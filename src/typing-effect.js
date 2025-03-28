@@ -1,6 +1,11 @@
 // Terminal typing effect
 const messages = [
     "Hello, World!",
+    "Welcome!",
+    "I Installed Arch all by myself btw.",
+    "Are you impressed?",
+    "Please love me.",
+    "Mwah Mwah.",
 ];
 
 let typedTextElement;
