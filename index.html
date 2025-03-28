@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Developer Portfolio</title>
+    <!-- Add a dynamic base URL via JavaScript to handle GitHub Pages -->
+    <script>
+        // Set dynamic base URL for GitHub Pages
+        (function () {
+            const pathname = window.location.pathname;
+            let baseUrl = '/';
+
+            // Check if deployed on GitHub Pages
+            if (pathname !== '/' && pathname.indexOf('.html') === -1) {
+                // Get repository name for GitHub Pages
+                const pathSegments = pathname.split('/');
+                if (pathSegments.length > 1 && pathSegments[1] !== '') {
+                    baseUrl = '/' + pathSegments[1] + '/';
+                }
+            }
+
+            // Create and append base element
+            const base = document.createElement('base');
+            base.href = baseUrl;
+            document.head.appendChild(base);
+        })();
+    </script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <header>
+        <div id="terminal-intro">
+            <div id="typed-text"></div><span class="blink">_</span>
+        </div>
+        <h1>NamesAreOverrated</h1>
+        <p>hmm...</p>
+        <div class="social-links">
+            <a href="https://github.com/NamesAreOverrated" target="_blank">GitHub</a>
+            <a href="mailto:NamesAreOverrated.GitHub@outlook.com">Email</a>
+        </div>
+    </header>
+
+    <!-- New page content container -->
+    <section id="page-content">
+        <div class="back-button" onclick="window.router.navigateToHome()">&larr; Back to home</div>
+        <div id="dynamic-content"></div>
+    </section>
+
+    <section id="projects" class="section">
+        <h2>> Projects</h2>
+
+        <div class="search-container">
+            <input type="text" id="search-projects" class="search-input" placeholder="Search projects..."
+                autocomplete="off">
+        </div>
+
+        <div class="projects-container" id="projects-container">
+            <!-- Projects will be loaded from projects.json -->
+            <div class="loading">Loading projects...</div>
+        </div>
+
+        <div class="pagination-controls" id="projects-pagination">
+            <button id="projects-prev-page" disabled>&lt; Previous</button>
+            <span class="page-info">Page <span id="projects-current-page">1</span> of <span
+                    id="projects-total-pages">1</span></span>
+            <button id="projects-next-page">Next &gt;</button>
+        </div>
+    </section>
+
+    <section id="tools" class="section">
+        <h2>> Tools_I_Built</h2>
+
+        <div class="search-container">
+            <input type="text" id="search-tools" class="search-input" placeholder="Search tools..." autocomplete="off">
+        </div>
+
+        <div class="tools-container" id="tools-container">
+            <!-- Tools will be loaded from tools.json -->
+            <div class="loading">Loading tools...</div>
+        </div>
+
+        <div class="pagination-controls" id="tools-pagination">
+            <button id="tools-prev-page" disabled>&lt; Previous</button>
+            <span class="page-info">Page <span id="tools-current-page">1</span> of <span
+                    id="tools-total-pages">1</span></span>
+            <button id="tools-next-page">Next &gt;</button>
+        </div>
+    </section>
+
+    <section id="blogs" class="section">
+        <h2>> Blog_Posts</h2>
+
+        <div class="search-container">
+            <input type="text" id="search-blogs" class="search-input" placeholder="Search blog posts..."
+                autocomplete="off">
+        </div>
+
+        <div class="blog-category-filters" id="blog-category-filters">
+            <!-- Categories will be dynamically added -->
+            <button class="category-filter active" data-category="all">All</button>
+        </div>
+
+        <div class="blogs-container" id="blogs-container">
+            <!-- Blogs will be loaded from blogs.json -->
+            <div class="loading">Loading blog posts...</div>
+        </div>
+
+        <div class="pagination-controls" id="blogs-pagination">
+            <button id="blogs-prev-page" disabled>&lt; Previous</button>
+            <span class="page-info">Page <span id="blogs-current-page">1</span> of <span
+                    id="blogs-total-pages">1</span></span>
+            <button id="blogs-next-page">Next &gt;</button>
+        </div>
+    </section>
+
+    <footer>
+        <p>© <span id="year"></span> Built by claude but i got the custody ❤️.</p>
+    </footer>
+
+    <script src="src/main.js" type="module"></script>
+</body>
+
+</html>
