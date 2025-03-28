@@ -126,50 +126,56 @@ function initializeSection(sectionType, itemsPerPage) {
 }
 
 /**
- * Filter blogs by category
+ * Filter items by category
  * @param {string} category - Category to filter by
- * @param {Array} allBlogs - All blog posts
+ * @param {Array} allItems - All items of the specific type
+ * @param {string} itemType - Type of items (projects, tools, blogs)
  */
-function filterBlogsByCategory(category, allBlogs) {
-    const container = document.getElementById('blogs-container');
-    const blogCards = document.querySelectorAll('.blog-card');
+function filterItemsByCategory(category, allItems, itemType) {
+    const container = document.getElementById(`${itemType}-container`);
+    const itemSelector = itemType === 'blogs' ? '.blog-card' :
+        itemType === 'projects' ? '.project-card' : '.tool-card';
+    const itemCards = document.querySelectorAll(itemSelector);
 
     if (category === 'all') {
-        // Show all blogs
-        blogCards.forEach(card => card.style.display = '');
-        // Re-initialize pagination with all blogs
-        initializeSection('blogs', 3);
+        // Show all items
+        itemCards.forEach(card => card.style.display = '');
+        // Re-initialize pagination with all items
+        initializeSection(itemType, itemType === 'tools' ? 6 : 3);
         return;
     }
 
-    // Hide all blogs first
-    blogCards.forEach(card => {
-        const categories = card.getAttribute('data-categories');
-        if (categories && categories.includes(category)) {
+    // Hide all items first
+    itemCards.forEach(card => {
+        const tags = card.getAttribute('data-tags');
+        const categories = card.getAttribute('data-categories'); // For blogs
+
+        if ((tags && tags.includes(category)) ||
+            (categories && categories.includes(category))) {
             card.style.display = '';
         } else {
             card.style.display = 'none';
         }
     });
 
-    // Check if any blogs are visible
-    let visibleBlogs = 0;
-    blogCards.forEach(card => {
+    // Check if any items are visible
+    let visibleItems = 0;
+    itemCards.forEach(card => {
         if (card.style.display !== 'none') {
-            visibleBlogs++;
+            visibleItems++;
         }
     });
 
-    // Show "no results" if no blogs match the category
+    // Show "no results" if no items match the category
     let noResultsElem = container.querySelector('.no-results');
-    if (visibleBlogs === 0) {
+    if (visibleItems === 0) {
         if (!noResultsElem) {
             noResultsElem = document.createElement('div');
             noResultsElem.className = 'no-results';
-            noResultsElem.textContent = `No blog posts found in category: ${category}`;
+            noResultsElem.textContent = `No ${itemType} found in category: ${category}`;
             container.appendChild(noResultsElem);
         } else {
-            noResultsElem.textContent = `No blog posts found in category: ${category}`;
+            noResultsElem.textContent = `No ${itemType} found in category: ${category}`;
             noResultsElem.style.display = '';
         }
     } else if (noResultsElem) {
@@ -177,7 +183,16 @@ function filterBlogsByCategory(category, allBlogs) {
     }
 
     // Hide pagination when filtering by category
-    document.getElementById('blogs-pagination').style.display = 'none';
+    document.getElementById(`${itemType}-pagination`).style.display = 'none';
 }
 
-export { initializeSection, filterBlogsByCategory };
+/**
+ * Filter blogs by category
+ * @param {string} category - Category to filter by
+ * @param {Array} allBlogs - All blog posts
+ */
+function filterBlogsByCategory(category, allBlogs) {
+    filterItemsByCategory(category, allBlogs, 'blogs');
+}
+
+export { initializeSection, filterBlogsByCategory, filterItemsByCategory };

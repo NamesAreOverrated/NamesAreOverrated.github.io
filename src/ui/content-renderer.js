@@ -2,7 +2,7 @@
  * UI content rendering functions
  */
 import { normalizeFilename, calculateReadTime } from '../utils/data-loader.js';
-import { initializeSection, filterBlogsByCategory } from './section-manager.js';
+import { initializeSection, filterBlogsByCategory, filterItemsByCategory } from './section-manager.js';
 
 /**
  * Render projects to the DOM
@@ -10,11 +10,64 @@ import { initializeSection, filterBlogsByCategory } from './section-manager.js';
  */
 function renderProjects(projects) {
     const container = document.getElementById('projects-container');
+    const categoryFiltersContainer = document.getElementById('project-category-filters');
     container.innerHTML = '';
 
     if (!projects || projects.length === 0) {
         container.innerHTML = '<div class="no-results">No projects found.</div>';
         return;
+    }
+
+    // Extract all unique tags/categories from projects
+    const allCategories = new Set();
+    projects.forEach(project => {
+        if (project.tags && Array.isArray(project.tags)) {
+            project.tags.forEach(tag => allCategories.add(tag));
+        }
+    });
+
+    // Clear existing category filters and add the "All" button
+    categoryFiltersContainer.innerHTML = '';
+    const allFilterButton = document.createElement('button');
+    allFilterButton.textContent = 'All';
+    allFilterButton.className = 'category-filter active';
+    allFilterButton.setAttribute('data-category', 'all');
+    allFilterButton.addEventListener('click', function () {
+        // Remove active class from all filters
+        document.querySelectorAll('#project-category-filters .category-filter').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        // Add active class to this filter
+        this.classList.add('active');
+        // Show all projects
+        filterItemsByCategory('all', projects, 'projects');
+    });
+    categoryFiltersContainer.appendChild(allFilterButton);
+
+    // Add category filters
+    if (allCategories.size > 0) {
+        allCategories.forEach(category => {
+            const filterButton = document.createElement('button');
+            filterButton.textContent = category;
+            filterButton.className = 'category-filter';
+            filterButton.setAttribute('data-category', category);
+
+            filterButton.addEventListener('click', function () {
+                // Remove active class from all filters
+                document.querySelectorAll('#project-category-filters .category-filter').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+
+                // Add active class to clicked filter
+                this.classList.add('active');
+
+                // Filter projects by category
+                const selectedCategory = this.getAttribute('data-category');
+                filterItemsByCategory(selectedCategory, projects, 'projects');
+            });
+
+            categoryFiltersContainer.appendChild(filterButton);
+        });
     }
 
     projects.forEach(project => {
@@ -49,11 +102,64 @@ function renderProjects(projects) {
  */
 function renderTools(tools) {
     const container = document.getElementById('tools-container');
+    const categoryFiltersContainer = document.getElementById('tool-category-filters');
     container.innerHTML = '';
 
     if (!tools || tools.length === 0) {
         container.innerHTML = '<div class="no-results">No tools found.</div>';
         return;
+    }
+
+    // Extract all unique tags/categories from tools
+    const allCategories = new Set();
+    tools.forEach(tool => {
+        if (tool.tags && Array.isArray(tool.tags)) {
+            tool.tags.forEach(tag => allCategories.add(tag));
+        }
+    });
+
+    // Clear existing category filters and add the "All" button
+    categoryFiltersContainer.innerHTML = '';
+    const allFilterButton = document.createElement('button');
+    allFilterButton.textContent = 'All';
+    allFilterButton.className = 'category-filter active';
+    allFilterButton.setAttribute('data-category', 'all');
+    allFilterButton.addEventListener('click', function () {
+        // Remove active class from all filters
+        document.querySelectorAll('#tool-category-filters .category-filter').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        // Add active class to this filter
+        this.classList.add('active');
+        // Show all tools
+        filterItemsByCategory('all', tools, 'tools');
+    });
+    categoryFiltersContainer.appendChild(allFilterButton);
+
+    // Add category filters
+    if (allCategories.size > 0) {
+        allCategories.forEach(category => {
+            const filterButton = document.createElement('button');
+            filterButton.textContent = category;
+            filterButton.className = 'category-filter';
+            filterButton.setAttribute('data-category', category);
+
+            filterButton.addEventListener('click', function () {
+                // Remove active class from all filters
+                document.querySelectorAll('#tool-category-filters .category-filter').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+
+                // Add active class to clicked filter
+                this.classList.add('active');
+
+                // Filter tools by category
+                const selectedCategory = this.getAttribute('data-category');
+                filterItemsByCategory(selectedCategory, tools, 'tools');
+            });
+
+            categoryFiltersContainer.appendChild(filterButton);
+        });
     }
 
     tools.forEach(tool => {
@@ -105,8 +211,26 @@ function renderBlogs(blogs) {
         }
     });
 
-    // Add category filters (if not already there)
-    if (allCategories.size > 0 && categoryFiltersContainer.children.length === 1) {
+    // Clear existing category filters and add the "All" button
+    categoryFiltersContainer.innerHTML = '';
+    const allFilterButton = document.createElement('button');
+    allFilterButton.textContent = 'All';
+    allFilterButton.className = 'category-filter active';
+    allFilterButton.setAttribute('data-category', 'all');
+    allFilterButton.addEventListener('click', function () {
+        // Remove active class from all filters
+        document.querySelectorAll('#blog-category-filters .category-filter').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        // Add active class to this filter
+        this.classList.add('active');
+        // Show all blogs
+        filterBlogsByCategory('all', blogs);
+    });
+    categoryFiltersContainer.appendChild(allFilterButton);
+
+    // Add category filters
+    if (allCategories.size > 0) {
         allCategories.forEach(category => {
             const filterButton = document.createElement('button');
             filterButton.textContent = category;
