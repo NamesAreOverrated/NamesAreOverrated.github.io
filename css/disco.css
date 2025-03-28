@@ -1,0 +1,293 @@
+/* Disco Mode Styles */
+body.disco-mode {
+    animation: disco-background 6s steps(1, end) infinite;
+    /* Increased from 3s to 6s */
+    transition: background-color 0.5s ease;
+    /* Increased from 0.3s to 0.5s */
+    position: relative;
+}
+
+body.disco-mode::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    opacity: 0.25;
+    pointer-events: none;
+    z-index: -1;
+    animation: disco-overlay 5s steps(1, end) infinite;
+    /* Increased from 2.5s to 5s */
+}
+
+@keyframes disco-background {
+
+    0%,
+    100% {
+        background-color: #1d1d21;
+    }
+
+    25% {
+        background-color: #232330;
+        /* Slightly more colorful */
+    }
+
+    50% {
+        background-color: #1e222c;
+        /* Slightly more colorful */
+    }
+
+    75% {
+        background-color: #221e2c;
+        /* Slightly more colorful */
+    }
+}
+
+@keyframes disco-overlay {
+    0% {
+        background: linear-gradient(45deg, #ff006e35 0%, transparent 70%);
+        /* More opacity */
+        box-shadow: inset 0 0 200px rgba(255, 0, 110, 0.4);
+        /* Increased intensity */
+    }
+
+    20% {
+        background: linear-gradient(120deg, #3a86ff35 0%, transparent 70%);
+        /* More opacity */
+        box-shadow: inset 0 0 200px rgba(58, 134, 255, 0.4);
+        /* Increased intensity */
+    }
+
+    40% {
+        background: linear-gradient(190deg, #8338ec35 0%, transparent 70%);
+        /* More opacity */
+        box-shadow: inset 0 0 200px rgba(131, 56, 236, 0.4);
+        /* Increased intensity */
+    }
+
+    60% {
+        background: linear-gradient(260deg, #ffbe0b35 0%, transparent 70%);
+        /* More opacity */
+        box-shadow: inset 0 0 200px rgba(255, 190, 11, 0.4);
+        /* Increased intensity */
+    }
+
+    80% {
+        background: linear-gradient(320deg, #fb558435 0%, transparent 70%);
+        /* More opacity */
+        box-shadow: inset 0 0 200px rgba(251, 85, 132, 0.4);
+        /* Increased intensity */
+    }
+
+    100% {
+        background: linear-gradient(45deg, #ff006e35 0%, transparent 70%);
+        /* More opacity */
+        box-shadow: inset 0 0 200px rgba(255, 0, 110, 0.4);
+        /* Increased intensity */
+    }
+}
+
+body.disco-mode section,
+body.disco-mode header {
+    animation: section-pulse 5.8s ease-in-out infinite;
+    /* Increased from 2.9s to 5.8s */
+}
+
+@keyframes section-pulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 15px rgba(255, 0, 110, 0.15);
+        /* Slightly increased intensity */
+    }
+
+    25% {
+        box-shadow: 0 0 15px rgba(58, 134, 255, 0.15);
+        /* Slightly increased intensity */
+    }
+
+    50% {
+        box-shadow: 0 0 15px rgba(131, 56, 236, 0.15);
+        /* Slightly increased intensity */
+    }
+
+    75% {
+        box-shadow: 0 0 15px rgba(255, 190, 11, 0.15);
+        /* Slightly increased intensity */
+    }
+}
+
+.disco-toggle {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: #222;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    font-size: 20px;
+    cursor: pointer;
+    z-index: 1000;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.disco-toggle:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.disco-toggle.active {
+    background-color: #333;
+    animation: disco-button 5.8s steps(1, end) infinite;
+    /* Increased from 2.9s to 5.8s */
+}
+
+@keyframes disco-button {
+
+    0%,
+    100% {
+        box-shadow: 0 0 20px rgba(255, 0, 110, 0.7);
+        /* Increased glow */
+    }
+
+    20% {
+        box-shadow: 0 0 20px rgba(58, 134, 255, 0.7);
+        /* Increased glow */
+    }
+
+    40% {
+        box-shadow: 0 0 20px rgba(131, 56, 236, 0.7);
+        /* Increased glow */
+    }
+
+    60% {
+        box-shadow: 0 0 20px rgba(255, 190, 11, 0.7);
+        /* Increased glow */
+    }
+
+    80% {
+        box-shadow: 0 0 20px rgba(251, 85, 132, 0.7);
+        /* Increased glow */
+    }
+}
+
+/* Light flashes */
+body.disco-mode .project-card,
+body.disco-mode .tool-card,
+body.disco-mode .blog-card {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid transparent;
+    animation: card-border-pulse 5.8s steps(1, end) infinite;
+    /* Increased from 2.9s to 5.8s */
+}
+
+body.disco-mode .project-card::after,
+body.disco-mode .tool-card::after,
+body.disco-mode .blog-card::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, transparent 95%, rgba(255, 255, 255, 0.35) 100%);
+    animation: card-flash 9s cubic-bezier(0.42, 0, 0.58, 1) infinite;
+    /* Increased from 4.5s to 9s */
+    opacity: 0;
+    z-index: 1;
+    pointer-events: none;
+}
+
+@keyframes card-flash {
+
+    0%,
+    95%,
+    100% {
+        opacity: 0;
+        transform: translateX(-100%) translateY(-100%);
+    }
+
+    96%,
+    99% {
+        opacity: 1;
+        transform: translateX(100%) translateY(100%);
+    }
+}
+
+/* Staggered timing for cards to create rhythm */
+body.disco-mode .project-card:nth-child(3n)::after,
+body.disco-mode .tool-card:nth-child(3n)::after,
+body.disco-mode .blog-card:nth-child(3n)::after {
+    animation-delay: 0.5s;
+}
+
+body.disco-mode .project-card:nth-child(3n+1)::after,
+body.disco-mode .tool-card:nth-child(3n+1)::after,
+body.disco-mode .blog-card:nth-child(3n+1)::after {
+    animation-delay: 1s;
+}
+
+/* Text visibility enhancement for disco mode - more subtle but visible */
+body.disco-mode .content-header h1,
+body.disco-mode .content-body {
+    background-color: rgba(25, 25, 28, 0.75);
+    /* Adjusted background for better contrast */
+    border-radius: 8px;
+    padding: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    /* Slightly stronger shadow */
+}
+
+/* Interactive elements pulse */
+body.disco-mode button:not(.disco-toggle),
+body.disco-mode a {
+    transition: all 0.3s ease;
+}
+
+body.disco-mode button:not(.disco-toggle):hover,
+body.disco-mode a:hover {
+    animation: button-pulse 2s ease infinite;
+    /* Increased from 1s to 2s */
+}
+
+@keyframes button-pulse {
+
+    0%,
+    100% {
+        text-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+        /* Increased glow */
+    }
+
+    50% {
+        text-shadow: 0 0 18px rgba(255, 255, 255, 0.9);
+        /* Increased glow */
+    }
+}
+
+@keyframes card-border-pulse {
+
+    0%,
+    100% {
+        border-color: rgba(255, 0, 110, 0.2);
+    }
+
+    25% {
+        border-color: rgba(58, 134, 255, 0.2);
+    }
+
+    50% {
+        border-color: rgba(131, 56, 236, 0.2);
+    }
+
+    75% {
+        border-color: rgba(255, 190, 11, 0.2);
+    }
+}
