@@ -165,8 +165,8 @@
 
         <!-- Habits tab -->
         <div id="habits-tab" class="tab-content active">
-            <!-- Habits section as its own independent section -->
-            <section class="section habits-section featured-section">
+            <!-- Habits section - removed featured-section class to match main page styling -->
+            <section class="section habits-section">
                 <h2>> Daily_Habit_Tracker</h2>
                 <p class="description">Track your habits and build streaks. Data is stored in your browser's local
                     storage.</p>
@@ -175,7 +175,7 @@
                 </div>
             </section>
 
-            <!-- Add habit section as its own independent section -->
+            <!-- Add habit section - matches main page styling now -->
             <section class="section add-habit-section">
                 <h2>> Add_New_Habit</h2>
                 <form id="habit-form">
@@ -189,11 +189,12 @@
                     <div class="form-row">
                         <label for="habit-category">Category:</label>
                         <select id="habit-category">
-                            <option value="General">General</option>
-                            <option value="Health">Health</option>
-                            <option value="Work">Work</option>
-                            <option value="Learning">Learning</option>
-                            <option value="Personal">Personal</option>
+                            <option value="general">general</option>
+                            <option value="health">health</option>
+                            <option value="work">work</option>
+                            <option value="project">project</option>
+                            <option value="learning">learning</option>
+                            <option value="personal">personal</option>
                             <option value="custom">+ Add Custom Category</option>
                         </select>
                         <div id="custom-category-container" style="display: none;">
@@ -268,6 +269,10 @@
                     <button id="reset-data" class="data-btn reset-btn">
                         <span class="btn-icon">🗑️</span> Reset Data
                     </button>
+
+                    <button id="copy-logseq" class="data-btn logseq-btn">
+                        <span class="btn-icon">📋</span> Copy as Logseq Block
+                    </button>
                 </div>
 
                 <input type="file" id="import-file" accept=".json" style="display:none">
@@ -302,7 +307,6 @@
     <script src="js/nav-effects.js"></script>
     <script src="js/disco.js"></script>
     <script src="js/habit-tracker.js"></script>
-    <script src="js/habit-streak-alerts.js"></script>
 </body>
 
 </html>

@@ -69,7 +69,7 @@ class Habit {
 class HabitTracker {
     constructor() {
         this.habits = [];
-        this.categories = ['Health', 'Work', 'Learning', 'Personal', 'General']; // Default categories
+        this.categories = this.getDefaultCategories(); // Default categories
         this.loadHabits();
 
         // Helper method to safely add event listeners
@@ -110,6 +110,7 @@ class HabitTracker {
         addListener('import-data', 'click', () => document.getElementById('import-file').click());
         addListener('import-file', 'change', (e) => this.importData(e));
         addListener('reset-data', 'click', () => this.resetData());
+        addListener('copy-logseq', 'click', () => this.copyAsLogseqBlock());
 
         // Tab navigation
         addListener('stats-tab-button', 'click', () => this.showStatsTab());
@@ -129,6 +130,11 @@ class HabitTracker {
             }
         });
     }
+    getDefaultCategories() {
+        return ['health', 'work', 'project', 'learning', 'personal', 'general'];
+    }
+
+
 
     cleanup() {
         // Store reference to resize handlers in the instance
@@ -721,7 +727,7 @@ class HabitTracker {
         habitElement.dataset.habitId = habit.id; // NEW: Add habit ID as data attribute
 
         // For custom categories that aren't in our predefined list, generate a color
-        if (habit.category && !['Health', 'Work', 'Learning', 'Personal', 'General'].includes(habit.category)) {
+        if (habit.category && !this.getDefaultCategories().includes(habit.category)) {
             // Generate a consistent color for the custom category based on its name
             const customColor = this.getColorForCategory(habit.category);
             habitElement.style.borderRight = `3px solid ${customColor}`;
@@ -1318,7 +1324,7 @@ class HabitTracker {
                     }
 
                     // Ensure default categories are included
-                    const defaultCategories = ['Health', 'Work', 'Learning', 'Personal', 'General'];
+                    const defaultCategories = this.getDefaultCategories();
                     defaultCategories.forEach(category => {
                         if (!this.categories.includes(category)) {
                             this.categories.push(category);
@@ -1361,7 +1367,7 @@ class HabitTracker {
                 this.habits = [];
 
                 // Reset categories to defaults
-                this.categories = ['Health', 'Work', 'Learning', 'Personal', 'General'];
+                this.categories = this.getDefaultCategories();
 
                 // Clear localStorage
                 localStorage.removeItem('habits');
@@ -2041,6 +2047,121 @@ class HabitTracker {
 
         html += '</div>';
         return html;
+    }
+
+    // New method to format and copy habit data as Logseq blocks
+    copyAsLogseqBlock() {
+        try {
+            // Get today's date in YYYY-MM-DD format for Logseq page reference
+            const today = new Date();
+            const todayISO = today.toISOString().split('T')[0]; // YYYY-MM-DD
+
+            // Format the current date for display
+            const displayDate = today.toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+
+            // Start building the Logseq formatted text
+            let logseqBlock = `- [[Habit Tracker]]\n`;
+
+            // Group habits by completion status
+            const completedHabits = this.habits.filter(habit => habit.completedToday);
+            const pendingHabits = this.habits.filter(habit => !habit.completedToday);
+
+            // Add completed habits
+            if (completedHabits.length > 0) {
+                logseqBlock += `  - Completed habits\n`;
+                completedHabits.forEach(habit => {
+                    logseqBlock += `    - DONE ${habit.name} #[[${habit.category}]]\n`;
+                });
+            }
+
+            // Add pending habits
+            if (pendingHabits.length > 0) {
+                logseqBlock += `  - Pending habits\n`;
+                pendingHabits.forEach(habit => {
+                    logseqBlock += `    - TODO ${habit.name} #[[${habit.category}]]\n`;
+                });
+            }
+
+            // Add completion stats
+            const completionPercentage = Math.round((completedHabits.length / this.habits.length) * 100) || 0;
+            logseqBlock += `  - Stats\n`;
+            logseqBlock += `    - ${completedHabits.length}/${this.habits.length} habits completed (${completionPercentage}%)\n`;
+
+            // Check for today's achievements
+            const todayAchievements = [];
+
+            // Collect all of today's achievements
+            this.habits.forEach(habit => {
+                if (habit.achievements && Array.isArray(habit.achievements)) {
+                    const achievedToday = habit.achievements.filter(achievement => {
+                        // Check if achievement date is from today
+                        const achievementDate = new Date(achievement.date).toISOString().split('T')[0];
+                        return achievementDate === todayISO;
+                    });
+
+                    if (achievedToday.length > 0) {
+                        achievedToday.forEach(achievement => {
+                            todayAchievements.push({
+                                habitName: habit.name,
+                                category: habit.category,
+                                goalType: achievement.goalType,
+                                goalValue: achievement.goalValue,
+                                streak: achievement.streak,
+                                weeklyCompletions: achievement.weeklyCompletions?.length || 0
+                            });
+                        });
+                    }
+                }
+            });
+
+            // Add today's achievements section if we have any
+            if (todayAchievements.length > 0) {
+                logseqBlock += `  - 🏆 Today's Achievements #achievement\n`;
+                todayAchievements.forEach(achievement => {
+                    if (achievement.goalType === 'streak') {
+                        logseqBlock += `    - Reached ${achievement.streak} day streak for "${achievement.habitName}" #[[${achievement.category}]]\n`;
+                    } else {
+                        logseqBlock += `    - Completed "${achievement.habitName}" ${achievement.weeklyCompletions} times this week (goal: ${achievement.goalValue}) #[[${achievement.category}]]\n`;
+                    }
+                });
+            }
+
+            // Add notable streaks (top 3)
+            const topStreaks = [...this.habits]
+                .filter(habit => habit.streak >= 3)  // Only include streaks of 3 or more
+                .sort((a, b) => b.streak - a.streak)
+                .slice(0, 3);
+
+            if (topStreaks.length > 0) {
+                logseqBlock += `  - Notable streaks\n`;
+                topStreaks.forEach(habit => {
+                    logseqBlock += `    - ${habit.name}: ${habit.streak} days ⚡\n`;
+                });
+            }
+
+            // Copy to clipboard
+            navigator.clipboard.writeText(logseqBlock).then(() => {
+                this.showToast(`Logseq block copied to clipboard for ${displayDate}`, {
+                    type: 'success',
+                    icon: '📋',
+                    duration: 3000
+                });
+            }, err => {
+                console.error('Could not copy text: ', err);
+                this.showToast('Failed to copy to clipboard. See console for details.', {
+                    type: 'error'
+                });
+            });
+
+        } catch (error) {
+            console.error('Error copying as Logseq block:', error);
+            this.showToast('Error formatting Logseq block', { type: 'error' });
+        }
     }
 }
 
