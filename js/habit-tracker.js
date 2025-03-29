@@ -407,24 +407,7 @@ class HabitTracker {
                 return;
             }
 
-            // Handle custom category properly
-            if (category === 'custom') {
-                const customCategory = document.getElementById('custom-category').value.trim();
-                if (customCategory) {
-                    category = customCategory; // Use the custom category name directly
-
-                    // Add to categories list if not already there (case-insensitive check)
-                    if (!this.categories.some(cat => cat.toLowerCase() === customCategory.toLowerCase())) {
-                        this.categories.push(customCategory);
-                        this.saveCategories(); // Save the updated categories
-                    }
-                } else {
-                    this.showNotification('Please enter a valid category name.', 'error');
-                    return;
-                }
-            }
-
-            // Create and add the new habit with selected/custom category
+            // Create and add the new habit with selected category
             const habit = new Habit(id, habitName, goalType, goalValue, category);
             habit.weekStreak = 0;
             habit.completedWeeks = 0;
@@ -447,8 +430,6 @@ class HabitTracker {
             habitInput.value = '';
             habitInput.focus();
             categorySelect.value = 'general';
-            document.getElementById('custom-category-container').style.display = 'none';
-            document.getElementById('custom-category').value = '';
             document.getElementById('goal-type').value = 'streak';
             document.getElementById('goal-value').value = '7';
             document.getElementById('goal-unit').textContent = 'days';
@@ -1411,9 +1392,6 @@ class HabitTracker {
         const categorySelect = document.getElementById('habit-category');
         if (!categorySelect) return;
 
-        // Store the custom option if it exists
-        const customOption = categorySelect.querySelector('option[value="custom"]');
-
         // Clear all options
         categorySelect.innerHTML = '';
 
@@ -1425,23 +1403,6 @@ class HabitTracker {
                 option.textContent = category;
                 categorySelect.appendChild(option);
             });
-        }
-
-        // Add custom option
-        const newCustomOption = customOption || document.createElement('option');
-        newCustomOption.value = 'custom';
-        newCustomOption.textContent = '+ Add Custom Category';
-        categorySelect.appendChild(newCustomOption);
-
-        // Reset custom category inputs
-        const customCategoryContainer = document.getElementById('custom-category-container');
-        if (customCategoryContainer) {
-            customCategoryContainer.style.display = 'none';
-        }
-
-        const customCategoryInput = document.getElementById('custom-category');
-        if (customCategoryInput) {
-            customCategoryInput.value = '';
         }
     }
 
@@ -2262,6 +2223,477 @@ class HabitTracker {
             console.error('Error copying as Logseq block:', error);
             this.showToast('Error formatting Logseq block', { type: 'error' });
         }
+    }
+
+    // Method to show category management modal
+    showCategoryManager() {
+        // Create modal container if it doesn't exist
+        let modal = document.getElementById('category-manager-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'category-manager-modal';
+            modal.className = 'modal';
+
+            document.body.appendChild(modal);
+        }
+
+        // Populate modal with current categories
+        this.renderCategoryManagerContent(modal);
+
+        // Show modal with fade-in effect
+        modal.style.display = 'flex';
+        setTimeout(() => {
+            modal.classList.add('visible');
+        }, 10);
+    }
+
+    // Render category manager content
+    renderCategoryManagerContent(modal) {
+        // Get categories with counts
+        const categoryCounts = this.getCategoryUsageCounts();
+
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Category Manager</h3>
+                    <button class="close-modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p class="description">Manage your habit categories. <span class="warning-text">Warning: Deleting a category can affect habits assigned to it.</span></p>
+                    
+                    <div class="category-list">
+                        ${this.categories.map(category => {
+            const count = categoryCounts[category.toLowerCase()] || 0;
+            const isDefault = this.getDefaultCategories().map(c => c.toLowerCase()).includes(category.toLowerCase());
+
+            return `
+                                <div class="category-item" data-category="${category.toLowerCase()}">
+                                    <div class="category-badge" data-category="${category.toLowerCase()}">${category}</div>
+                                    <span class="category-count">${count} habit${count !== 1 ? 's' : ''}</span>
+                                    <div class="category-actions">
+                                        <button class="btn-edit-category" data-category="${category}">${isDefault ? 'Rename' : 'Edit'}</button>
+                                        <button class="btn-delete-category" data-category="${category}" ${isDefault ? 'disabled title="Default categories cannot be deleted"' : ''}>${isDefault ? 'Default' : 'Delete'}</button>
+                                    </div>
+                                </div>
+                            `;
+        }).join('')}
+                    </div>
+                    
+                    <div class="add-category-form">
+                        <h4>Add New Category</h4>
+                        <div class="form-row">
+                            <input type="text" id="new-category-name" placeholder="Enter category name">
+                            <button id="add-category-btn">Add Category</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="close-category-manager">Close</button>
+                </div>
+            </div>
+        `;
+
+        // Add event listeners
+        setTimeout(() => {
+            // Close button
+            const closeBtn = modal.querySelector('.close-modal');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', () => this.closeCategoryManager());
+            }
+
+            // Close button in footer
+            const closeFooterBtn = modal.querySelector('#close-category-manager');
+            if (closeFooterBtn) {
+                closeFooterBtn.addEventListener('click', () => this.closeCategoryManager());
+            }
+
+            // Add category button
+            const addCategoryBtn = modal.querySelector('#add-category-btn');
+            if (addCategoryBtn) {
+                addCategoryBtn.addEventListener('click', () => {
+                    const input = document.getElementById('new-category-name');
+                    const categoryName = input.value.trim();
+
+                    if (categoryName) {
+                        this.addCategory(categoryName);
+                        input.value = '';
+                        this.renderCategoryManagerContent(modal);
+                    } else {
+                        this.showNotification('Please enter a category name', 'error');
+                    }
+                });
+            }
+
+            // Enter key for adding category
+            const newCategoryInput = modal.querySelector('#new-category-name');
+            if (newCategoryInput) {
+                newCategoryInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        document.getElementById('add-category-btn').click();
+                    }
+                });
+            }
+
+            // Edit category buttons
+            const editBtns = modal.querySelectorAll('.btn-edit-category');
+            editBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const category = btn.dataset.category;
+                    this.showEditCategoryModal(category);
+                });
+            });
+
+            // Delete category buttons
+            const deleteBtns = modal.querySelectorAll('.btn-delete-category:not([disabled])');
+            deleteBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const category = btn.dataset.category;
+                    this.showDeleteCategoryModal(category);
+                });
+            });
+        }, 0);
+    }
+
+    // Close category manager
+    closeCategoryManager() {
+        const modal = document.getElementById('category-manager-modal');
+        if (modal) {
+            modal.classList.remove('visible');
+            setTimeout(() => {
+                modal.style.display = 'none';
+            }, 300); // Match transition duration in CSS
+        }
+    }
+
+    // Get usage count for each category
+    getCategoryUsageCounts() {
+        const counts = {};
+
+        this.habits.forEach(habit => {
+            const category = habit.category.toLowerCase();
+            counts[category] = (counts[category] || 0) + 1;
+        });
+
+        return counts;
+    }
+
+    // Add a new category
+    addCategory(categoryName) {
+        // Check if category already exists (case-insensitive)
+        if (this.categories.some(cat => cat.toLowerCase() === categoryName.toLowerCase())) {
+            this.showNotification('This category already exists', 'error');
+            return false;
+        }
+
+        // Add the new category
+        this.categories.push(categoryName);
+        this.saveCategories();
+
+        // Update category dropdown
+        if (window.refreshCategoryDropdown) {
+            window.refreshCategoryDropdown();
+        } else {
+            this.refreshCategoryDropdownDirectly();
+        }
+
+        this.showNotification(`Category "${categoryName}" added`, 'success');
+        return true;
+    }
+
+    // Show modal to edit category
+    showEditCategoryModal(categoryName) {
+        // Create modal container if it doesn't exist
+        let modal = document.getElementById('edit-category-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'edit-category-modal';
+            modal.className = 'modal';
+
+            document.body.appendChild(modal);
+        }
+
+        // Populate modal
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Edit Category</h3>
+                    <button class="close-modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p>Edit the name for category "${categoryName}"</p>
+                    <div class="form-row">
+                        <input type="text" id="edit-category-name" value="${categoryName}" placeholder="New category name">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="cancel-edit-category">Cancel</button>
+                    <button id="save-category-edit" data-original-category="${categoryName}">Save Changes</button>
+                </div>
+            </div>
+        `;
+
+        // Show modal with fade-in effect
+        modal.style.display = 'flex';
+        setTimeout(() => {
+            modal.classList.add('visible');
+            // Focus on input
+            document.getElementById('edit-category-name').focus();
+        }, 10);
+
+        // Add event listeners
+        setTimeout(() => {
+            // Close buttons
+            modal.querySelector('.close-modal').addEventListener('click', () => this.closeEditCategoryModal());
+            modal.querySelector('#cancel-edit-category').addEventListener('click', () => this.closeEditCategoryModal());
+
+            // Save button
+            modal.querySelector('#save-category-edit').addEventListener('click', () => {
+                const originalCategory = categoryName;
+                const newCategoryName = document.getElementById('edit-category-name').value.trim();
+
+                if (newCategoryName && newCategoryName !== originalCategory) {
+                    this.editCategory(originalCategory, newCategoryName);
+                    this.closeEditCategoryModal();
+
+                    // Refresh category manager
+                    const categoryManager = document.getElementById('category-manager-modal');
+                    if (categoryManager) {
+                        this.renderCategoryManagerContent(categoryManager);
+                    }
+                } else if (!newCategoryName) {
+                    this.showNotification('Category name cannot be empty', 'error');
+                }
+            });
+
+            // Enter key
+            document.getElementById('edit-category-name').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    document.getElementById('save-category-edit').click();
+                }
+            });
+        }, 0);
+    }
+
+    // Close edit category modal
+    closeEditCategoryModal() {
+        const modal = document.getElementById('edit-category-modal');
+        if (modal) {
+            modal.classList.remove('visible');
+            setTimeout(() => {
+                modal.style.display = 'none';
+            }, 300);
+        }
+    }
+
+    // Edit a category name
+    editCategory(originalCategory, newCategory) {
+        // Validate new category name doesn't already exist
+        if (this.categories.some(cat =>
+            cat !== originalCategory && cat.toLowerCase() === newCategory.toLowerCase())) {
+            this.showNotification('This category already exists', 'error');
+            return false;
+        }
+
+        // Update the category in the categories array
+        const index = this.categories.findIndex(cat => cat === originalCategory);
+        if (index !== -1) {
+            this.categories[index] = newCategory;
+        }
+
+        // Update all habits with this category
+        let habitCount = 0;
+        this.habits.forEach(habit => {
+            if (habit.category === originalCategory) {
+                habit.category = newCategory;
+                habitCount++;
+            }
+        });
+
+        // Save changes
+        this.saveCategories();
+        this.saveHabits();
+
+        // Update dropdown and render habits
+        if (window.refreshCategoryDropdown) {
+            window.refreshCategoryDropdown();
+        } else {
+            this.refreshCategoryDropdownDirectly();
+        }
+
+        this.renderHabits();
+
+        this.showNotification(`Category renamed and updated for ${habitCount} habit${habitCount !== 1 ? 's' : ''}`, 'success');
+        return true;
+    }
+
+    // Show delete category confirmation modal
+    showDeleteCategoryModal(categoryName) {
+        // Get count of habits in this category
+        const habitCount = this.habits.filter(h => h.category === categoryName).length;
+
+        // Create modal container if it doesn't exist
+        let modal = document.getElementById('delete-category-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'delete-category-modal';
+            modal.className = 'modal';
+
+            document.body.appendChild(modal);
+        }
+
+        // Populate modal
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Delete Category</h3>
+                    <button class="close-modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p class="warning-text">Are you sure you want to delete the category "${categoryName}"?</p>
+                    
+                    ${habitCount > 0 ? `
+                        <p>This category is used by ${habitCount} habit${habitCount !== 1 ? 's' : ''}. Please choose what to do with these habits:</p>
+                        
+                        <div class="radio-option">
+                            <input type="radio" id="reassign-habits" name="delete-option" value="reassign" checked>
+                            <label for="reassign-habits">Reassign habits to another category</label>
+                        </div>
+                        
+                        <div class="reassign-container">
+                            <select id="reassign-category">
+                                ${this.categories
+                    .filter(cat => cat !== categoryName)
+                    .map(cat => `<option value="${cat}">${cat}</option>`)
+                    .join('')}
+                            </select>
+                        </div>
+                        
+                        <div class="radio-option">
+                            <input type="radio" id="delete-habits" name="delete-option" value="delete">
+                            <label for="delete-habits">Delete all habits in this category</label>
+                        </div>
+                    ` : `
+                        <p>This category is not currently used by any habits.</p>
+                    `}
+                </div>
+                <div class="modal-footer">
+                    <button id="cancel-delete-category">Cancel</button>
+                    <button id="confirm-delete-category" data-category="${categoryName}" class="danger-btn">Delete Category</button>
+                </div>
+            </div>
+        `;
+
+        // Show modal with fade-in effect
+        modal.style.display = 'flex';
+        setTimeout(() => {
+            modal.classList.add('visible');
+        }, 10);
+
+        // Add event listeners
+        setTimeout(() => {
+            // Close buttons
+            modal.querySelector('.close-modal').addEventListener('click', () => this.closeDeleteCategoryModal());
+            modal.querySelector('#cancel-delete-category').addEventListener('click', () => this.closeDeleteCategoryModal());
+
+            // Radio buttons for habit handling
+            if (habitCount > 0) {
+                const reassignRadio = document.getElementById('reassign-habits');
+                const deleteRadio = document.getElementById('delete-habits');
+                const reassignContainer = document.querySelector('.reassign-container');
+
+                reassignRadio.addEventListener('change', () => {
+                    reassignContainer.style.display = 'block';
+                });
+
+                deleteRadio.addEventListener('change', () => {
+                    reassignContainer.style.display = 'none';
+                });
+            }
+
+            // Delete button
+            modal.querySelector('#confirm-delete-category').addEventListener('click', () => {
+                const category = categoryName;
+                let action = 'delete'; // Default action
+                let targetCategory = null;
+
+                // If there are habits in this category, check what to do with them
+                if (habitCount > 0) {
+                    const reassignRadio = document.getElementById('reassign-habits');
+                    if (reassignRadio.checked) {
+                        action = 'reassign';
+                        targetCategory = document.getElementById('reassign-category').value;
+                    }
+                }
+
+                this.deleteCategory(category, action, targetCategory);
+                this.closeDeleteCategoryModal();
+
+                // Refresh category manager
+                const categoryManager = document.getElementById('category-manager-modal');
+                if (categoryManager) {
+                    this.renderCategoryManagerContent(categoryManager);
+                }
+            });
+        }, 0);
+    }
+
+    // Close delete category modal
+    closeDeleteCategoryModal() {
+        const modal = document.getElementById('delete-category-modal');
+        if (modal) {
+            modal.classList.remove('visible');
+            setTimeout(() => {
+                modal.style.display = 'none';
+            }, 300);
+        }
+    }
+
+    // Delete a category
+    deleteCategory(category, action = 'delete', targetCategory = null) {
+        // Cannot delete default categories
+        if (this.getDefaultCategories().map(c => c.toLowerCase()).includes(category.toLowerCase())) {
+            this.showNotification('Cannot delete default categories', 'error');
+            return false;
+        }
+
+        // Get affected habits
+        const affectedHabits = this.habits.filter(h => h.category === category);
+
+        // Handle habits based on selected action
+        if (action === 'reassign' && targetCategory) {
+            // Reassign habits to target category
+            affectedHabits.forEach(habit => {
+                habit.category = targetCategory;
+            });
+
+            this.saveHabits();
+            this.showNotification(`Reassigned ${affectedHabits.length} habit${affectedHabits.length !== 1 ? 's' : ''} to "${targetCategory}"`, 'info');
+        } else if (action === 'delete') {
+            // Delete all habits in this category
+            this.habits = this.habits.filter(h => h.category !== category);
+            this.saveHabits();
+
+            if (affectedHabits.length > 0) {
+                this.showNotification(`Deleted ${affectedHabits.length} habit${affectedHabits.length !== 1 ? 's' : ''} in category "${category}"`, 'info');
+            }
+        }
+
+        // Remove the category
+        this.categories = this.categories.filter(c => c !== category);
+        this.saveCategories();
+
+        // Update category dropdown and render habits
+        if (window.refreshCategoryDropdown) {
+            window.refreshCategoryDropdown();
+        } else {
+            this.refreshCategoryDropdownDirectly();
+        }
+
+        this.renderHabits();
+        this.showNotification(`Category "${category}" deleted`, 'success');
+        return true;
     }
 }
 

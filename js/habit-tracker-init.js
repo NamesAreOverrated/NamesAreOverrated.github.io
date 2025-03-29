@@ -18,9 +18,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         console.log('Refreshing category dropdown with categories:', habitTracker.categories);
 
-        // Store the custom option if it exists
-        const customOption = categorySelect.querySelector('option[value="custom"]');
-
         // Clear all options
         categorySelect.innerHTML = '';
 
@@ -42,22 +39,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 categorySelect.appendChild(option);
             });
         }
-
-        // Always add the custom option at the end
-        const newCustomOption = customOption || document.createElement('option');
-        newCustomOption.value = 'custom';
-        newCustomOption.textContent = '+ Add Custom Category';
-        categorySelect.appendChild(newCustomOption);
-
-        // Reset custom category input
-        const customCategoryInput = document.getElementById('custom-category');
-        if (customCategoryInput) {
-            customCategoryInput.value = '';
-        }
-        const customCategoryContainer = document.getElementById('custom-category-container');
-        if (customCategoryContainer) {
-            customCategoryContainer.style.display = 'none';
-        }
     }
 
     // Function to initialize habit tracker category handling
@@ -71,20 +52,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // Populate the dropdown with categories
         populateCategoryDropdown();
 
-        // Add event listener for category selection changes
-        const categorySelect = document.getElementById('habit-category');
-        if (categorySelect) {
-            categorySelect.addEventListener('change', (e) => {
-                const customCategoryContainer = document.getElementById('custom-category-container');
-                if (e.target.value === 'custom') {
-                    customCategoryContainer.style.display = 'block';
-                    document.getElementById('custom-category').focus();
-                } else {
-                    customCategoryContainer.style.display = 'none';
-                }
-            });
-        }
-
         // Add event listener for goal type changes
         const goalTypeSelect = document.getElementById('goal-type');
         if (goalTypeSelect) {
@@ -92,6 +59,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 const goalUnit = document.getElementById('goal-unit');
                 if (goalUnit) {
                     goalUnit.textContent = e.target.value === 'streak' ? 'days' : 'times/week';
+                }
+            });
+        }
+
+        // Add event listener for manage categories button
+        const manageCategoriesBtn = document.getElementById('manage-categories-btn');
+        if (manageCategoriesBtn) {
+            manageCategoriesBtn.addEventListener('click', () => {
+                if (window.habitTrackerInstance) {
+                    window.habitTrackerInstance.showCategoryManager();
                 }
             });
         }

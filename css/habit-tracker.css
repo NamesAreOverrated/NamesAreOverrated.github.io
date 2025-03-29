@@ -2359,3 +2359,297 @@ body.disco-mode .habit-item:nth-child(3n+1)::after {
     color: #aaa;
     border: 1px solid transparent;
 }
+
+/* --------------------------------------
+   11. CATEGORY MANAGEMENT
+   -------------------------------------- */
+
+/* Category management button */
+.manage-categories-btn {
+    background-color: rgba(100, 255, 218, 0.1);
+    color: var(--habit-primary-color);
+    border: 1px solid var(--habit-primary-color);
+    border-radius: 4px;
+    padding: 6px 12px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: var(--habit-transition);
+    display: inline-flex;
+    align-items: center;
+    margin-top: 8px;
+}
+
+.manage-categories-btn:hover {
+    background-color: rgba(100, 255, 218, 0.2);
+    transform: translateY(-2px);
+}
+
+.manage-categories-btn::before {
+    content: "⚙️";
+    margin-right: 5px;
+    font-size: 1rem;
+}
+
+/* Modal styles */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.modal.visible {
+    opacity: 1;
+}
+
+.modal-content {
+    background-color: var(--habit-bg-color);
+    border-radius: var(--habit-border-radius);
+    max-width: 550px;
+    width: 90%;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+    border-left: 3px solid var(--habit-primary-color);
+    transform: translateY(20px);
+    transition: transform 0.3s ease;
+    overflow: hidden;
+}
+
+.modal.visible .modal-content {
+    transform: translateY(0);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    border-bottom: 1px solid rgba(100, 100, 100, 0.3);
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: var(--habit-primary-color);
+    font-family: 'Courier New', monospace;
+}
+
+.close-modal {
+    background: transparent;
+    color: #ccc;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.close-modal:hover {
+    color: var(--habit-primary-color);
+}
+
+.modal-body {
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.modal-footer {
+    padding: 15px 20px;
+    border-top: 1px solid rgba(100, 100, 100, 0.3);
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.modal-footer button {
+    padding: 8px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: var(--habit-transition);
+}
+
+.modal-footer button:hover {
+    transform: translateY(-2px);
+}
+
+/* Category list in the modal */
+.category-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+    max-height: 300px;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+.category-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 15px;
+    background-color: rgba(30, 30, 30, 0.5);
+    border-radius: var(--habit-border-radius);
+    gap: 15px;
+    transition: var(--habit-transition);
+}
+
+.category-item:hover {
+    background-color: rgba(40, 40, 40, 0.7);
+}
+
+.category-badge {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    color: #aaa;
+    font-weight: 500;
+    background-color: rgba(100, 100, 100, 0.2);
+}
+
+.category-count {
+    color: #aaa;
+    font-size: 0.85rem;
+    margin-left: auto;
+}
+
+.category-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.category-actions button {
+    background-color: transparent;
+    border: 1px solid rgba(100, 100, 100, 0.3);
+    border-radius: 4px;
+    padding: 4px 8px;
+    color: #ccc;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: var(--habit-transition);
+}
+
+.btn-edit-category:hover {
+    background-color: rgba(100, 255, 218, 0.1);
+    border-color: var(--habit-primary-color);
+    color: var(--habit-primary-color);
+}
+
+.btn-delete-category:hover {
+    background-color: rgba(244, 67, 54, 0.1);
+    border-color: var(--habit-error-color);
+    color: var(--habit-error-color);
+}
+
+.btn-delete-category[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-delete-category[disabled]:hover {
+    background-color: transparent;
+    border-color: rgba(100, 100, 100, 0.3);
+    color: #ccc;
+}
+
+/* Add category form */
+.add-category-form {
+    background-color: rgba(30, 30, 30, 0.5);
+    padding: 15px;
+    border-radius: var(--habit-border-radius);
+    border-left: 2px solid var(--habit-primary-color);
+}
+
+.add-category-form h4 {
+    margin-top: 0;
+    color: var(--habit-primary-color);
+    font-family: 'Courier New', monospace;
+    margin-bottom: 10px;
+    font-size: 1rem;
+}
+
+.add-category-form .form-row {
+    display: flex;
+    gap: 10px;
+}
+
+.add-category-form input[type="text"] {
+    flex: 1;
+    padding: 10px;
+    background-color: rgba(15, 15, 15, 0.6);
+    color: var(--habit-text-color);
+    border: 1px solid #555;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.add-category-form button {
+    background-color: rgba(100, 255, 218, 0.1);
+    color: var(--habit-primary-color);
+    border: 1px solid var(--habit-primary-color);
+    border-radius: 4px;
+    padding: 8px 15px;
+    cursor: pointer;
+    transition: var(--habit-transition);
+}
+
+.add-category-form button:hover {
+    background-color: rgba(100, 255, 218, 0.2);
+}
+
+/* Warning text */
+.warning-text {
+    color: var(--habit-warning-color);
+    font-weight: 500;
+}
+
+/* Delete category modal specific styles */
+.radio-option {
+    display: flex;
+    align-items: center;
+    margin: 15px 0;
+    gap: 10px;
+}
+
+.radio-option input[type="radio"] {
+    cursor: pointer;
+}
+
+.radio-option label {
+    cursor: pointer;
+    color: #eee;
+}
+
+.reassign-container {
+    margin-left: 25px;
+    margin-bottom: 15px;
+}
+
+.reassign-container select {
+    width: 100%;
+    padding: 8px 10px;
+    background-color: rgba(15, 15, 15, 0.6);
+    color: var(--habit-text-color);
+    border: 1px solid #555;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.danger-btn {
+    background-color: rgba(244, 67, 54, 0.2) !important;
+    color: var(--habit-error-color) !important;
+    border: 1px solid var(--habit-error-color) !important;
+}
+
+.danger-btn:hover {
+    background-color: rgba(244, 67, 54, 0.3) !important;
+    box-shadow: 0 0 10px rgba(244, 67, 54, 0.3);
+}
