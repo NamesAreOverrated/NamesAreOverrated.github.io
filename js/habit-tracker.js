@@ -69,7 +69,7 @@ class Habit {
 class HabitTracker {
     constructor() {
         this.habits = [];
-        this.categories = this.getDefaultCategories(); // Default categories
+        this.categories = []; // Start with empty categories, will be populated dynamically
         this.loadHabits();
 
         // Helper method to safely add event listeners
@@ -130,11 +130,28 @@ class HabitTracker {
             }
         });
     }
+
+    // Use this method only as fallback to get default categories
     getDefaultCategories() {
         return ['health', 'work', 'project', 'learning', 'personal', 'general'];
     }
 
+    // New method to extract categories from habits
+    extractCategoriesFromHabits() {
+        // Start with default categories as base
+        const defaultCategories = this.getDefaultCategories();
+        const uniqueCategories = new Set(defaultCategories);
 
+        // Add any custom categories from habits
+        this.habits.forEach(habit => {
+            if (habit.category) {
+                uniqueCategories.add(habit.category.toLowerCase());
+            }
+        });
+
+        // Convert Set back to array
+        return Array.from(uniqueCategories);
+    }
 
     cleanup() {
         // Store reference to resize handlers in the instance
@@ -161,6 +178,9 @@ class HabitTracker {
     // Load habits from localStorage
     loadHabits() {
         const storedHabits = localStorage.getItem('habits');
+        // Try to load saved categories first
+        const storedCategories = localStorage.getItem('habitCategories');
+
         if (storedHabits) {
             // Parse stored habits and ensure instances are proper Habit objects
             const parsedHabits = JSON.parse(storedHabits);
@@ -188,17 +208,42 @@ class HabitTracker {
                 return newHabit;
             });
 
-            // Extract custom categories from loaded habits
-            this.habits.forEach(habit => {
-                if (habit.category && !this.categories.includes(habit.category)) {
-                    this.categories.push(habit.category);
+            // Extract categories from habits
+            if (storedCategories) {
+                try {
+                    this.categories = JSON.parse(storedCategories);
+                } catch (e) {
+                    console.error("Error parsing stored categories, regenerating...", e);
+                    this.categories = this.extractCategoriesFromHabits();
                 }
-            });
+            } else {
+                // If no stored categories, extract them from habits
+                this.categories = this.extractCategoriesFromHabits();
+            }
 
             this.checkDayChange();
             this.checkWeekChange();
+        } else {
+            // Initialize with default categories if no habits exist
+            this.categories = this.getDefaultCategories();
         }
+
+        // Save categories after initialization
+        this.saveCategories();
+
+        // Refresh the category dropdown after loading habits
+        setTimeout(() => {
+            if (window.refreshCategoryDropdown) {
+                window.refreshCategoryDropdown();
+            }
+        }, 100);
     }
+
+    // New method to save categories
+    saveCategories() {
+        localStorage.setItem('habitCategories', JSON.stringify(this.categories));
+    }
+
     // Helper method to get appropriate background color for toast type
     getToastBackgroundColor(type) {
         switch (type) {
@@ -288,6 +333,8 @@ class HabitTracker {
     // Save habits to localStorage
     saveHabits() {
         localStorage.setItem('habits', JSON.stringify(this.habits));
+        // Also save categories to ensure they persist
+        this.saveCategories();
         this.updateStorageUsage();
     }
 
@@ -365,8 +412,11 @@ class HabitTracker {
                 const customCategory = document.getElementById('custom-category').value.trim();
                 if (customCategory) {
                     category = customCategory; // Use the custom category name directly
-                    if (!this.categories.includes(customCategory)) {
+
+                    // Add to categories list if not already there (case-insensitive check)
+                    if (!this.categories.some(cat => cat.toLowerCase() === customCategory.toLowerCase())) {
                         this.categories.push(customCategory);
+                        this.saveCategories(); // Save the updated categories
                     }
                 } else {
                     this.showNotification('Please enter a valid category name.', 'error');
@@ -386,10 +436,17 @@ class HabitTracker {
             this.saveHabits();
             this.renderHabits();
 
+            // Refresh the category dropdown
+            if (window.refreshCategoryDropdown) {
+                window.refreshCategoryDropdown();
+            } else {
+                this.refreshCategoryDropdownDirectly();
+            }
+
             // Reset form
             habitInput.value = '';
             habitInput.focus();
-            categorySelect.value = 'General';
+            categorySelect.value = 'general';
             document.getElementById('custom-category-container').style.display = 'none';
             document.getElementById('custom-category').value = '';
             document.getElementById('goal-type').value = 'streak';
@@ -447,7 +504,7 @@ class HabitTracker {
                         this.showNotification(`🌟 INCREDIBLE! ${habit.streak} day streak for "${habit.name}"!`, 'success');
                     }
 
-                    // NEW: Check if goal was just achieved with this completion
+                    // Check if goal was just achieved with this completion
                     if (habit.goalType === 'streak' && habit.streak === habit.goalValue) {
                         this.handleGoalAchievement(habit);
                     }
@@ -461,7 +518,7 @@ class HabitTracker {
                     if (habit.goalType === 'frequency' &&
                         habit.weeklyCompletions.length === habit.goalValue) {
                         this.showNotification(`Weekly goal achieved for "${habit.name}"! 🎯`, 'success');
-                        // NEW: Handle frequency goal achievement
+                        // Handle frequency goal achievement
                         this.handleGoalAchievement(habit);
                     }
                 }
@@ -726,21 +783,8 @@ class HabitTracker {
         habitElement.dataset.goalType = habit.goalType;  // Add goal type as a data attribute
         habitElement.dataset.habitId = habit.id; // NEW: Add habit ID as data attribute
 
-        // For custom categories that aren't in our predefined list, generate a color
-        if (habit.category && !this.getDefaultCategories().includes(habit.category)) {
-            // Generate a consistent color for the custom category based on its name
-            const customColor = this.getColorForCategory(habit.category);
-            habitElement.style.borderRight = `3px solid ${customColor}`;
-
-            // Also add a matching style for the category badge (will be applied after element is added to DOM)
-            setTimeout(() => {
-                const categoryBadge = habitElement.querySelector('.habit-category');
-                if (categoryBadge) {
-                    categoryBadge.style.backgroundColor = `rgba(${parseInt(customColor.slice(1, 3), 16)}, ${parseInt(customColor.slice(3, 5), 16)}, ${parseInt(customColor.slice(5, 7), 16)}, 0.2)`;
-                    categoryBadge.style.color = customColor;
-                }
-            }, 0);
-        }
+        // Remove the code that tries to style the category directly here
+        // We'll handle styling with the refreshCategoryStyles function instead
 
         // Create progress percentage
         const progressPercentage = habit.getProgressPercentage();
@@ -797,7 +841,7 @@ class HabitTracker {
                 <div class="habit-header">
                     <div class="habit-title">
                         <span class="habit-name">${habit.name}</span>
-                        <span class="habit-category">${habit.category}</span>
+                        <span class="habit-category" data-category="${habit.category.toLowerCase()}">${habit.category}</span>
                     </div>
                     <span class="streak-badge ${habit.streak > 0 ? 'has-streak' : ''}">
                         ${habit.goalType === 'streak' ? '⚡ ' + habit.streak : '📅 ' + habit.weeklyCompletions.length}
@@ -994,13 +1038,13 @@ class HabitTracker {
         });
 
         // Create month labels with proper positioning
-        Object.keys(datesByMonth).forEach(month => {
+        Object.keys(daysPerMonth).forEach(month => {
             const label = document.createElement('div');
             label.className = 'month-label';
             label.textContent = monthNames[parseInt(month)];
 
             // Calculate proper width based on days count
-            const daysInMonth = datesByMonth[month].length;
+            const daysInMonth = daysPerMonth[month];
             if (daysInMonth > 7) {
                 label.style.minWidth = `${Math.ceil(daysInMonth / 7) * 18}px`;
             }
@@ -1179,7 +1223,7 @@ class HabitTracker {
             habitsList.parentNode.insertBefore(filterContainer, habitsList);
         }
 
-        // Add filter buttons
+        // Clear existing filters first
         filterContainer.innerHTML = '<span class="filter-label">Filter: </span>';
 
         // Add "All" filter first
@@ -1192,7 +1236,7 @@ class HabitTracker {
         // Add filters for each category
         this.categories.forEach(category => {
             // Only add filters for categories that actually have habits
-            if (this.habits.some(habit => habit.category === category)) {
+            if (this.habits.some(habit => habit.category.toLowerCase() === category.toLowerCase())) {
                 const button = document.createElement('button');
                 button.textContent = category;
                 button.className = 'category-filter';
@@ -1321,17 +1365,14 @@ class HabitTracker {
                     // Restore categories if present in import
                     if (data.categories && Array.isArray(data.categories)) {
                         this.categories = data.categories;
+                    } else {
+                        // Extract categories from imported habits if categories not included
+                        this.categories = this.extractCategoriesFromHabits();
                     }
 
-                    // Ensure default categories are included
-                    const defaultCategories = this.getDefaultCategories();
-                    defaultCategories.forEach(category => {
-                        if (!this.categories.includes(category)) {
-                            this.categories.push(category);
-                        }
-                    });
-
+                    // Save both habits and categories
                     this.saveHabits();
+                    this.saveCategories();
                     this.renderHabits();
 
                     // Update storage usage after import
@@ -1340,6 +1381,14 @@ class HabitTracker {
                     // Check for day/week changes
                     this.checkDayChange();
                     this.checkWeekChange();
+
+                    // Refresh the category dropdown after import
+                    if (window.refreshCategoryDropdown) {
+                        window.refreshCategoryDropdown();
+                    } else {
+                        // Direct refresh if function not available
+                        this.refreshCategoryDropdownDirectly();
+                    }
 
                     this.showNotification('Data imported successfully! 📤', 'success');
                 } else {
@@ -1357,6 +1406,45 @@ class HabitTracker {
         event.target.value = '';
     }
 
+    // Add a direct method to refresh category dropdown (for cases where the global function isn't available)
+    refreshCategoryDropdownDirectly() {
+        const categorySelect = document.getElementById('habit-category');
+        if (!categorySelect) return;
+
+        // Store the custom option if it exists
+        const customOption = categorySelect.querySelector('option[value="custom"]');
+
+        // Clear all options
+        categorySelect.innerHTML = '';
+
+        // Add categories from this instance
+        if (this.categories && this.categories.length > 0) {
+            this.categories.forEach(category => {
+                const option = document.createElement('option');
+                option.value = category.toLowerCase();
+                option.textContent = category;
+                categorySelect.appendChild(option);
+            });
+        }
+
+        // Add custom option
+        const newCustomOption = customOption || document.createElement('option');
+        newCustomOption.value = 'custom';
+        newCustomOption.textContent = '+ Add Custom Category';
+        categorySelect.appendChild(newCustomOption);
+
+        // Reset custom category inputs
+        const customCategoryContainer = document.getElementById('custom-category-container');
+        if (customCategoryContainer) {
+            customCategoryContainer.style.display = 'none';
+        }
+
+        const customCategoryInput = document.getElementById('custom-category');
+        if (customCategoryInput) {
+            customCategoryInput.value = '';
+        }
+    }
+
     // Reset all habit data
     resetData() {
         // Double confirmation to prevent accidental data loss
@@ -1369,8 +1457,9 @@ class HabitTracker {
                 // Reset categories to defaults
                 this.categories = this.getDefaultCategories();
 
-                // Clear localStorage
+                // Clear localStorage for both habits and categories
                 localStorage.removeItem('habits');
+                localStorage.removeItem('habitCategories');
 
                 // Render empty habits list
                 this.renderHabits();
@@ -1385,6 +1474,34 @@ class HabitTracker {
                 const filterContainer = document.getElementById('category-filters');
                 if (filterContainer) {
                     filterContainer.innerHTML = '';
+                }
+
+                // Refresh the category dropdown to reflect default categories
+                if (window.refreshCategoryDropdown) {
+                    window.refreshCategoryDropdown();
+                } else {
+                    // If running in GitHub Pages, ensure categories are refreshed
+                    setTimeout(() => {
+                        const categorySelect = document.getElementById('habit-category');
+                        if (categorySelect) {
+                            // Clear current options
+                            categorySelect.innerHTML = '';
+
+                            // Add default categories
+                            this.categories.forEach(category => {
+                                const option = document.createElement('option');
+                                option.value = category.toLowerCase();
+                                option.textContent = category;
+                                categorySelect.appendChild(option);
+                            });
+
+                            // Add custom option at the end
+                            const customOption = document.createElement('option');
+                            customOption.value = 'custom';
+                            customOption.textContent = '+ Add Custom Category';
+                            categorySelect.appendChild(customOption);
+                        }
+                    }, 100);
                 }
             }
         }
@@ -1448,8 +1565,8 @@ class HabitTracker {
         // Keep Total Completions card in the stats tab too for consistency
         const totalCompletions = this.calculateTotalCompletions();
         const totalCompletionsCard = this.createStatCard(
-            'Total Habit Completions',
             this.generateTotalCompletionsHTML(totalCompletions),
+            'Total Habit Completions',
             'The total number of times you\'ve completed habits since you started tracking',
             'success'
         );
@@ -1458,8 +1575,8 @@ class HabitTracker {
         // 1. Overall Completion Rate
         const completionRate = this.calculateOverallCompletionRate();
         const completionRateCard = this.createStatCard(
-            'Overall Completion Rate',
             `${completionRate}%`,
+            'Overall Completion Rate',
             'The percentage of habit completions over the last 30 days',
             completionRate > 80 ? 'success' : completionRate > 50 ? 'warning' : 'danger'
         );
@@ -1508,8 +1625,8 @@ class HabitTracker {
         const achievements = this.getAchievements();
         if (achievements.length > 0) {
             const achievementsCard = this.createStatCard(
-                'Recent Achievements',
                 this.generateAchievementsHTML(achievements),
+                'Recent Achievements',
                 'Goals you\'ve successfully completed',
                 'success'
             );
@@ -1520,21 +1637,18 @@ class HabitTracker {
     // New helper: Calculate total completions across all habits
     calculateTotalCompletions() {
         let totalCount = 0;
-
         // Sum up all completions from each habit's history
         this.habits.forEach(habit => {
             if (habit.completionHistory) {
                 totalCount += Object.keys(habit.completionHistory).length;
             }
         });
-
         return totalCount;
     }
 
     // New helper: Generate HTML for total completions card
     generateTotalCompletionsHTML(count) {
         const achievements = this.getTotalCompletionAchievements(count);
-
         return `
             <div class="total-completions">
                 <div class="total-count">${count}</div>
@@ -1547,7 +1661,6 @@ class HabitTracker {
     // New helper: Generate achievement badges based on total count
     getTotalCompletionAchievements(count) {
         const badges = [];
-
         // Add achievement badges based on milestones
         if (count >= 10) badges.push('<span class="achievement" title="Beginner: 10+ completions">🌱</span>');
         if (count >= 50) badges.push('<span class="achievement" title="Consistent: 50+ completions">🌿</span>');
@@ -1562,7 +1675,6 @@ class HabitTracker {
     createStatCard(title, content, description, status = '') {
         const card = document.createElement('div');
         card.className = `stat-card ${status}`;
-
         card.innerHTML = `
             <h4 class="stat-title">${title}</h4>
             <div class="stat-content">${content}</div>
@@ -1574,8 +1686,8 @@ class HabitTracker {
 
     // Helper: Calculate overall completion rate
     calculateOverallCompletionRate() {
-        // Get the last 30 days
         const last30Days = [];
+        // Get the last 30 days
         for (let i = 0; i < 30; i++) {
             const date = new Date();
             date.setDate(date.getDate() - i);
@@ -1585,18 +1697,17 @@ class HabitTracker {
         // Count completions and total opportunities
         let totalCompletions = 0;
         let totalOpportunities = 0;
-
-        // Only count habits that existed during this period
         this.habits.forEach(habit => {
-            // Skip habits without any completion history
+            // Only count habits that existed during this period
             if (!habit.completionHistory || Object.keys(habit.completionHistory).length === 0) {
                 return;
             }
 
+            // Assuming the first completion date is close to creation date
+            const firstCompletionDate = this.getFirstCompletionDate(habit);
+
             last30Days.forEach(date => {
                 // Only count days since the habit was created
-                // Assuming the first completion date is close to creation date
-                const firstCompletionDate = this.getFirstCompletionDate(habit);
                 if (!firstCompletionDate || new Date(date) >= new Date(firstCompletionDate)) {
                     totalOpportunities++;
                     if (habit.completionHistory[date]) {
@@ -1646,14 +1757,12 @@ class HabitTracker {
             `;
         });
         html += '</div>';
-
         return html;
     }
 
     // Helper: Calculate category performance
     calculateCategoryPerformance() {
         const categoryStats = {};
-
         // Initialize stats for each category that has habits
         this.habits.forEach(habit => {
             const category = habit.category || 'General';
@@ -1669,8 +1778,8 @@ class HabitTracker {
             categoryStats[category].habits++;
         });
 
-        // Get the last 30 days
         const last30Days = [];
+        // Get the last 30 days
         for (let i = 0; i < 30; i++) {
             const date = new Date();
             date.setDate(date.getDate() - i);
@@ -1680,7 +1789,6 @@ class HabitTracker {
         // Calculate completion stats for each habit by category
         this.habits.forEach(habit => {
             const category = habit.category || 'General';
-
             // Skip if we somehow don't have this category (shouldn't happen)
             if (!categoryStats[category]) return;
 
@@ -1688,9 +1796,10 @@ class HabitTracker {
             let habitCompletions = 0;
             let habitOpportunities = 0;
 
+            // Only count days after habit was created
+            const firstCompletionDate = this.getFirstCompletionDate(habit);
+
             last30Days.forEach(date => {
-                // Only count days after habit was created
-                const firstCompletionDate = this.getFirstCompletionDate(habit);
                 if (!firstCompletionDate || new Date(date) >= new Date(firstCompletionDate)) {
                     habitOpportunities++;
                     if (habit.completionHistory && habit.completionHistory[date]) {
@@ -1733,7 +1842,6 @@ class HabitTracker {
         }
 
         let html = '<div class="category-chart">';
-
         categories.forEach(category => {
             const stats = categoryPerformance[category];
             const percentage = stats.rate;
@@ -1775,7 +1883,6 @@ class HabitTracker {
             // Count completions for this date
             const totalHabitsExisting = this.habits.length;
             let completedCount = 0;
-
             this.habits.forEach(habit => {
                 if (habit.completionHistory && habit.completionHistory[dateString]) {
                     completedCount++;
@@ -1854,7 +1961,6 @@ class HabitTracker {
         sortedHabits.forEach(habit => {
             const last7Days = this.calculateCompletionRateForPeriod(habit, 7);
             const last30Days = this.calculateCompletionRateForPeriod(habit, 30);
-
             const progressPercentage = habit.getProgressPercentage();
             const progressClass = progressPercentage >= 100 ? 'achieved' :
                 progressPercentage >= 70 ? 'good' :
@@ -1892,7 +1998,6 @@ class HabitTracker {
     calculateCompletionRateForPeriod(habit, days) {
         let completed = 0;
         const period = [];
-
         // Get the dates for the period
         for (let i = 0; i < days; i++) {
             const date = new Date();
@@ -1977,7 +2082,6 @@ class HabitTracker {
                 habit.goalAcknowledged = true;
                 this.showNotification(`Goal for "${habit.name}" increased to ${habit.goalValue}!`, 'info');
                 break;
-
             case 'acknowledgeGoal':
                 // Simply acknowledge the goal was achieved
                 habit.goalAcknowledged = true;
@@ -1992,16 +2096,14 @@ class HabitTracker {
     // New: Get achievements for statistics
     getAchievements() {
         let allAchievements = [];
-
         this.habits.forEach(habit => {
             if (habit.achievements && habit.achievements.length > 0) {
                 const habitAchievements = habit.achievements.map(achievement => ({
                     ...achievement,
-                    habitName: habit.name,
                     habitId: habit.id,
+                    habitName: habit.name,
                     category: habit.category
                 }));
-
                 allAchievements = [...allAchievements, ...habitAchievements];
             }
         });
@@ -2022,7 +2124,6 @@ class HabitTracker {
         achievements.slice(0, 5).forEach(achievement => {
             const date = new Date(achievement.date).toLocaleDateString();
             let achievementDesc = '';
-
             if (achievement.goalType === 'streak') {
                 achievementDesc = `Reached a ${achievement.streak}-day streak`;
             } else {
@@ -2088,8 +2189,8 @@ class HabitTracker {
             }
 
             // Add completion stats
-            const completionPercentage = Math.round((completedHabits.length / this.habits.length) * 100) || 0;
             logseqBlock += `  - Stats\n`;
+            const completionPercentage = Math.round((completedHabits.length / this.habits.length) * 100) || 0;
             logseqBlock += `    - ${completedHabits.length}/${this.habits.length} habits completed (${completionPercentage}%)\n`;
 
             // Check for today's achievements
@@ -2157,7 +2258,6 @@ class HabitTracker {
                     type: 'error'
                 });
             });
-
         } catch (error) {
             console.error('Error copying as Logseq block:', error);
             this.showToast('Error formatting Logseq block', { type: 'error' });

@@ -189,12 +189,7 @@
                     <div class="form-row">
                         <label for="habit-category">Category:</label>
                         <select id="habit-category">
-                            <option value="general">general</option>
-                            <option value="health">health</option>
-                            <option value="work">work</option>
-                            <option value="project">project</option>
-                            <option value="learning">learning</option>
-                            <option value="personal">personal</option>
+                            <!-- Categories will be populated dynamically via JavaScript -->
                             <option value="custom">+ Add Custom Category</option>
                         </select>
                         <div id="custom-category-container" style="display: none;">
@@ -279,8 +274,7 @@
 
                 <div class="data-info">
                     <p><strong>Note:</strong> Importing data will overwrite your current habits. Resetting will
-                        permanently
-                        delete all habits.</p>
+                        permanently delete all habits.</p>
                 </div>
 
                 <!-- Add storage usage indicator -->
@@ -307,6 +301,7 @@
     <script src="js/nav-effects.js"></script>
     <script src="js/disco.js"></script>
     <script src="js/habit-tracker.js"></script>
+    <script src="js/habit-tracker-init.js"></script>
 </body>
 
 </html>
