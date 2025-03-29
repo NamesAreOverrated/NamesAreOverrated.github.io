@@ -1,3 +1,14 @@
 {
-    "blogs": []
+    "blogs": [
+        {
+            "id": "habit-tracker",
+            "title": "Habit Tracker",
+            "description": "Track your daily habits and monitor your progress",
+            "date": "2023-11-10",
+            "tags": [
+                "tools",
+                "productivity"
+            ]
+        }
+    ]
 }

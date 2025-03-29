@@ -71,22 +71,30 @@ async function loadBlogs() {
  * @returns {string} - Base URL
  */
 function getBaseUrl() {
-    const pathname = window.location.pathname;
-    // Check if deployed on GitHub Pages (will have format /{repo-name}/)
-    if (pathname.match(/^\/[^/]+\/$/)) {
-        // Already has trailing slash
-        return pathname;
-    }
-    // Path contains repo name but no trailing slash
-    else if (pathname !== '/' && !pathname.endsWith('/')) {
-        const pathWithoutFile = pathname.substring(0, pathname.lastIndexOf('/') + 1);
-        // Handle case when viewing from a subdirectory
-        if (pathWithoutFile !== '/') {
-            return pathWithoutFile;
+    const { hostname, pathname } = window.location;
+
+    // Check if running on GitHub Pages (username.github.io)
+    if (hostname.endsWith('github.io')) {
+        // Handle both username.github.io/ and username.github.io/repo-name/ formats
+        const pathSegments = pathname.split('/').filter(segment => segment !== '');
+
+        // If this is username.github.io/repo-name format
+        if (pathSegments.length > 0) {
+            return `/${pathSegments[0]}/`;
         }
+
+        // If this is username.github.io format (root-level site)
+        return '/';
     }
-    // Local development or root deployment
-    return '/';
+
+    // For local development
+    if (pathname === '/' || pathname.endsWith('.html')) {
+        return '/';
+    }
+
+    // For any other scenarios, get the path up to the last directory
+    const pathWithoutFile = pathname.substring(0, pathname.lastIndexOf('/') + 1);
+    return pathWithoutFile || '/';
 }
 
 /**

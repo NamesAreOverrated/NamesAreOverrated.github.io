@@ -10,26 +10,34 @@
     <script>
         // Set dynamic base URL for GitHub Pages
         (function () {
-            const pathname = window.location.pathname;
+            const { hostname, pathname } = window.location;
             let baseUrl = '/';
 
-            // Check if deployed on GitHub Pages
-            if (pathname !== '/' && pathname.indexOf('.html') === -1) {
-                // Get repository name for GitHub Pages
-                const pathSegments = pathname.split('/');
-                if (pathSegments.length > 1 && pathSegments[1] !== '') {
-                    baseUrl = '/' + pathSegments[1] + '/';
+            // Check if running on GitHub Pages (username.github.io)
+            if (hostname.endsWith('github.io')) {
+                // Handle both username.github.io/ and username.github.io/repo-name/ formats
+                const pathSegments = pathname.split('/').filter(segment => segment !== '');
+
+                // If this is username.github.io/repo-name format
+                if (pathSegments.length > 0) {
+                    baseUrl = `/${pathSegments[0]}/`;
                 }
+            } else if (pathname !== '/' && pathname.indexOf('.html') === -1) {
+                // For any other scenarios, get the path up to the last directory
+                baseUrl = pathname.substring(0, pathname.lastIndexOf('/') + 1);
             }
 
             // Create and append base element
             const base = document.createElement('base');
             base.href = baseUrl;
             document.head.appendChild(base);
+
+            // Make baseUrl available globally
+            window.siteBaseUrl = baseUrl;
         })();
     </script>
     <link rel="stylesheet" href="styles.css">
-    <!-- Add disco CSS -->
+    <link rel="stylesheet" href="css/nav-styles.css">
     <link rel="stylesheet" href="css/disco.css">
 </head>
 
@@ -44,6 +52,12 @@
             <a href="https://github.com/NamesAreOverrated" target="_blank">GitHub</a>
             <a href="mailto:NamesAreOverrated.GitHub@outlook.com">Email</a>
         </div>
+        <nav>
+            <ul>
+                <li><a href="index.html" class="active">Home</a></li>
+                <li><a href="habit-tracker.html">Habit_Tracker</a></li>
+            </ul>
+        </nav>
     </header>
 
     <!-- New page content container -->
@@ -129,12 +143,19 @@
         </div>
     </section>
 
+    <main>
+        <section>
+            <h2>My Projects</h2>
+            <p>Check out my <a href="habit-tracker.html">Habit Tracker</a> to help build better habits!</p>
+        </section>
+    </main>
+
     <footer>
         <p>© <span id="year"></span> Built by claude but i got the custody ❤️.</p>
     </footer>
 
     <script src="src/main.js" type="module"></script>
-    <!-- Add disco JS before the closing body tag -->
+    <script src="js/nav-effects.js"></script>
     <script src="js/disco.js"></script>
 </body>
 
