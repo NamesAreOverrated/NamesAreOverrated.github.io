@@ -6,6 +6,20 @@ function formatLocalDate(date = new Date()) {
     return `${year}-${month}-${day}`;
 }
 
+// Add this helper function near your other date formatting functions
+function formatLocalDateTime(date = new Date()) {
+    // Get date components in local timezone
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+
+    // Return in ISO-like format but using local timezone
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+}
+
 function calculateWeekStartDate(date = new Date()) {
     const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
     const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
@@ -1454,7 +1468,7 @@ class HabitTracker {
         const dataStr = JSON.stringify({
             habits: this.habits,
             categories: this.categories,
-            exportDate: new Date().toISOString(),
+            exportDate: formatLocalDateTime(new Date()),
             version: '1.0'
         });
 
@@ -1462,7 +1476,7 @@ class HabitTracker {
         const url = URL.createObjectURL(dataBlob);
 
         const downloadLink = document.createElement('a');
-        const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+        const date = formatLocalDate(new Date());
         downloadLink.download = `habit-tracker-backup-${date}.json`;
         downloadLink.href = url;
         downloadLink.click();
