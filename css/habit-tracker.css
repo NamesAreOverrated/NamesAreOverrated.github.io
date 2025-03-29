@@ -1585,10 +1585,7 @@ body.disco-mode .habit-item:nth-child(3n+1)::after {
     padding: 1rem;
 }
 
-/* Update add-habit-section to match previous styling - remove redundant width constraints */
-.add-habit-section {
-    /* Remove max-width as it's now handled by the .section class */
-}
+
 
 .add-habit-container {
     background-color: var(--secondary-color);
@@ -1610,10 +1607,7 @@ body.disco-mode .habit-item:nth-child(3n+1)::after {
     border-left: 3px solid var(--accent-color);
 }
 
-/* Update info section styling - remove redundant width constraints */
-.info-section {
-    /* Remove max-width as it's now handled by the .section class */
-}
+
 
 .info-box {
     background-color: var(--secondary-color);

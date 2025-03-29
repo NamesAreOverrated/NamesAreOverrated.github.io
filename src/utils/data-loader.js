@@ -11,9 +11,13 @@ async function loadData(dataType) {
     try {
         // Get base URL for GitHub Pages compatibility
         const baseUrl = getBaseUrl();
-        const response = await fetch(`${baseUrl}data/${dataType}.json`);
+        // Log the path being fetched for debugging
+        const url = `${baseUrl}data/${dataType}.json`;
+        console.log(`Fetching data from: ${url}`);
+
+        const response = await fetch(url);
         if (!response.ok) {
-            throw new Error(`Failed to load ${dataType} data`);
+            throw new Error(`Failed to load ${dataType} data: ${response.status} ${response.statusText}`);
         }
         return await response.json();
     } catch (error) {
@@ -31,22 +35,29 @@ async function loadBlogs() {
         // Get base URL for GitHub Pages compatibility
         const baseUrl = getBaseUrl();
 
-        // Load from manifest and individual files
-        const manifestResponse = await fetch(`${baseUrl}data/blogs/manifest.json`);
+        // Log the manifest path being fetched for debugging
+        const manifestUrl = `${baseUrl}data/blogs/manifest.json`;
+        console.log(`Fetching blogs manifest from: ${manifestUrl}`);
+
+        const manifestResponse = await fetch(manifestUrl);
         if (!manifestResponse.ok) {
-            throw new Error('Failed to load blogs manifest');
+            throw new Error(`Failed to load blogs manifest: ${manifestResponse.status} ${manifestResponse.statusText}`);
         }
 
         const manifest = await manifestResponse.json();
         const blogPromises = manifest.blogs.map(async (blogFile) => {
-            const blogResponse = await fetch(`${baseUrl}data/blogs/${blogFile}`);
+            // For each blog, construct the full URL
+            const blogUrl = `${baseUrl}data/blogs/${blogFile.id || blogFile}`;
+            console.log(`Fetching blog from: ${blogUrl}`);
+
+            const blogResponse = await fetch(blogUrl);
             if (!blogResponse.ok) {
-                console.error(`Failed to load blog: ${blogFile}`);
+                console.error(`Failed to load blog: ${blogUrl} - ${blogResponse.status} ${blogResponse.statusText}`);
                 return null;
             }
 
             // Handle Markdown files
-            if (blogFile.endsWith('.md')) {
+            if (blogUrl.endsWith('.md')) {
                 const markdownContent = await blogResponse.text();
                 return parseBlogMarkdown(markdownContent, blogFile);
             }
@@ -73,28 +84,24 @@ async function loadBlogs() {
 function getBaseUrl() {
     const { hostname, pathname } = window.location;
 
+    console.log(`Current hostname: ${hostname}, pathname: ${pathname}`);
+
     // Check if running on GitHub Pages (username.github.io)
     if (hostname.endsWith('github.io')) {
-        // Handle both username.github.io/ and username.github.io/repo-name/ formats
+        // For username.github.io/repo-name format
         const pathSegments = pathname.split('/').filter(segment => segment !== '');
 
-        // If this is username.github.io/repo-name format
         if (pathSegments.length > 0) {
+            // Return /repo-name/ format
             return `/${pathSegments[0]}/`;
         }
 
-        // If this is username.github.io format (root-level site)
+        // For username.github.io format (root-level site)
         return '/';
     }
 
-    // For local development
-    if (pathname === '/' || pathname.endsWith('.html')) {
-        return '/';
-    }
-
-    // For any other scenarios, get the path up to the last directory
-    const pathWithoutFile = pathname.substring(0, pathname.lastIndexOf('/') + 1);
-    return pathWithoutFile || '/';
+    // For local development or other hosting
+    return '/';
 }
 
 /**

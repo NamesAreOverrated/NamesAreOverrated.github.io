@@ -21,10 +21,16 @@
                 // If this is username.github.io/repo-name format
                 if (pathSegments.length > 0) {
                     baseUrl = `/${pathSegments[0]}/`;
+                    console.log(`GitHub Pages detected (repo-based). Base URL set to: ${baseUrl}`);
+                } else {
+                    console.log('GitHub Pages detected (organization/username-based). Base URL: /');
                 }
             } else if (pathname !== '/' && pathname.indexOf('.html') === -1) {
                 // For any other scenarios, get the path up to the last directory
                 baseUrl = pathname.substring(0, pathname.lastIndexOf('/') + 1);
+                console.log(`Custom hosting detected. Base URL set to: ${baseUrl}`);
+            } else {
+                console.log('Local development detected. Base URL: /');
             }
 
             // Create and append base element
@@ -34,6 +40,8 @@
 
             // Make baseUrl available globally
             window.siteBaseUrl = baseUrl;
+
+            console.log(`Base URL configured: ${baseUrl}`);
         })();
     </script>
     <link rel="stylesheet" href="styles.css">
@@ -54,8 +62,8 @@
         </div>
         <nav>
             <ul>
-                <li><a href="index.html" class="active">Home</a></li>
-                <li><a href="habit-tracker.html">Habit_Tracker</a></li>
+                <li><a href="#/" class="active">Home</a></li>
+                <li><a href="#/habit-tracker">Habit_Tracker</a></li>
             </ul>
         </nav>
     </header>

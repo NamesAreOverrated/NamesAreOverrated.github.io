@@ -36,19 +36,37 @@ const router = {
             handler: (id) => {
                 displayTool(id);
             }
+        },
+        habit: {
+            path: 'habit-tracker',
+            handler: () => {
+                redirectToHabitTracker();
+            }
         }
     },
 
     init() {
-        window.addEventListener('hashchange', () => this.handleRouting());
+        // Handle initial page load - this will ensure the hash route is handled even on first load
         this.handleRouting();
+
+        // Listen for hash changes
+        window.addEventListener('hashchange', () => this.handleRouting());
+
+        // If no hash on initial load, default to home
+        if (!window.location.hash) {
+            window.location.hash = '#/';
+        }
     },
 
     handleRouting() {
-        const hash = window.location.hash.substring(2); // Remove #/ from hash
-        const [routePath, id] = hash.split('/');
+        // Get the hash without the # character
+        const hash = window.location.hash.substring(1) || '/';
 
-        // Default to home if no route is found
+        // Parse the route path and ID
+        // Remove the leading slash and split by remaining slashes
+        const [routePath, id] = hash.replace(/^\//, '').split('/');
+
+        // Find the matching route or default to home
         const route = Object.values(this.routes).find(r => r.path === routePath) || this.routes.home;
 
         // Call the route handler with the ID if present
@@ -219,6 +237,14 @@ async function displayTool(id) {
         document.getElementById('dynamic-content').innerHTML =
             '<div class="no-results">Failed to load tool. Please try again later.</div>';
     }
+}
+
+// Function to redirect to habit tracker page
+function redirectToHabitTracker() {
+    // Get base URL for GitHub Pages compatibility
+    const baseUrl = getBaseUrl();
+    // Redirect to the dedicated habit tracker page
+    window.location.href = `${baseUrl}habit-tracker.html`;
 }
 
 export default router;

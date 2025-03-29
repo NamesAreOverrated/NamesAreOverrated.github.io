@@ -8,7 +8,7 @@
     <title>Habit Tracker - NamesAreOverrated</title>
     <!-- Add a dynamic base URL via JavaScript to handle GitHub Pages -->
     <script>
-        // Set dynamic base URL for GitHub Pages
+        // First set up the base URL
         (function () {
             const { hostname, pathname } = window.location;
             let baseUrl = '/';
@@ -34,7 +34,10 @@
 
             // Make baseUrl available globally
             window.siteBaseUrl = baseUrl;
+            console.log("Base URL set to:", baseUrl);
         })();
+
+        // REMOVED the redirect code that was causing issues
     </script>
     <style>
         /* Add CSS variables from main site to ensure compatibility */
@@ -268,6 +271,18 @@
                 } else {
                     goalValue.removeAttribute('max');
                 }
+            }
+        });
+    </script>
+
+    <script>
+        // Update navigation links for GitHub Pages compatibility
+        document.addEventListener('DOMContentLoaded', function () {
+            const baseUrl = window.siteBaseUrl || '/';
+            // Update the Home link
+            const homeLink = document.querySelector('nav a[href="index.html"]');
+            if (homeLink) {
+                homeLink.href = `${baseUrl}index.html`;
             }
         });
     </script>

@@ -3,6 +3,9 @@
  */
 
 document.addEventListener('DOMContentLoaded', function () {
+    // Get base URL for GitHub Pages compatibility
+    const baseUrl = window.siteBaseUrl || '/';
+
     // Ensure current navigation item is highlighted
     const currentLocation = window.location.pathname;
     const navLinks = document.querySelectorAll('nav a');
@@ -11,7 +14,9 @@ document.addEventListener('DOMContentLoaded', function () {
         const linkPath = link.getAttribute('href');
         // Check if current path ends with the link's href
         if (currentLocation.endsWith(linkPath) ||
-            (linkPath === 'index.html' && (currentLocation === '/' || currentLocation.endsWith('/')))) {
+            (linkPath === 'index.html' && (currentLocation === '/' || currentLocation.endsWith('/'))) ||
+            // Special case for habit tracker
+            (linkPath.includes('habit-tracker') && currentLocation.includes('habit-tracker'))) {
             link.classList.add('active');
         } else {
             link.classList.remove('active');
