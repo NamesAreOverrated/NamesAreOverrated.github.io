@@ -17,6 +17,9 @@ const router = {
                 document.getElementById('blogs').style.display = 'block';
                 // Hide the dynamic content container
                 document.getElementById('page-content').style.display = 'none';
+                // Hide habit tracker section
+                const habitSection = document.getElementById('habit-tracker-section');
+                if (habitSection) habitSection.style.display = 'none';
             }
         },
         blog: {
@@ -40,7 +43,7 @@ const router = {
         habit: {
             path: 'habit-tracker',
             handler: () => {
-                redirectToHabitTracker();
+                displayHabitTracker();
             }
         }
     },
@@ -239,21 +242,32 @@ async function displayTool(id) {
     }
 }
 
-// Function to redirect to habit tracker page
-function redirectToHabitTracker() {
-    // Get base URL for GitHub Pages compatibility
-    const baseUrl = getBaseUrl();
+// New function to display the habit tracker
+function displayHabitTracker() {
+    // Hide all sections explicitly (about removed)
+    document.getElementById('projects').style.display = 'none';
+    document.getElementById('tools').style.display = 'none';
+    document.getElementById('blogs').style.display = 'none';
+    document.getElementById('page-content').style.display = 'none';
 
-    // Create the correct URL for the habit tracker page using the base URL
-    let habitTrackerUrl = `${baseUrl}habit-tracker.html`;
+    // Show habit tracker section
+    const habitSection = document.getElementById('habit-tracker-section');
+    if (habitSection) {
+        habitSection.style.display = 'block';
+        document.body.classList.add('viewing-habit-tracker');
 
-    // Ensure there's no double slash in the URL
-    habitTrackerUrl = habitTrackerUrl.replace(/([^:])\/\/+/g, '$1/');
-
-    console.log(`Redirecting to habit tracker at: ${habitTrackerUrl}`);
-
-    // Redirect to the dedicated habit tracker page
-    window.location.href = habitTrackerUrl;
+        // Initialize habit tracker if not already done
+        if (typeof HabitTracker === 'function' && !window.habitTrackerInstance) {
+            window.habitTrackerInstance = new HabitTracker();
+            console.log('Habit tracker initialized from router');
+        } else if (window.habitTrackerInstance) {
+            // If already initialized, refresh the UI
+            window.habitTrackerInstance.renderHabits();
+            console.log('Habit tracker refreshed');
+        }
+    } else {
+        console.error('Habit tracker section not found in the DOM');
+    }
 }
 
 export default router;

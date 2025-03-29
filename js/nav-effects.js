@@ -6,49 +6,47 @@ document.addEventListener('DOMContentLoaded', function () {
     // Get base URL for GitHub Pages compatibility
     const baseUrl = window.siteBaseUrl || '/';
 
-    // Ensure current navigation item is highlighted
-    const currentLocation = window.location.pathname;
-    console.log('Current location:', currentLocation, 'Base URL:', baseUrl);
-
-    const navLinks = document.querySelectorAll('nav a');
-
-    navLinks.forEach(link => {
-        const linkPath = link.getAttribute('href');
-        console.log('Checking link:', linkPath);
-
-        // Enhanced path matching for GitHub Pages - account for repo name in path
-        const isActive =
-            // Direct path match
-            currentLocation.endsWith(linkPath) ||
-            // Index page variations
-            (linkPath === 'index.html' && (currentLocation === '/' || currentLocation.endsWith('/') || currentLocation.endsWith('/index.html'))) ||
-            // Special case for habit tracker
-            (linkPath.includes('habit-tracker') && currentLocation.includes('habit-tracker')) ||
-            // Hash-based routing match for the home page
-            (linkPath === '#/' && (currentLocation === '/' || currentLocation.endsWith('/') || currentLocation.endsWith('/index.html')));
-
-        if (isActive) {
-            console.log('Setting active class for:', linkPath);
-            link.classList.add('active');
-        } else {
-            link.classList.remove('active');
-        }
+    // Store original link texts to avoid issues with typing effect
+    const originalLinkTexts = {};
+    document.querySelectorAll('nav a').forEach(link => {
+        originalLinkTexts[link.getAttribute('href')] = link.textContent;
     });
 
-    // Add typing effect to the active link text
-    const activeLink = document.querySelector('nav a.active');
-    if (activeLink) {
-        const originalText = activeLink.textContent;
-        activeLink.textContent = '';
+    // Update navigation links based on current hash
+    function updateNavLinks() {
+        const currentHash = window.location.hash;
+        console.log('Current hash:', currentHash);
 
-        let i = 0;
-        const typeInterval = setInterval(() => {
-            if (i < originalText.length) {
-                activeLink.textContent += originalText.charAt(i);
-                i++;
+        const navLinks = document.querySelectorAll('nav a');
+
+        navLinks.forEach(link => {
+            // First, restore original text to avoid partial text issues
+            const linkPath = link.getAttribute('href');
+            link.textContent = originalLinkTexts[linkPath];
+
+            console.log('Checking link:', linkPath);
+
+            // Handle hash-based routes
+            const isActive =
+                // Home path match
+                (linkPath === '#/' && (currentHash === '' || currentHash === '#/' || currentHash === '#')) ||
+                // Exact hash match for other pages
+                (linkPath === currentHash) ||
+                // Partial match for sub-routes (like #/blog/something)
+                (linkPath !== '#/' && currentHash.startsWith(linkPath));
+
+            if (isActive) {
+                console.log('Setting active class for:', linkPath);
+                link.classList.add('active');
             } else {
-                clearInterval(typeInterval);
+                link.classList.remove('active');
             }
-        }, 50);
+        });
     }
+
+    // Call on page load
+    updateNavLinks();
+
+    // Also call when hash changes
+    window.addEventListener('hashchange', updateNavLinks);
 });

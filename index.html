@@ -47,6 +47,7 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="css/nav-styles.css">
     <link rel="stylesheet" href="css/disco.css">
+    <link rel="stylesheet" href="css/habit-tracker.css">
 </head>
 
 <body>
@@ -74,6 +75,7 @@
         <div id="dynamic-content"></div>
     </section>
 
+    <!-- Main sections shown on homepage -->
     <section id="projects" class="section">
         <h2>> Projects</h2>
 
@@ -151,7 +153,115 @@
         </div>
     </section>
 
+    <!-- Habit Tracker Section - Added as an integrated part of the main application -->
+    <section id="habit-tracker-section" style="display: none;">
+        <!-- Removed "Back to home" button -->
 
+        <!-- Habits section as its own independent section -->
+        <section class="section habits-section featured-section">
+            <h2>> Daily_Habit_Tracker</h2>
+            <p class="description">Track your habits and build streaks. Data is stored in your browser's local storage.
+            </p>
+            <div id="habits-list" class="habits-list">
+                <!-- Habits will be inserted here -->
+            </div>
+        </section>
+
+        <!-- Add habit section as its own independent section -->
+        <section class="section add-habit-section">
+            <h2>> Add_New_Habit</h2>
+            <div class="add-habit-container">
+                <form id="habit-form">
+                    <div class="form-row">
+                        <label for="habit-input">Habit Name:</label>
+                        <div class="input-container">
+                            <input type="text" id="habit-input" placeholder="Enter a new habit..." required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <label for="habit-category">Category:</label>
+                        <select id="habit-category">
+                            <option value="General">General</option>
+                            <option value="Health">Health</option>
+                            <option value="Work">Work</option>
+                            <option value="Learning">Learning</option>
+                            <option value="Personal">Personal</option>
+                            <option value="custom">+ Add Custom Category</option>
+                        </select>
+                        <div id="custom-category-container" style="display: none;">
+                            <label for="custom-category">Custom Category Name:</label>
+                            <input type="text" id="custom-category" placeholder="Enter custom category name">
+                        </div>
+                    </div>
+
+                    <div class="form-row goal-options">
+                        <div class="goal-type">
+                            <label for="goal-type">Goal Type:</label>
+                            <select id="goal-type">
+                                <option value="streak">Streak Goal</option>
+                                <option value="frequency">Weekly Frequency</option>
+                            </select>
+                        </div>
+
+                        <div class="goal-value">
+                            <label for="goal-value">Target:</label>
+                            <input type="number" id="goal-value" min="1" value="7">
+                            <span id="goal-unit">days</span>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <button type="submit">Add Habit</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <!-- Info section as its own independent section -->
+        <section class="section info-section">
+            <h2>> How_This_Works</h2>
+            <div class="info-box">
+                <p>This habit tracker uses your browser's localStorage to save your habits. This means:</p>
+                <ul>
+                    <li>Your habits are private and only visible to you</li>
+                    <li>Your data persists between visits on the same device and browser</li>
+                    <li>Different users will see their own individual habit trackers</li>
+                    <li>Clearing browser data will reset your habit tracker</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Data Management section as its own independent section -->
+        <section class="section data-section">
+            <h2>> Data_Management</h2>
+            <div class="data-controls">
+                <p class="description">Back up your habit data to your computer or restore from a previous backup.</p>
+
+                <div class="data-buttons">
+                    <button id="export-data" class="data-btn export-btn">
+                        <span class="btn-icon">📥</span> Export Data
+                    </button>
+
+                    <button id="import-data" class="data-btn import-btn">
+                        <span class="btn-icon">📤</span> Import Data
+                    </button>
+
+                    <button id="reset-data" class="data-btn reset-btn">
+                        <span class="btn-icon">🗑️</span> Reset Data
+                    </button>
+                </div>
+
+                <input type="file" id="import-file" accept=".json" style="display:none">
+
+                <div class="data-info">
+                    <p><strong>Note:</strong> Importing data will overwrite your current habits. Resetting will
+                        permanently
+                        delete all habits.</p>
+                </div>
+            </div>
+        </section>
+    </section>
 
     <footer>
         <p>© <span id="year"></span> Built by claude but i got the custody ❤️.</p>
@@ -160,6 +270,7 @@
     <script src="src/main.js" type="module"></script>
     <script src="js/nav-effects.js"></script>
     <script src="js/disco.js"></script>
+    <script src="js/habit-tracker.js"></script>
 </body>
 
 </html>

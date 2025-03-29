@@ -1141,13 +1141,33 @@ class HabitTracker {
     }
 }
 
-// Initialize the habit tracker when the page loads
+// Initialize the habit tracker when the page loads or when navigated to
 document.addEventListener('DOMContentLoaded', () => {
-    const tracker = new HabitTracker();
+    // Create the tracker instance if it doesn't exist yet
+    if (!window.habitTrackerInstance) {
+        window.habitTrackerInstance = new HabitTracker();
+        console.log("Habit Tracker initialized on page load");
+    }
 
     // Set the current year in the footer if it exists
     const yearElement = document.getElementById('year');
     if (yearElement) {
         yearElement.textContent = new Date().getFullYear();
+    }
+});
+
+// Add event listener for hash changes to reinitialize tracker if needed
+window.addEventListener('hashchange', () => {
+    // Check if navigating to habit tracker
+    if (window.location.hash === '#/habit-tracker') {
+        // If tracker is not initialized, create it
+        if (!window.habitTrackerInstance) {
+            window.habitTrackerInstance = new HabitTracker();
+            console.log("Habit Tracker initialized on navigation");
+        } else {
+            // If already exists, refresh the habits display
+            window.habitTrackerInstance.renderHabits();
+            console.log("Habit Tracker refreshed on navigation");
+        }
     }
 });
