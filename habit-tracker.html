@@ -36,8 +36,6 @@
             window.siteBaseUrl = baseUrl;
             console.log("Base URL set to:", baseUrl);
         })();
-
-        // REMOVED the redirect code that was causing issues
     </script>
     <style>
         /* Add CSS variables from main site to ensure compatibility */
@@ -92,7 +90,7 @@
         </div>
         <nav>
             <ul>
-                <li><a href="index.html">Home</a></li>
+                <li><a href="index.html" id="home-link">Home</a></li>
                 <li><a href="habit-tracker.html" class="active">Habit_Tracker</a></li>
             </ul>
         </nav>
@@ -229,61 +227,94 @@
             typeWriter();
 
             // Add event listener for custom category selection
-            document.getElementById('habit-category').addEventListener('change', function () {
-                const customCategoryContainer = document.getElementById('custom-category-container');
-                if (this.value === 'custom') {
-                    customCategoryContainer.style.display = 'block';
-                } else {
-                    customCategoryContainer.style.display = 'none';
-                }
-            });
-        });
-
-        // Change goal unit based on selected goal type
-        document.getElementById('goal-type').addEventListener('change', function () {
-            const unit = this.value === 'streak' ? 'days' : 'times/week';
-            document.getElementById('goal-unit').textContent = unit;
-
-            // Adjust max value for frequency goal
-            const goalValue = document.getElementById('goal-value');
-            if (this.value === 'frequency') {
-                goalValue.max = 7;
-                if (goalValue.value > 7) goalValue.value = 7;
-            } else {
-                goalValue.removeAttribute('max');
+            const habitCategorySelect = document.getElementById('habit-category');
+            if (habitCategorySelect) {
+                habitCategorySelect.addEventListener('change', function () {
+                    const customCategoryContainer = document.getElementById('custom-category-container');
+                    if (customCategoryContainer) {
+                        if (this.value === 'custom') {
+                            customCategoryContainer.style.display = 'block';
+                        } else {
+                            customCategoryContainer.style.display = 'none';
+                        }
+                    }
+                });
             }
         });
 
-        // Fix event listener for goal type changes
+        // Change goal unit based on selected goal type
         document.addEventListener('DOMContentLoaded', function () {
-            // Make sure the goal type handler is properly initialized on page load
             const goalTypeSelect = document.getElementById('goal-type');
             if (goalTypeSelect) {
+                goalTypeSelect.addEventListener('change', function () {
+                    const goalUnit = document.getElementById('goal-unit');
+                    if (goalUnit) {
+                        const unit = this.value === 'streak' ? 'days' : 'times/week';
+                        goalUnit.textContent = unit;
+                    }
+
+                    // Adjust max value for frequency goal
+                    const goalValue = document.getElementById('goal-value');
+                    if (goalValue) {
+                        if (this.value === 'frequency') {
+                            goalValue.max = 7;
+                            if (goalValue.value > 7) goalValue.value = 7;
+                        } else {
+                            goalValue.removeAttribute('max');
+                        }
+                    }
+                });
+
                 // Set initial state
                 const unit = goalTypeSelect.value === 'streak' ? 'days' : 'times/week';
-                document.getElementById('goal-unit').textContent = unit;
+                const goalUnit = document.getElementById('goal-unit');
+                if (goalUnit) {
+                    goalUnit.textContent = unit;
+                }
 
                 // Fix the goal value limits based on initial selection
                 const goalValue = document.getElementById('goal-value');
-                if (goalTypeSelect.value === 'frequency') {
-                    goalValue.max = 7;
-                    if (parseInt(goalValue.value) > 7) goalValue.value = 7;
-                } else {
-                    goalValue.removeAttribute('max');
+                if (goalValue) {
+                    if (goalTypeSelect.value === 'frequency') {
+                        goalValue.max = 7;
+                        if (parseInt(goalValue.value) > 7) goalValue.value = 7;
+                    } else {
+                        goalValue.removeAttribute('max');
+                    }
                 }
             }
         });
     </script>
 
     <script>
-        // Update navigation links for GitHub Pages compatibility
+        // Fix navigation links for GitHub Pages compatibility
         document.addEventListener('DOMContentLoaded', function () {
             const baseUrl = window.siteBaseUrl || '/';
+            console.log('Habit tracker navigation using base URL:', baseUrl);
+
             // Update the Home link
-            const homeLink = document.querySelector('nav a[href="index.html"]');
+            const homeLink = document.getElementById('home-link');
             if (homeLink) {
-                homeLink.href = `${baseUrl}index.html`;
+                // Make sure the URL doesn't have double slashes
+                let homePath = baseUrl + 'index.html';
+                homePath = homePath.replace(/([^:])\/\/+/g, '$1/');
+                homeLink.href = homePath;
+                console.log('Updated home link to:', homePath);
             }
+
+            // In case there are any other relative links that need fixing
+            document.querySelectorAll('a[href]:not([href^="http"]):not([href^="#"]):not([href^="mailto:"])').forEach(link => {
+                if (!link.id || link.id !== 'home-link') { // Skip the home link we already fixed
+                    const href = link.getAttribute('href');
+                    // Only fix links that don't already include the baseUrl
+                    if (!href.startsWith(baseUrl) && !href.startsWith('/')) {
+                        let newHref = baseUrl + href;
+                        newHref = newHref.replace(/([^:])\/\/+/g, '$1/');
+                        link.href = newHref;
+                        console.log(`Fixed link: ${href} -> ${newHref}`);
+                    }
+                }
+            });
         });
     </script>
 </body>

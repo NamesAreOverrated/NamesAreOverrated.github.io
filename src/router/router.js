@@ -243,8 +243,17 @@ async function displayTool(id) {
 function redirectToHabitTracker() {
     // Get base URL for GitHub Pages compatibility
     const baseUrl = getBaseUrl();
+
+    // Create the correct URL for the habit tracker page using the base URL
+    let habitTrackerUrl = `${baseUrl}habit-tracker.html`;
+
+    // Ensure there's no double slash in the URL
+    habitTrackerUrl = habitTrackerUrl.replace(/([^:])\/\/+/g, '$1/');
+
+    console.log(`Redirecting to habit tracker at: ${habitTrackerUrl}`);
+
     // Redirect to the dedicated habit tracker page
-    window.location.href = `${baseUrl}habit-tracker.html`;
+    window.location.href = habitTrackerUrl;
 }
 
 export default router;

@@ -8,15 +8,27 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Ensure current navigation item is highlighted
     const currentLocation = window.location.pathname;
+    console.log('Current location:', currentLocation, 'Base URL:', baseUrl);
+
     const navLinks = document.querySelectorAll('nav a');
 
     navLinks.forEach(link => {
         const linkPath = link.getAttribute('href');
-        // Check if current path ends with the link's href
-        if (currentLocation.endsWith(linkPath) ||
-            (linkPath === 'index.html' && (currentLocation === '/' || currentLocation.endsWith('/'))) ||
+        console.log('Checking link:', linkPath);
+
+        // Enhanced path matching for GitHub Pages - account for repo name in path
+        const isActive =
+            // Direct path match
+            currentLocation.endsWith(linkPath) ||
+            // Index page variations
+            (linkPath === 'index.html' && (currentLocation === '/' || currentLocation.endsWith('/') || currentLocation.endsWith('/index.html'))) ||
             // Special case for habit tracker
-            (linkPath.includes('habit-tracker') && currentLocation.includes('habit-tracker'))) {
+            (linkPath.includes('habit-tracker') && currentLocation.includes('habit-tracker')) ||
+            // Hash-based routing match for the home page
+            (linkPath === '#/' && (currentLocation === '/' || currentLocation.endsWith('/') || currentLocation.endsWith('/index.html')));
+
+        if (isActive) {
+            console.log('Setting active class for:', linkPath);
             link.classList.add('active');
         } else {
             link.classList.remove('active');
