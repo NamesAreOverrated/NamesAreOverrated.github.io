@@ -7,13 +7,10 @@ class Habit {
         this.name = name;
         this.goalType = goalType; // 'streak' or 'frequency'
         this.goalValue = parseInt(goalValue); // target streak or times per week
-        this.weeklyCompletions = []; // Array of dates completed this week
         this.completionHistory = []; // Store historical completion data by date
         this.category = category; // New: category field for the habit
         this.weekStreak = 0; // New: Track weeks streak for frequency habits
         this.completedWeeks = 0; // New: Track total number of completed weeks
-
-        // Remove weekStartDate from individual habit - this will now be managed by the tracker
     }
 
     // Calculate the start of the current week (Monday instead of Sunday)
@@ -34,7 +31,7 @@ class Habit {
         if (this.goalType === 'streak') {
             return this.getCurrentStreak() >= this.goalValue;
         } else { // frequency
-            return this.weeklyCompletions.length >= this.goalValue;
+            return this.getWeeklyCompletions().length >= this.goalValue;
         }
     }
 
@@ -43,7 +40,7 @@ class Habit {
         if (this.goalType === 'streak') {
             return Math.min(100, Math.round((this.getCurrentStreak() / this.goalValue) * 100));
         } else { // frequency
-            return Math.min(100, Math.round((this.weeklyCompletions.length / this.goalValue) * 100));
+            return Math.min(100, Math.round((this.getWeeklyCompletions().length / this.goalValue) * 100));
         }
     }
 
@@ -109,10 +106,30 @@ class Habit {
         return this.completionHistory.includes(today);
     }
 
+    // Get weekly completions from history for the current week
+    getWeeklyCompletions(weekStartDate) {
+        // If no specific week start provided, use current week
+        if (!weekStartDate) {
+
+            weekStartDate = this.getWeekStartDate();
+        }
+
+        // Calculate week end date (6 days after start)
+        const weekEndDate = new Date(weekStartDate);
+        weekEndDate.setDate(weekEndDate.getDate() + 6);
+        const weekEndDateStr = weekEndDate.toISOString().split('T')[0];
+
+        // Filter completion history for dates in the current week
+        return this.completionHistory.filter(dateStr => {
+            return dateStr >= weekStartDate && dateStr <= weekEndDateStr;
+        });
+    }
+
     // Check if a week is completed (achieved the goal)
-    isWeekCompleted() {
+    isWeekCompleted(weekStartDate) {
         if (this.goalType !== 'frequency') return false;
-        return this.weeklyCompletions.length >= this.goalValue;
+        const weeklyCompletions = this.getWeeklyCompletions(weekStartDate);
+        return weeklyCompletions.length >= this.goalValue;
     }
 }
 
@@ -121,8 +138,10 @@ class HabitTracker {
     constructor() {
         this.habits = [];
         this.categories = []; // Start with empty categories, will be populated dynamically
-        // Remove the universal weekStartDate property storage - we'll calculate it when needed
         this.loadHabits();
+
+        // Analyze and update weekly progress, especially if app hasn't been used in a while
+        this.analyzeAndUpdateWeeklyProgress();
 
         // Helper method to safely add event listeners
         const addListener = (selector, eventType, handler) => {
@@ -247,8 +266,6 @@ class HabitTracker {
         // Try to load saved categories first
         const storedCategories = localStorage.getItem('habitCategories');
 
-        // Remove localStorage code for weekStartDate - we'll calculate it dynamically
-
         if (storedHabits) {
             // Parse stored habits and ensure instances are proper Habit objects
             const parsedHabits = JSON.parse(storedHabits);
@@ -263,7 +280,6 @@ class HabitTracker {
 
                 // Copy over properties using Object.assign for cleaner code
                 Object.assign(newHabit, {
-                    weeklyCompletions: habit.weeklyCompletions || [],
                     completionHistory: Array.isArray(habit.completionHistory) ? habit.completionHistory : [],
                     weekStreak: habit.weekStreak || 0,
                     completedWeeks: habit.completedWeeks || 0
@@ -284,6 +300,9 @@ class HabitTracker {
                 // If no stored categories, extract them from habits
                 this.categories = this.extractCategoriesFromHabits();
             }
+
+            // Recalculate week streaks to ensure they're accurate
+            this.recalculateWeekStreaks();
 
             this.checkDayChange();
             this.checkWeekChange();
@@ -546,13 +565,12 @@ class HabitTracker {
                     this.handleGoalAchievement(habit);
                 }
 
-                // Add to weekly completions if not already there
-                if (!habit.weeklyCompletions.includes(todayISO)) {
-                    habit.weeklyCompletions.push(todayISO);
+                // Check if this completion achieves the weekly goal for frequency habits
+                if (habit.goalType === 'frequency') {
+                    // Get weekly completions count
+                    const weeklyCompletions = habit.getWeeklyCompletions();
 
-                    // Check if this completion achieves the weekly goal
-                    if (habit.goalType === 'frequency' &&
-                        habit.weeklyCompletions.length === habit.goalValue) {
+                    if (weeklyCompletions.length === habit.goalValue) {
                         this.showNotification(`Weekly goal achieved for "${habit.name}"! 🎯`, 'success');
                         // Handle frequency goal achievement
                         this.handleGoalAchievement(habit);
@@ -561,9 +579,6 @@ class HabitTracker {
             } else {
                 // Mark as not completed by removing from completion history
                 habit.removeCompletion(todayISO);
-
-                // Remove from weekly completions
-                habit.weeklyCompletions = habit.weeklyCompletions.filter(date => date !== todayISO);
             }
 
             this.saveHabits();
@@ -579,11 +594,9 @@ class HabitTracker {
         // Check if date has changed since last check
         const dateChanged = !lastCheckDate || lastCheckDate !== today;
 
-        // No need to manually reset anything - streaks are calculated on demand from completionHistory
-
         // Refresh heatmap if the date has changed
         if (dateChanged) {
-            // Store the new date to avoid unnecessary refreshes
+            // Store the new date to avoid unnecessary refreshes - this is purely for performance
             localStorage.setItem('lastHeatmapCheckDate', today);
 
             // Refresh the heatmap
@@ -595,56 +608,115 @@ class HabitTracker {
     checkWeekChange() {
         const currentWeekStart = this.calculateWeekStartDate();
 
-        // Get the last saved week start from completion history or calculate based on completion data
-        const lastWeekStart = this.getLastProcessedWeekStart();
+        // Instead of relying on stored values, we'll find the previous week directly
+        const previousWeekStart = this.calculatePreviousWeekStart();
 
-        // Only process if the week has changed
-        if (lastWeekStart !== currentWeekStart) {
-            console.log("Week changed from", lastWeekStart, "to", currentWeekStart);
+        // Only process if we can determine the previous week
+        if (previousWeekStart && previousWeekStart !== currentWeekStart) {
+            console.log("Processing week transition from", previousWeekStart, "to", currentWeekStart);
 
             // Process all habits for week change
             this.habits.forEach(habit => {
                 // Check if previous week's goal was achieved
                 if (habit.goalType === 'frequency') {
-                    const previousGoalAchieved = habit.weeklyCompletions.length >= habit.goalValue;
+                    // Get completions for the previous week using the completionHistory
+                    const previousWeekCompletions = habit.getWeeklyCompletions(previousWeekStart);
+                    const previousGoalAchieved = previousWeekCompletions.length >= habit.goalValue;
 
                     // Update week streak based on previous week's achievement
                     if (previousGoalAchieved) {
                         habit.weekStreak++;
                         habit.completedWeeks++;
-                    } else if (habit.weeklyCompletions.length > 0) {
+                    } else {
                         // Only reset streak if there was at least one completion but goal wasn't met
-                        if (habit.weekStreak > 0) {
+                        // This is more lenient - if no completions, we assume the user was away/inactive
+                        if (previousWeekCompletions.length > 0 && habit.weekStreak > 0) {
                             habit.weekStreak = 0;
                         }
                     }
                 }
-
-                // Reset weekly tracking for all habits
-                habit.weeklyCompletions = [];
             });
 
-            // Save changes after processing all habits and store the new week start
-            this.storeCurrentWeekStartAsProcessed(currentWeekStart);
+            // Save changes after processing all habits
             this.saveHabits();
         }
     }
 
-    // New method: Get the last processed week start date from localStorage
-    getLastProcessedWeekStart() {
-        const lastProcessed = localStorage.getItem('habitLastProcessedWeek');
-        if (lastProcessed) {
-            return lastProcessed;
-        }
-        // If not found, calculate and save current week
-        const currentWeek = this.calculateWeekStartDate();
-        this.storeCurrentWeekStartAsProcessed(currentWeek);
-        return currentWeek;
+    // New method: Calculate the start of the previous week
+    calculatePreviousWeekStart() {
+        // Get current week start
+        const currentWeekStart = this.calculateWeekStartDate();
+
+        // Create date object from current week start and subtract 7 days
+        const previousWeekDate = new Date(currentWeekStart);
+        previousWeekDate.setDate(previousWeekDate.getDate() - 7);
+
+        return this.calculateWeekStartDate(previousWeekDate);
     }
 
-    // New method: Store the current week start as processed
-    storeCurrentWeekStartAsProcessed(weekStart) {
-        localStorage.setItem('habitLastProcessedWeek', weekStart);
+    // New method: Recalculate weekStreak for a habit based on historical data
+    recalculateWeekStreaks() {
+        // Process each frequency-based habit
+        this.habits.forEach(habit => {
+            if (habit.goalType !== 'frequency') return;
+
+            // Reset streak counters before recalculation
+            habit.weekStreak = 0;
+            habit.completedWeeks = 0;
+
+            // Get all completion dates and sort them
+            const completionDates = [...habit.completionHistory].sort();
+            if (completionDates.length === 0) return;
+
+            // Find the first and last weeks to analyze
+            const firstDate = new Date(completionDates[0]);
+            const lastDate = new Date(); // Today
+
+            // Get the start of the first week
+            const firstWeekStart = this.calculateWeekStartDate(firstDate);
+            const currentWeekStart = this.calculateWeekStartDate(lastDate);
+
+            // Track consecutive completed weeks
+            let currentStreak = 0;
+
+            // Process each week from first completion to current week
+            let weekStart = new Date(firstWeekStart);
+
+            while (weekStart <= new Date(currentWeekStart)) {
+                const weekStartStr = weekStart.toISOString().split('T')[0];
+
+                // Skip current week in streak calculation (it's still in progress)
+                if (weekStartStr === currentWeekStart) {
+                    break;
+                }
+
+                // Check if this week's goal was achieved
+                const weekCompletions = habit.getWeeklyCompletions(weekStartStr);
+                const weekGoalAchieved = weekCompletions.length >= habit.goalValue;
+
+                if (weekGoalAchieved) {
+                    habit.completedWeeks++;
+
+                    // Only count in streak if there was at least one completion
+                    if (weekCompletions.length > 0) {
+                        currentStreak++;
+                    }
+                } else if (weekCompletions.length > 0) {
+                    // Reset streak only if there was activity but goal wasn't met
+                    currentStreak = 0;
+                }
+                // If no completions in a week, we don't reset streak (vacation/absence)
+
+                // Move to next week
+                weekStart.setDate(weekStart.getDate() + 7);
+            }
+
+            // Update the habit's week streak
+            habit.weekStreak = currentStreak;
+        });
+
+        // Save the recalculated streaks
+        this.saveHabits();
     }
 
     // Get the day names for current week (starting with Monday)
@@ -831,10 +903,13 @@ class HabitTracker {
         // Only show goal icon for frequency goals, not streak goals
         const goalStatusIcon = habit.goalType === 'frequency' ? (isGoalAchieved ? '🎯' : '🔄') : '';
 
+        // Get weekly completions for this habit
+        const weeklyCompletions = habit.getWeeklyCompletions();
+
         // Build weekly tracker HTML
         let weeklyTracker = '<div class="weekly-tracker">';
         weekDays.forEach(day => {
-            const isCompleted = habit.weeklyCompletions.includes(day.date);
+            const isCompleted = habit.completionHistory.includes(day.date);
             const today = day.isToday ? 'title="Today"' : '';
             weeklyTracker += `<div class="day-marker${isCompleted ? ' completed' : ''}" ${today} data-date="${day.date}" title="${day.name}"></div>`;
         });
@@ -843,7 +918,7 @@ class HabitTracker {
         // Different progress text based on habit type
         const progressText = habit.goalType === 'streak'
             ? `${currentStreak}/${habit.goalValue}`
-            : `${habit.weeklyCompletions.length}/${habit.goalValue} this week`;
+            : `${weeklyCompletions.length}/${habit.goalValue} this week`;
 
         // Weekly stats for frequency habits
         const weeklyStatsHtml = habit.goalType === 'frequency'
@@ -879,7 +954,7 @@ class HabitTracker {
                         <span class="habit-category" data-category="${habit.category.toLowerCase()}">${habit.category}</span>
                     </div>
                     <span class="streak-badge ${currentStreak > 0 ? 'has-streak' : ''}">
-                        ${habit.goalType === 'streak' ? '⚡ ' + currentStreak : '📅 ' + habit.weeklyCompletions.length}
+                        ${habit.goalType === 'streak' ? '⚡ ' + currentStreak : '📅 ' + weeklyCompletions.length}
                     </span>
                 </div>
                 
@@ -1321,7 +1396,7 @@ class HabitTracker {
         console.group('Week Streak Information');
         this.habits.forEach(habit => {
             if (habit.goalType === 'frequency') {
-                const progress = `${habit.weeklyCompletions.length}/${habit.goalValue}`;
+                const progress = `${habit.getWeeklyCompletions().length}/${habit.goalValue}`;
                 const weekRemaining = this.getDaysRemainingInWeek();
                 console.log(`${habit.name}: ${progress} | Streak: ${habit.weekStreak} | Days left in week: ${weekRemaining}`);
             }
@@ -1393,7 +1468,6 @@ class HabitTracker {
                         );
 
                         // Copy over properties
-                        newHabit.weeklyCompletions = habit.weeklyCompletions || [];
                         newHabit.completionHistory = Array.isArray(habit.completionHistory) ? habit.completionHistory : [];
                         newHabit.weekStreak = habit.weekStreak || 0;
                         newHabit.completedWeeks = habit.completedWeeks || 0;
@@ -2049,7 +2123,7 @@ class HabitTracker {
             goalType: habit.goalType,
             goalValue: habit.goalValue,
             streak: habit.getCurrentStreak(),
-            weeklyCompletions: [...habit.weeklyCompletions]
+            weeklyCompletions: habit.getWeeklyCompletions() // Get weekly completions from history
         };
 
         habit.achievements.push(achievement);
@@ -2248,7 +2322,10 @@ class HabitTracker {
                     if (achievement.goalType === 'streak') {
                         logseqBlock += `    - Reached ${achievement.streak} day streak for "${achievement.habitName}" #[[${achievement.category}]]\n`;
                     } else {
-                        logseqBlock += `    - Completed "${achievement.habitName}" ${achievement.weeklyCompletions} times this week (goal: ${achievement.goalValue}) #[[${achievement.category}]]\n`;
+                        // Use weeklyCompletions array length for frequency goals
+                        const weeklyCompletionCount = Array.isArray(achievement.weeklyCompletions) ?
+                            achievement.weeklyCompletions.length : achievement.weeklyCompletions;
+                        logseqBlock += `    - Completed "${achievement.habitName}" ${weeklyCompletionCount} times this week (goal: ${achievement.goalValue}) #[[${achievement.category}]]\n`;
                     }
                 });
             }
@@ -2778,6 +2855,25 @@ class HabitTracker {
                 this.renderHeatmap(habitsList, true);
             }
         }
+    }
+
+    // Add a method to check for gaps in tracking and handle them appropriately
+    analyzeAndUpdateWeeklyProgress() {
+        // This is useful for users who haven't opened the app in a while
+        const currentDate = new Date();
+        const lastCheckDate = localStorage.getItem('lastWeeklyProgressCheck');
+
+        // If we've checked recently, don't reprocess
+        if (lastCheckDate) {
+            const daysSinceLastCheck = Math.floor((currentDate - new Date(lastCheckDate)) / (1000 * 60 * 60 * 24));
+            if (daysSinceLastCheck < 7) return; // Only reprocess if it's been at least a week
+        }
+
+        // Recalculate all streaks to ensure they're accurate
+        this.recalculateWeekStreaks();
+
+        // Save the current date as the last check date - this is just an optimization
+        localStorage.setItem('lastWeeklyProgressCheck', currentDate.toISOString());
     }
 }
 
