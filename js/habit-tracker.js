@@ -1,3 +1,21 @@
+// Add this helper function at the top of your HabitTracker class or as a standalone utility
+function formatLocalDate(date = new Date()) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function calculateWeekStartDate(date = new Date()) {
+    const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    const weekStart = new Date(date);
+    weekStart.setDate(date.getDate() - daysToSubtract);
+    weekStart.setHours(0, 0, 0, 0);
+    return formatLocalDate(weekStart); // Use local formatting
+}
+
+
 // Habit tracker functionality
 
 // Habit class with enhanced goal capabilities
@@ -11,20 +29,8 @@ class Habit {
         this.category = category; // New: category field for the habit
         this.weekStreak = 0; // New: Track weeks streak for frequency habits
         this.completedWeeks = 0; // New: Track total number of completed weeks
-    }
-
-    // Calculate the start of the current week (Monday instead of Sunday)
-    // This method remains as a static utility but will no longer store per-habit state
-    getWeekStartDate() {
-        const now = new Date();
-        const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
-        // Calculate days to subtract to get to Monday (if today is Sunday, subtract -6 days)
-
-        const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-        const weekStart = new Date(now);
-        weekStart.setDate(now.getDate() - daysToSubtract);
-        weekStart.setHours(0, 0, 0, 0);
-        return weekStart.toISOString().split('T')[0]; // Return just the YYYY-MM-DD part
+        this.achievements = []; // Add this line to store achievement records
+        this.lifetimeCompletions = 0; // New: Track lifetime completions
     }
 
     // Check if goal is achieved 
@@ -73,7 +79,7 @@ class Habit {
         const sortedDates = [...this.completionHistory].sort();
 
         // Check if today is completed
-        const today = new Date().toISOString().split('T')[0];
+        const today = formatLocalDate(); // Use local formatting
         const hasCompletedToday = sortedDates.includes(today);
 
         // Start from today or yesterday based on if today is completed
@@ -86,7 +92,7 @@ class Habit {
 
         // Count backwards from today/yesterday until we find a non-completed day
         while (true) {
-            const dateString = currentDate.toISOString().split('T')[0];
+            const dateString = formatLocalDate(currentDate); // Use local formatting
 
             if (sortedDates.includes(dateString)) {
                 streak++;
@@ -103,34 +109,28 @@ class Habit {
 
     // Check if habit was completed today
     isCompletedToday() {
-        const today = new Date().toISOString().split('T')[0];
+        const today = formatLocalDate(); // Use local formatting
         return this.completionHistory.includes(today);
     }
 
     // Get weekly completions from history for the current week
+    // Get weekly completions from history for the current week
     getWeeklyCompletions(weekStartDate) {
         // If no specific week start provided, use current week
         if (!weekStartDate) {
-            weekStartDate = this.getWeekStartDate();
+            weekStartDate = calculateWeekStartDate();
         }
-
 
         // Calculate week end date (6 days after start)
         const startDate = new Date(weekStartDate);
         const endDate = new Date(startDate);
         endDate.setDate(startDate.getDate() + 6);
-        const weekEndDateStr = endDate.toISOString().split('T')[0];
+        const weekEndDateStr = formatLocalDate(endDate); // FIX: Use the same format function
 
-        // Filter completion history for dates in the current week
+        // Rest of the function remains the same
         return this.completionHistory.filter(dateStr => {
-            // Ensure we have valid date strings before comparing
             if (!dateStr || typeof dateStr !== 'string') return false;
-
-            // Normalize date format if needed
-            const normalizedDateStr = dateStr.includes('T') ?
-                dateStr.split('T')[0] : dateStr;
-
-            // Compare the date strings using lexicographic comparison
+            const normalizedDateStr = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
             return normalizedDateStr >= weekStartDate && normalizedDateStr <= weekEndDateStr;
         });
     }
@@ -259,16 +259,6 @@ class HabitTracker {
         console.log('Habit tracker cleaned up');
     }
 
-    // Updated method: Calculate week start date (Monday) for the current or specified date
-    calculateWeekStartDate(date = new Date()) {
-        const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
-        // Calculate days to subtract to get to Monday (if today is Sunday, subtract -6 days)
-        const daysToSubtract = dayOfWeek === 0 ? -6 : dayOfWeek - 1;
-        const weekStart = new Date(date);
-        weekStart.setDate(date.getDate() - daysToSubtract);
-        weekStart.setHours(0, 0, 0, 0);
-        return weekStart.toISOString().split('T')[0]; // Return just the YYYY-MM-DD part
-    }
 
     // Load habits from localStorage
     loadHabits() {
@@ -550,8 +540,7 @@ class HabitTracker {
         const habit = this.habits.find(h => h.id === id);
 
         if (habit) {
-            const today = new Date();
-            const todayISO = today.toISOString().split('T')[0]; // YYYY-MM-DD
+            const todayISO = formatLocalDate();
             const isCompletedToday = habit.completionHistory.includes(todayISO);
 
             if (!isCompletedToday) {
@@ -589,6 +578,11 @@ class HabitTracker {
             } else {
                 // Mark as not completed by removing from completion history
                 habit.removeCompletion(todayISO);
+
+                //remove from achievements if exists
+                if (habit.lifetimeCompletions == habit.achievements.length) {
+                    habit.achievements.pop();
+                }
             }
 
             this.saveHabits();
@@ -616,7 +610,7 @@ class HabitTracker {
 
     // Updated method: Check if week has changed and reset weekly completions
     checkWeekChange() {
-        const currentWeekStart = this.calculateWeekStartDate();
+        const currentWeekStart = calculateWeekStartDate();
 
         // Instead of relying on stored values, we'll find the previous week directly
         const previousWeekStart = this.calculatePreviousWeekStart();
@@ -655,13 +649,13 @@ class HabitTracker {
     // New method: Calculate the start of the previous week
     calculatePreviousWeekStart() {
         // Get current week start
-        const currentWeekStart = this.calculateWeekStartDate();
+        const currentWeekStart = calculateWeekStartDate();
 
         // Create date object from current week start and subtract 7 days
         const previousWeekDate = new Date(currentWeekStart);
         previousWeekDate.setDate(previousWeekDate.getDate() - 7);
 
-        return this.calculateWeekStartDate(previousWeekDate);
+        return calculateWeekStartDate(previousWeekDate);
     }
 
     // New method: Recalculate weekStreak for a habit based on historical data
@@ -683,8 +677,8 @@ class HabitTracker {
             const lastDate = new Date(); // Today
 
             // Get the start of the first week
-            const firstWeekStart = this.calculateWeekStartDate(firstDate);
-            const currentWeekStart = this.calculateWeekStartDate(lastDate);
+            const firstWeekStart = calculateWeekStartDate(firstDate);
+            const currentWeekStart = calculateWeekStartDate(lastDate);
 
             // Track consecutive completed weeks
             let currentStreak = 0;
@@ -749,7 +743,7 @@ class HabitTracker {
             result.push({
                 name: days[i],
                 isToday: i === adjustedDayOfWeek,
-                date: date.toISOString().split('T')[0]
+                date: formatLocalDate(date) // Use local formatting
             });
         }
 
@@ -1037,8 +1031,16 @@ class HabitTracker {
         const today = new Date();
         const totalDays = weeks * 7;
 
+        // Format date using local timezone
+        const formatDateString = (date) => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
         // Pre-calculate today string for comparison
-        const todayString = today.toISOString().split('T')[0];
+        const todayString = formatDateString(today);
 
         // More efficient approach - calculate dates once and reuse
         for (let i = 0; i < totalDays; i++) {
@@ -1049,8 +1051,8 @@ class HabitTracker {
             const dateDayOfWeek = date.getDay();
             const adjustedDayOfWeek = dateDayOfWeek === 0 ? 6 : dateDayOfWeek - 1;
 
-            // Format date string once
-            const dateString = date.toISOString().split('T')[0];
+            // Format date string using local timezone
+            const dateString = formatDateString(date);
 
             dates.unshift({
                 date: dateString,
@@ -1218,7 +1220,9 @@ class HabitTracker {
         const dateStats = {};
         dates.forEach(dateObj => {
             const date = dateObj.date;
-            const completed = this.habits.filter(habit => habit.completionHistory && habit.completionHistory[date]).length;
+            const completed = this.habits.filter(habit =>
+                habit.completionHistory && habit.completionHistory.includes(date)
+            ).length;
             const total = this.habits.length;
             dateStats[date] = {
                 count: completed,
@@ -1264,14 +1268,27 @@ class HabitTracker {
                     cell.dataset.count = stats ? stats.count : 0;
 
                     // Highlight today's cell
-                    const today = new Date().toISOString().split('T')[0];
+                    const formatLocalDate = (date) => {
+                        const year = date.getFullYear();
+                        const month = String(date.getMonth() + 1).padStart(2, '0');
+                        const day = String(date.getDate()).padStart(2, '0');
+                        return `${year}-${month}-${day}`;
+                    };
+
+                    const today = formatLocalDate(new Date());
                     if (date === today) {
                         cell.classList.add('today');
                     }
 
-                    // Add hover tooltip functionality with improved positioning
                     cell.addEventListener('mouseenter', (e) => {
-                        const dateObj = new Date(date);
+                        // Get the date from the cell's dataset
+                        const cellDate = date;
+
+                        // Create the date object directly from components, without UTC conversion
+                        const [year, month, day] = cellDate.split('-').map(Number);
+                        const dateObj = new Date(year, month - 1, day);
+
+                        // Format using locale methods without timezone specification
                         const formattedDate = dateObj.toLocaleDateString('en-US', {
                             weekday: 'short',
                             year: 'numeric',
@@ -2139,7 +2156,7 @@ class HabitTracker {
 
         // Record this achievement with timestamp
         const achievement = {
-            date: new Date().toISOString(),
+            date: formatLocalDate(new Date()),
             goalType: habit.goalType,
             goalValue: habit.goalValue,
             streak: habit.getCurrentStreak(),
@@ -2147,6 +2164,7 @@ class HabitTracker {
         };
 
         habit.achievements.push(achievement);
+        habit.lifetimeCompletions++;
 
         // Visual celebration
         this.showGoalAchievementCelebration(habit);
@@ -2264,13 +2282,26 @@ class HabitTracker {
         html += '</div>';
         return html;
     }
-
-    // New method to format and copy habit data as Logseq blocks
     copyAsLogseqBlock() {
         try {
+            const LOGSEQ_SEPRATOR = '---';
+
             // Get today's date in YYYY-MM-DD format for Logseq page reference
             const today = new Date();
-            const todayISO = today.toISOString().split('T')[0]; // YYYY-MM-DD
+            const todayISO = formatLocalDate();
+
+            // Get the ISO week number
+            const getWeekNumber = (date) => {
+                const d = new Date(date);
+                d.setHours(0, 0, 0, 0);
+                d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
+                const week1 = new Date(d.getFullYear(), 0, 4);
+                return 1 + Math.round(((d - week1) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+            };
+
+            const weekNumber = getWeekNumber(today);
+            // December 28th is guaranteed to be in the last week of the year
+            const totalWeeks = getWeekNumber(new Date(today.getFullYear(), 11, 28));
 
             // Format the current date for display
             const displayDate = today.toLocaleDateString('en-US', {
@@ -2280,88 +2311,89 @@ class HabitTracker {
                 day: 'numeric'
             });
 
-            // Start building the Logseq formatted text
-            let logseqBlock = `- [[Habit Tracker]]\n`;
+            // Start building the Logseq formatted text with page reference
+            let logseqBlock = `- [[Habit Tracker]] [[${todayISO}]]\n`;
+            logseqBlock += `  - Week ${weekNumber}/${totalWeeks} of ${today.getFullYear()}\n`;
+            logseqBlock += `  - ${LOGSEQ_SEPRATOR}\n`;
+
 
             // Group habits by completion status
             const completedHabits = this.habits.filter(habit => habit.isCompletedToday());
             const pendingHabits = this.habits.filter(habit => !habit.isCompletedToday());
 
-            // Add completed habits
+            // Add completed habits with emoji
             if (completedHabits.length > 0) {
-                logseqBlock += `  - Completed habits\n`;
+                logseqBlock += `  - ✅ Completed habits\n`;
                 completedHabits.forEach(habit => {
-                    logseqBlock += `    - DONE ${habit.name} #[[${habit.category}]]\n`;
+                    // Add streak info for streaks ≥ 3
+                    const streakInfo = habit.getCurrentStreak() >= 3 ?
+                        ` ⚡${habit.getCurrentStreak()}` : '';
+                    logseqBlock += `    - DONE ${habit.name}${streakInfo} #[[${habit.category}]]\n`;
                 });
             }
 
-            // Add pending habits
+            // Add pending habits with emoji
             if (pendingHabits.length > 0) {
-                logseqBlock += `  - Pending habits\n`;
+                logseqBlock += `  - ⏳ Pending habits\n`;
                 pendingHabits.forEach(habit => {
                     logseqBlock += `    - TODO ${habit.name} #[[${habit.category}]]\n`;
                 });
             }
 
-            // Add completion stats
-            logseqBlock += `  - Stats\n`;
+            // Add completion stats with visual indicators
+            logseqBlock += `  - 📊 Stats\n`;
             const completionPercentage = Math.round((completedHabits.length / this.habits.length) * 100) || 0;
+
+            // Add visual progress bar using characters
+            const progressBar = this.generateTextProgressBar(completionPercentage);
             logseqBlock += `    - ${completedHabits.length}/${this.habits.length} habits completed (${completionPercentage}%)\n`;
+            logseqBlock += `    - ${progressBar}\n`;
 
-            // Check for today's achievements
+            // add separator for clarity
+            logseqBlock += `  - ${LOGSEQ_SEPRATOR}\n`;
+
+            // Add today's achievements section with trophy emoji
             const todayAchievements = [];
+            this.collectTodayAchievements(todayAchievements, todayISO);
 
-            // Collect all of today's achievements
-            this.habits.forEach(habit => {
-                if (habit.achievements && Array.isArray(habit.achievements)) {
-                    const achievedToday = habit.achievements.filter(achievement => {
-                        // Check if achievement date is from today
-                        const achievementDate = new Date(achievement.date).toISOString().split('T')[0];
-                        return achievementDate === todayISO;
-                    });
-
-                    if (achievedToday.length > 0) {
-                        achievedToday.forEach(achievement => {
-                            todayAchievements.push({
-                                habitName: habit.name,
-                                category: habit.category,
-                                goalType: achievement.goalType,
-                                goalValue: achievement.goalValue,
-                                streak: achievement.streak,
-                                weeklyCompletions: achievement.weeklyCompletions?.length || 0
-                            });
-                        });
-                    }
-                }
-            });
-
-            // Add today's achievements section if we have any
             if (todayAchievements.length > 0) {
                 logseqBlock += `  - 🏆 Today's Achievements #achievement\n`;
                 todayAchievements.forEach(achievement => {
                     if (achievement.goalType === 'streak') {
-                        logseqBlock += `    - Reached ${achievement.streak} day streak for "${achievement.habitName}" #[[${achievement.category}]]\n`;
+                        logseqBlock += `    - 🔥 Reached ${achievement.streak} day streak for "${achievement.habitName}" #[[${achievement.category}]]\n`;
                     } else {
-                        // Use weeklyCompletions array length for frequency goals
                         const weeklyCompletionCount = Array.isArray(achievement.weeklyCompletions) ?
                             achievement.weeklyCompletions.length : achievement.weeklyCompletions;
-                        logseqBlock += `    - Completed "${achievement.habitName}" ${weeklyCompletionCount} times this week (goal: ${achievement.goalValue}) #[[${achievement.category}]]\n`;
+                        logseqBlock += `    - 🎯 Completed "${achievement.habitName}" ${weeklyCompletionCount} times this week (goal: ${achievement.goalValue}) #[[${achievement.category}]]\n`;
                     }
                 });
+
+                // Add a separator for clarity
+                logseqBlock += `  - ${LOGSEQ_SEPRATOR}\n`;
             }
 
-            // Add notable streaks (top 3)
+            // Add notable streaks section
             const topStreaks = [...this.habits]
-                .filter(habit => habit.getCurrentStreak() >= 3)  // Only include streaks of 3 or more
+                .filter(habit => habit.getCurrentStreak() >= 3)
                 .sort((a, b) => b.getCurrentStreak() - a.getCurrentStreak())
                 .slice(0, 3);
 
             if (topStreaks.length > 0) {
-                logseqBlock += `  - Notable streaks\n`;
+                logseqBlock += `  - ⚡ Notable streaks\n`;
                 topStreaks.forEach(habit => {
-                    logseqBlock += `    - ${habit.name}: ${habit.getCurrentStreak()} days ⚡\n`;
+                    logseqBlock += `    - ${habit.name}: ${habit.getCurrentStreak()} days ${this.getStreakEmoji(habit.getCurrentStreak())}\n`;
                 });
             }
+            else {
+                logseqBlock += `  - ⚡ No streaks yet! Keep going!\n`;
+            }
+
+            // Add a separator for clarity
+            logseqBlock += `  - ${LOGSEQ_SEPRATOR}\n`;
+
+            // Add metadata and timestamp
+            const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            logseqBlock += `  - 🕒 Generated on ${displayDate} (${timezone})\n`;
 
             // Copy to clipboard
             navigator.clipboard.writeText(logseqBlock).then(() => {
@@ -2381,6 +2413,47 @@ class HabitTracker {
             this.showToast('Error formatting Logseq block', { type: 'error' });
         }
     }
+
+    // Helper method to collect today's achievements
+    collectTodayAchievements(todayAchievements, todayISO) {
+        this.habits.forEach(habit => {
+            if (habit.achievements && Array.isArray(habit.achievements)) {
+                const achievedToday = habit.achievements.filter(achievement => {
+                    const achievementDate = formatLocalDate(new Date(achievement.date));
+                    return achievementDate === todayISO;
+                });
+
+                if (achievedToday.length > 0) {
+                    achievedToday.forEach(achievement => {
+                        todayAchievements.push({
+                            habitName: habit.name,
+                            category: habit.category,
+                            goalType: achievement.goalType,
+                            goalValue: achievement.goalValue,
+                            streak: achievement.streak,
+                            weeklyCompletions: achievement.weeklyCompletions
+                        });
+                    });
+                }
+            }
+        });
+    }
+
+    // Generate text-based progress bar
+    generateTextProgressBar(percentage, length = 10) {
+        const filledCount = Math.round((percentage / 100) * length);
+        const emptyCount = length - filledCount;
+        return '█'.repeat(filledCount) + '░'.repeat(emptyCount);
+    }
+
+    // Get appropriate streak emoji based on streak length
+    getStreakEmoji(streakLength) {
+        if (streakLength >= 100) return '🔥🔥🔥';
+        if (streakLength >= 30) return '🔥🔥';
+        if (streakLength >= 7) return '🔥';
+        return '⚡';
+    }
+
 
     // Method to show category management modal
     showCategoryManager() {
