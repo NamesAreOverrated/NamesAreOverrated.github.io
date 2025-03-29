@@ -19,11 +19,12 @@ class Habit {
         const now = new Date();
         const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
         // Calculate days to subtract to get to Monday (if today is Sunday, subtract -6 days)
-        const daysToSubtract = dayOfWeek === 0 ? -6 : dayOfWeek - 1;
+
+        const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
         const weekStart = new Date(now);
         weekStart.setDate(now.getDate() - daysToSubtract);
         weekStart.setHours(0, 0, 0, 0);
-        return weekStart.toISOString();
+        return weekStart.toISOString().split('T')[0]; // Return just the YYYY-MM-DD part
     }
 
     // Check if goal is achieved 
@@ -110,18 +111,27 @@ class Habit {
     getWeeklyCompletions(weekStartDate) {
         // If no specific week start provided, use current week
         if (!weekStartDate) {
-
             weekStartDate = this.getWeekStartDate();
         }
 
+
         // Calculate week end date (6 days after start)
-        const weekEndDate = new Date(weekStartDate);
-        weekEndDate.setDate(weekEndDate.getDate() + 6);
-        const weekEndDateStr = weekEndDate.toISOString().split('T')[0];
+        const startDate = new Date(weekStartDate);
+        const endDate = new Date(startDate);
+        endDate.setDate(startDate.getDate() + 6);
+        const weekEndDateStr = endDate.toISOString().split('T')[0];
 
         // Filter completion history for dates in the current week
         return this.completionHistory.filter(dateStr => {
-            return dateStr >= weekStartDate && dateStr <= weekEndDateStr;
+            // Ensure we have valid date strings before comparing
+            if (!dateStr || typeof dateStr !== 'string') return false;
+
+            // Normalize date format if needed
+            const normalizedDateStr = dateStr.includes('T') ?
+                dateStr.split('T')[0] : dateStr;
+
+            // Compare the date strings using lexicographic comparison
+            return normalizedDateStr >= weekStartDate && normalizedDateStr <= weekEndDateStr;
         });
     }
 
@@ -906,19 +916,29 @@ class HabitTracker {
         // Get weekly completions for this habit
         const weeklyCompletions = habit.getWeeklyCompletions();
 
+        console.log("Weekly completions for habit:", habit.name, weeklyCompletions);
+
         // Build weekly tracker HTML
         let weeklyTracker = '<div class="weekly-tracker">';
         weekDays.forEach(day => {
-            const isCompleted = habit.completionHistory.includes(day.date);
+            // Use the pre-calculated weeklyCompletions instead of checking completionHistory again
+            const isCompleted = weeklyCompletions.includes(day.date);
             const today = day.isToday ? 'title="Today"' : '';
             weeklyTracker += `<div class="day-marker${isCompleted ? ' completed' : ''}" ${today} data-date="${day.date}" title="${day.name}"></div>`;
         });
         weeklyTracker += '</div>';
 
         // Different progress text based on habit type
-        const progressText = habit.goalType === 'streak'
-            ? `${currentStreak}/${habit.goalValue}`
-            : `${weeklyCompletions.length}/${habit.goalValue} this week`;
+        let progressText;
+        if (habit.goalType === 'streak') {
+            progressText = `${currentStreak}/${habit.goalValue}`;
+        } else { // frequency
+            if (isGoalAchieved) {
+                progressText = `Goal achieved! ${weeklyCompletions.length}/${habit.goalValue}`;
+            } else {
+                progressText = `${weeklyCompletions.length}/${habit.goalValue} this week`;
+            }
+        }
 
         // Weekly stats for frequency habits
         const weeklyStatsHtml = habit.goalType === 'frequency'
