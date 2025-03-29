@@ -1,3 +1,31 @@
+/* --------------------------------------
+   1. BASE & RESET STYLES
+   -------------------------------------- */
+:root {
+    /* Core colors */
+    --habit-primary-color: var(--accent-color, #64ffda);
+    --habit-secondary-color: rgba(100, 255, 218, 0.2);
+    --habit-text-color: var(--text-color, #eee);
+    --habit-bg-color: var(--secondary-color, #1d1d1d);
+
+    /* Status colors */
+    --habit-success-color: #4BB543;
+    --habit-warning-color: #FFC107;
+    --habit-error-color: #f44336;
+    --habit-pending-color: #ff6b6b;
+
+    /* Goal type colors */
+    --streak-color: #ff9f1c;
+    --frequency-color: #4cc9f0;
+
+    /* UI elements */
+    --habit-border-radius: 8px;
+    --habit-section-padding: 1.5rem;
+    --habit-box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    --habit-item-padding: 15px;
+    --habit-transition: all 0.3s ease;
+}
+
 * {
     box-sizing: border-box;
     margin: 0;
@@ -5,24 +33,15 @@
 }
 
 body {
-    /* Using main site theme - these will be inherited from styles.css */
     line-height: 1.6;
 }
 
-/* Remove the container class styling as we're now using the section class from the main site */
-.container {
-    max-width: 900px;
-    margin: 2rem auto;
-    padding: 1rem;
-}
-
-/* Terminal-style section headers to match main site */
+/* Terminal-style section headers */
 h2,
 h3 {
     font-family: 'Courier New', monospace;
     margin-bottom: 1.5rem;
-    color: var(--accent-color);
-    /* Using site's accent color */
+    color: var(--habit-primary-color);
 }
 
 .description {
@@ -31,16 +50,165 @@ h3 {
     font-style: italic;
 }
 
-.add-habit-container {
-    background-color: var(--secondary-color);
-    padding: 1.5rem;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-    margin-bottom: 2rem;
-    border-left: 3px solid var(--accent-color);
+.container {
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 1rem;
 }
 
-/* Form styling - improved version */
+/* --------------------------------------
+   2. LAYOUT COMPONENTS
+   -------------------------------------- */
+
+.habits-container {
+    background-color: var(--habit-bg-color);
+    padding: var(--habit-section-padding);
+    border-radius: var(--habit-border-radius);
+    box-shadow: var(--habit-box-shadow);
+    margin-bottom: 2rem;
+    border-left: 3px solid var(--habit-primary-color);
+}
+
+.add-habit-container {
+    background-color: var(--habit-bg-color);
+    padding: var(--habit-section-padding);
+    border-radius: var(--habit-border-radius);
+    box-shadow: var(--habit-box-shadow);
+    margin-bottom: 2rem;
+    border-left: 3px solid var(--habit-primary-color);
+}
+
+/* Featured section styling */
+.featured-section {
+    background-color: rgba(48, 48, 48, 0.95);
+    padding: 1.8rem;
+    border-radius: var(--habit-border-radius);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+    border-left: 5px solid var(--habit-primary-color);
+    position: relative;
+    overflow: hidden;
+}
+
+.featured-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 150px;
+    height: 150px;
+    background: radial-gradient(circle, var(--habit-primary-color) 0%, transparent 70%);
+    opacity: 0.05;
+    border-radius: 50%;
+    transform: translate(50%, -50%);
+}
+
+.featured-section h3 {
+    font-size: 1.3rem;
+    text-shadow: 0 0 10px rgba(100, 255, 218, 0.3);
+}
+
+.featured-section::after {
+    content: '📊';
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    font-size: 1.5rem;
+    opacity: 0.4;
+}
+
+/* Tab navigation */
+.habits-tab-navigation {
+    display: flex;
+    margin-bottom: 20px;
+    border-bottom: 1px solid rgba(100, 255, 218, 0.2);
+}
+
+.tab-button {
+    background: transparent;
+    color: #ccc;
+    border: none;
+    padding: 10px 20px;
+    font-size: 1rem;
+    cursor: pointer;
+    font-family: 'Courier New', monospace;
+    transition: var(--habit-transition);
+    border-bottom: 2px solid transparent;
+    margin-right: 10px;
+}
+
+.tab-button:hover {
+    color: var(--habit-primary-color);
+}
+
+.tab-button.active {
+    color: var(--habit-primary-color);
+    border-bottom: 2px solid var(--habit-primary-color);
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* Section stylings */
+.section {
+    margin-bottom: 2rem;
+    max-width: 1100px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 1rem;
+    background-color: var(--habit-bg-color);
+    border-radius: var(--habit-border-radius);
+    box-shadow: var(--habit-box-shadow);
+    border-left: 3px solid var(--habit-primary-color);
+}
+
+.section h2 {
+    font-family: 'Courier New', monospace;
+    margin-bottom: 1.5rem;
+    color: var(--habit-primary-color);
+    font-size: 1.5rem;
+}
+
+.section.habits-section,
+.section.add-habit-section,
+.section.info-section,
+.section.intro-section {
+    background-color: transparent;
+    border-left: none;
+    padding: 0;
+}
+
+/* Info box styling */
+.info-box {
+    background-color: var(--habit-bg-color);
+    padding: var(--habit-section-padding);
+    border-radius: var(--habit-border-radius);
+    box-shadow: var(--habit-box-shadow);
+    margin-top: 2rem;
+    border-left: 3px solid var(--habit-primary-color);
+}
+
+.info-box h3 {
+    color: var(--habit-primary-color);
+}
+
+.info-box ul {
+    margin-left: 1.5rem;
+    color: #ccc;
+}
+
+.info-box li {
+    margin-bottom: 0.5rem;
+}
+
+/* --------------------------------------
+   3. FORM ELEMENTS
+   -------------------------------------- */
+
 #habit-form {
     display: flex;
     flex-direction: column;
@@ -55,7 +223,7 @@ h3 {
 .form-row label {
     display: block;
     margin-bottom: 5px;
-    color: var(--accent-color);
+    color: var(--habit-primary-color);
     font-size: 0.9rem;
     font-family: 'Courier New', monospace;
 }
@@ -66,19 +234,19 @@ h3 {
     width: 100%;
     padding: 12px;
     background-color: rgba(15, 15, 15, 0.6);
-    color: var(--text-color);
+    color: var(--habit-text-color);
     border: 1px solid #555;
     border-radius: 4px;
     font-size: 16px;
     font-family: 'Courier New', monospace;
-    transition: all 0.3s ease;
+    transition: var(--habit-transition);
 }
 
 .form-row input[type="text"]:focus,
 .form-row select:focus,
 .form-row input[type="number"]:focus {
     outline: none;
-    border-color: var(--accent-color);
+    border-color: var(--habit-primary-color);
     box-shadow: 0 0 10px rgba(100, 255, 218, 0.2);
 }
 
@@ -108,7 +276,6 @@ h3 {
     position: absolute;
     right: 12px;
     top: 42px;
-    /* Positioned to align with the input */
     color: #888;
     pointer-events: none;
     font-size: 0.9rem;
@@ -118,13 +285,13 @@ h3 {
     width: 100%;
     padding: 12px;
     background-color: rgba(100, 255, 218, 0.1);
-    color: var(--accent-color);
-    border: 1px solid var(--accent-color);
+    color: var(--habit-primary-color);
+    border: 1px solid var(--habit-primary-color);
     border-radius: 4px;
     cursor: pointer;
     font-size: 16px;
     font-weight: bold;
-    transition: all 0.3s ease;
+    transition: var(--habit-transition);
     letter-spacing: 1px;
     text-transform: uppercase;
     font-family: 'Courier New', monospace;
@@ -150,7 +317,7 @@ h3 {
     position: absolute;
     left: 0;
     top: 12px;
-    color: var(--accent-color);
+    color: var(--habit-primary-color);
     opacity: 0.7;
     z-index: 1;
     font-family: 'Courier New', monospace;
@@ -167,28 +334,27 @@ h3 {
     padding-left: 20px !important;
 }
 
-.habits-container {
-    background-color: var(--secondary-color);
-    padding: 1.5rem;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-    margin-bottom: 2rem;
-    border-left: 3px solid var(--accent-color);
+/* Custom category container */
+#custom-category-container {
+    display: none;
+    margin-top: 10px;
 }
 
-/* Redesigned habit items */
+/* --------------------------------------
+   4. HABIT ITEMS
+   -------------------------------------- */
+
+/* Base habit item style - consolidated */
 .habit-item {
     background-color: rgba(15, 15, 15, 0.3);
-    border-radius: 6px;
+    border-radius: var(--habit-border-radius);
     margin-bottom: 10px;
     display: flex;
     justify-content: space-between;
     align-items: stretch;
-    /* Changed from center to stretch to fix alignment */
-    padding: 15px;
-    transition: background-color 0.2s ease, transform 0.2s ease;
-    border-bottom: none;
-    border-left: 3px solid transparent;
+    padding: var(--habit-item-padding);
+    transition: var(--habit-transition);
+    position: relative;
 }
 
 .habit-item:hover {
@@ -196,12 +362,8 @@ h3 {
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
 }
 
-/* Visual separator for sections */
-.habits-section {
-    margin-bottom: 30px;
-    padding: 18px;
-    border-radius: 12px;
-    position: relative;
+.habit-item:last-child {
+    margin-bottom: 0;
 }
 
 /* Create a label for each habit */
@@ -217,33 +379,6 @@ h3 {
     border-bottom-left-radius: 5px;
 }
 
-/* Specific styling for each section's habits */
-.uncompleted-section .habit-item {
-    border-left: 4px solid #ff6b6b;
-    background: linear-gradient(to right, rgba(255, 107, 107, 0.1) 0%, rgba(25, 25, 25, 0.7) 100%);
-}
-
-.uncompleted-section .habit-item:hover {
-    background: linear-gradient(to right, rgba(255, 107, 107, 0.15) 0%, rgba(25, 25, 25, 0.8) 100%);
-}
-
-.uncompleted-section .habit-item::before {
-    background-color: rgba(255, 107, 107, 0.1);
-}
-
-.completed-section .habit-item {
-    border-left: 4px solid var(--accent-color);
-    background: linear-gradient(to right, rgba(100, 255, 218, 0.05) 0%, rgba(25, 25, 25, 0.7) 100%);
-}
-
-.completed-section .habit-item:hover {
-    background: linear-gradient(to right, rgba(100, 255, 218, 0.1) 0%, rgba(25, 25, 25, 0.8) 100%);
-}
-
-.completed-section .habit-item::before {
-    background-color: rgba(100, 255, 218, 0.05);
-}
-
 /* Add subtle separator between habits */
 .habit-item:not(:last-child)::after {
     content: '';
@@ -255,64 +390,60 @@ h3 {
     background: linear-gradient(to right, transparent, rgba(100, 100, 100, 0.2), transparent);
 }
 
-/* Make the action buttons more prominent */
-.habit-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-left: 15px;
-    min-width: fit-content;
-    /* Prevent button squishing */
+/* Basic habit section styling */
+.uncompleted-section .habit-item {
+    border-left: 3px solid var(--habit-pending-color);
+    background: linear-gradient(to right, rgba(255, 107, 107, 0.1) 0%, rgba(25, 25, 25, 0.7) 100%);
 }
 
-.habit-actions button {
-    padding: 8px 14px;
-    font-weight: bold;
-    min-width: 100px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+.uncompleted-section .habit-item:hover {
+    background: linear-gradient(to right, rgba(255, 107, 107, 0.15) 0%, rgba(25, 25, 25, 0.8) 100%);
 }
 
-/* Improved button hover states */
-.btn-complete:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(100, 255, 218, 0.3);
+.completed-section .habit-item {
+    border-left: 3px solid var(--habit-primary-color);
+    background: linear-gradient(to right, rgba(100, 255, 218, 0.05) 0%, rgba(25, 25, 25, 0.7) 100%);
+    opacity: 0.85;
 }
 
-.btn-delete:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(244, 67, 54, 0.3);
+.completed-section .habit-item:hover {
+    background: linear-gradient(to right, rgba(100, 255, 218, 0.1) 0%, rgba(25, 25, 25, 0.8) 100%);
+    opacity: 0.9;
 }
 
-/* Make the uncompleted action more prominent */
-.uncompleted-section .btn-complete {
-    background-color: rgba(100, 255, 218, 0.25);
-    font-weight: bold;
-    letter-spacing: 0.5px;
+/* Habit title and info layout */
+.habit-info {
+    flex: 1;
+    width: 100%;
+    min-width: 0;
+    /* Prevent flex item from overflowing */
 }
 
-/* Cleaner header section */
 .habit-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     margin-bottom: 10px;
     flex-wrap: wrap;
-    /* Allow wrapping if needed */
     gap: 8px;
-    /* Ensure proper spacing when wrapped */
+}
+
+.habit-title {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 5px;
 }
 
 .habit-name {
     font-weight: bold;
-    color: var(--text-color);
+    color: var(--habit-text-color);
     font-size: 1.05rem;
     word-break: break-word;
-    /* Allow text to break to prevent overflow */
     max-width: 100%;
-    /* Ensure text doesn't overflow */
 }
 
-/* Compact streak badge */
+/* Streak badge */
 .streak-badge {
     background-color: rgba(100, 100, 100, 0.3);
     color: #888;
@@ -326,10 +457,10 @@ h3 {
 
 .streak-badge.has-streak {
     background-color: rgba(100, 255, 218, 0.15);
-    color: var(--accent-color);
+    color: var(--habit-primary-color);
 }
 
-/* Progress area reorganization */
+/* Progress area */
 .progress-area {
     display: flex;
     flex-direction: column;
@@ -337,14 +468,12 @@ h3 {
     width: 100%;
 }
 
-/* Fix progress bar container to scale properly */
 .progress-bar-container {
     display: flex;
     align-items: center;
     gap: 10px;
     width: 100%;
     flex-wrap: wrap;
-    /* Allow wrapping on very narrow screens */
 }
 
 .progress-bar {
@@ -354,53 +483,44 @@ h3 {
     border-radius: 3px;
     overflow: hidden;
     min-width: 50px;
-    /* Ensure bar always has some width */
 }
 
 .progress-fill {
     height: 100%;
-    background-color: var(--accent-color);
+    background-color: var(--habit-primary-color);
     transition: width 0.3s ease;
 }
 
 .goal-info {
     font-size: 0.8rem;
-    white-space: nowrap;
-    color: #aaa;
     white-space: normal;
-    /* Allow wrapping */
+    color: #aaa;
 }
 
 .goal-achieved {
-    color: var(--accent-color);
+    color: var(--habit-primary-color);
 }
 
 .goal-not-achieved {
-    color: #ff6b6b;
+    color: var(--habit-pending-color);
 }
 
-/* Fix weekly indicator to prevent width scaling */
+/* Weekly tracker */
 .weekly-indicator {
     display: flex;
     align-items: center;
     width: auto;
-    /* Changed from 100% to auto */
     margin-top: 5px;
     overflow-x: visible;
-    /* Changed from auto to visible */
 }
 
 .weekly-tracker {
     display: flex;
     gap: 4px;
     justify-content: flex-start;
-    /* Changed from space-between to flex-start */
     min-width: auto;
-    /* Changed from min-content to auto */
     width: auto;
-    /* Added to prevent expansion */
     flex: 0 0 auto;
-    /* Prevent growing or shrinking */
 }
 
 .day-marker {
@@ -410,413 +530,174 @@ h3 {
     background-color: rgba(100, 255, 218, 0.1);
     border: 1px solid rgba(100, 255, 218, 0.3);
     flex: 0 0 auto;
-    /* Ensure fixed size */
 }
 
 .day-marker.completed {
-    background-color: var(--accent-color);
+    background-color: var(--habit-primary-color);
 }
 
 .day-marker[title="Today"] {
-    border: 1px solid var(--accent-color);
+    border: 1px solid var(--habit-primary-color);
     box-shadow: 0 0 5px rgba(100, 255, 218, 0.5);
 }
 
-/* Time left indicator styling */
-.time-left {
-    display: inline-block;
-    margin-left: 5px;
-    font-style: italic;
-    white-space: normal;
-    /* Allow wrapping */
+/* Weekly stats for frequency habits */
+.weekly-stats {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+    font-size: 0.8rem;
+    color: #aaa;
 }
 
-/* Action buttons */
+.week-streak-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 12px;
+    background-color: rgba(76, 201, 240, 0.15);
+    color: #4cc9f0;
+    font-size: 0.75rem;
+}
+
+/* Habit action buttons */
 .habit-actions {
     display: flex;
     flex-direction: column;
-    gap: 5px;
-    margin-left: 10px;
+    gap: 8px;
+    margin-left: 15px;
     min-width: fit-content;
-    /* Prevent button squishing */
 }
 
-/* Mobile responsive adjustments */
-@media (max-width: 600px) {
-    .habit-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 5px;
-    }
-
-    .streak-badge {
-        margin-left: 0;
-    }
-
-    .progress-bar-container {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 5px;
-    }
-
-    .goal-info {
-        align-self: flex-end;
-    }
-
-    /* Apply column layout for the entire habit item */
-    .habit-item {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    /* Full-width habit info and actions */
-    .habit-info {
-        width: 100%;
-        margin-bottom: 12px;
-    }
-
-    .habit-actions {
-        width: 100%;
-        flex-direction: row;
-        margin-left: 0;
-        justify-content: space-between;
-    }
-
-    .habit-actions button {
-        flex: 1;
-        margin: 0 4px;
-    }
-
-    /* Improved scaling for progress indicators */
-    .progress-bar-container {
-        align-items: flex-start;
-        flex-direction: column;
-    }
-
-    .progress-bar {
-        width: 100%;
-        margin-bottom: 5px;
-    }
-
-    .goal-info {
-        align-self: flex-end;
-        text-align: right;
-    }
-
-    .weekly-indicator {
-        margin-top: 8px;
-        justify-content: flex-start;
-        /* Align to left on mobile */
-    }
-
-    .weekly-tracker {
-        width: auto;
-    }
-}
-
-.completed {
-    background-color: rgba(100, 255, 218, 0.05);
-    border-left: 3px solid var(--accent-color);
-}
-
-.completed .habit-name {
-    text-decoration: line-through;
-    color: #888;
-}
-
-.btn-delete {
-    background-color: rgba(244, 67, 54, 0.1);
-    color: #f44336;
-    border: 1px solid #f44336;
-}
-
-.btn-delete:hover {
-    background-color: rgba(244, 67, 54, 0.2);
-    box-shadow: 0 0 10px rgba(244, 67, 54, 0.3);
+.habit-actions button {
+    padding: 8px 14px;
+    font-weight: bold;
+    min-width: 100px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    transition: var(--habit-transition);
 }
 
 .btn-complete {
     background-color: rgba(100, 255, 218, 0.2);
-    color: var(--accent-color);
-    border: 1px solid var(--accent-color);
+    color: var(--habit-primary-color);
+    border: 1px solid var(--habit-primary-color);
 }
 
 .btn-complete:hover {
     background-color: rgba(100, 255, 218, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(100, 255, 218, 0.3);
 }
 
-.info-box {
-    background-color: var(--secondary-color);
-    padding: 1.5rem;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-    margin-top: 2rem;
-    border-left: 3px solid var(--accent-color);
+.btn-delete {
+    background-color: rgba(244, 67, 54, 0.1);
+    color: var(--habit-error-color);
+    border: 1px solid var(--habit-error-color);
 }
 
-.info-box h3 {
-    color: var(--accent-color);
+.btn-delete:hover {
+    background-color: rgba(244, 67, 54, 0.2);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(244, 67, 54, 0.3);
 }
 
-.info-box ul {
-    margin-left: 1.5rem;
-    color: #ccc;
-}
-
-.info-box li {
-    margin-bottom: 0.5rem;
-}
-
-/* For the typed text */
-.blink {
-    animation: blink-animation 1s steps(5, start) infinite;
-}
-
-@keyframes blink-animation {
-    to {
-        visibility: hidden;
-    }
-}
-
-/* Visual indicators */
-.progress-indicators {
-    margin-top: 10px;
-    font-size: 0.85em;
-}
-
-.streak-indicator,
-.weekly-indicator {
-    margin-top: 5px;
-}
-
-.progress-bar {
-    height: 8px;
+/* Goal achievement styles */
+.goal-achievement-actions {
     background-color: rgba(100, 255, 218, 0.1);
+    padding: 12px;
+    border-radius: 6px;
+    margin-top: 12px;
+    border: 1px dashed var(--habit-primary-color);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+.goal-achieved-message {
+    color: var(--habit-primary-color);
+    font-weight: bold;
+    margin-right: auto;
+}
+
+.goal-action-btn {
+    background-color: rgba(100, 255, 218, 0.15);
+    color: var(--habit-primary-color);
+    border: 1px solid var(--habit-primary-color);
     border-radius: 4px;
-    overflow: hidden;
-    margin-top: 3px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: var(--habit-transition);
 }
 
-.progress-fill {
-    height: 100%;
-    background-color: var(--accent-color);
-    transition: width 0.3s ease;
+.goal-action-btn:hover {
+    background-color: rgba(100, 255, 218, 0.25);
+    transform: translateY(-2px);
 }
 
-.progress-stats {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.8em;
-    color: #aaa;
-    margin-top: 2px;
-}
-
-.weekly-tracker {
-    display: flex;
-    gap: 3px;
-    margin-top: 5px;
-}
-
-.day-marker {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background-color: rgba(100, 255, 218, 0.1);
-    border: 1px solid rgba(100, 255, 218, 0.3);
-}
-
-.day-marker.completed {
-    background-color: var(--accent-color);
-}
-
-.day-marker[title="Today"] {
-    border: 1px solid var(--accent-color);
-    box-shadow: 0 0 5px rgba(100, 255, 218, 0.5);
-}
-
-/* Goal status indicators */
-.goal-status {
-    font-size: 0.8em;
-    margin-left: 10px;
-}
-
-.goal-achieved {
-    color: var(--accent-color);
-}
-
-.goal-not-achieved {
-    color: #ff6b6b;
-}
-
-/* Make sure habit tracker works with disco mode */
-body.disco-mode .habit-item {
-    position: relative;
-    overflow: hidden;
-}
-
-body.disco-mode .habit-item::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(45deg, transparent 95%, rgba(255, 255, 255, 0.35) 100%);
-    animation: card-flash 9s cubic-bezier(0.42, 0, 0.58, 1) infinite;
-    opacity: 0;
-    z-index: 1;
-    pointer-events: none;
-}
-
-/* Staggered timing for habit items to create rhythm in disco mode */
-body.disco-mode .habit-item:nth-child(3n)::after {
-    animation-delay: 0.5s;
-}
-
-body.disco-mode .habit-item:nth-child(3n+1)::after {
-    animation-delay: 1s;
-}
-
-/* Responsive styles for the form */
-@media (max-width: 600px) {
-    .goal-options {
-        grid-template-columns: 1fr;
-    }
-
-    #goal-unit {
-        top: 42px;
-    }
-}
-
-/* Success animation */
-@keyframes success-pulse {
-    0% {
-        box-shadow: 0 0 0 0 rgba(100, 255, 218, 0.4);
-    }
-
-    70% {
-        box-shadow: 0 0 0 15px rgba(100, 255, 218, 0);
-    }
-
-    100% {
-        box-shadow: 0 0 0 0 rgba(100, 255, 218, 0);
-    }
-}
-
-.success-submit {
-    animation: success-pulse 1s ease-out;
-}
-
-/* Update featured section width to work within the new structure */
-.featured-section {
-    width: 100%;
-    background-color: rgba(48, 48, 48, 0.95);
-    padding: 1.8rem;
-    border-radius: 8px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
-    margin-bottom: 2rem;
-    border-left: 5px solid var(--accent-color);
-    position: relative;
-    overflow: hidden;
-}
-
-.featured-section::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 150px;
-    height: 150px;
-    background: radial-gradient(circle, var(--accent-color) 0%, transparent 70%);
-    opacity: 0.05;
-    border-radius: 50%;
-    transform: translate(50%, -50%);
-}
-
-.featured-section h3 {
-    font-size: 1.3rem;
-    text-shadow: 0 0 10px rgba(100, 255, 218, 0.3);
-}
-
-.featured-section::after {
-    content: '📊';
-    position: absolute;
-    top: 15px;
-    right: 15px;
-    font-size: 1.5rem;
-    opacity: 0.4;
-}
-
-/* Highlight the empty state message */
-.habits-container .habits-list p {
-    padding: 30px !important;
-    border: 1px dashed rgba(100, 255, 218, 0.3);
-    border-radius: 6px;
-    background-color: rgba(100, 255, 218, 0.05);
-    text-align: center;
-    font-style: italic;
-}
-
-/* Enhance the habit items */
-.habit-item {
-    background-color: rgba(15, 15, 15, 0.3);
-    border-radius: 6px;
-    margin-bottom: 10px;
-    display: flex;
-    justify-content: space-between;
-    align-items: stretch;
-    /* Changed from center to stretch to fix alignment */
-    padding: 15px;
-    transition: background-color 0.2s ease, transform 0.2s ease;
-    border-bottom: none;
-    border-left: 3px solid transparent;
-}
-
-.habit-item:hover {
-    transform: translateX(5px);
-    background-color: rgba(48, 48, 48, 0.8);
-    border-left-color: var(--accent-color);
-}
-
-.habit-item:last-child {
-    margin-bottom: 0;
-}
+/* --------------------------------------
+   5. SECTION ORGANIZATION
+   -------------------------------------- */
 
 /* Habits section styling for completed and uncompleted sections */
 .habits-section {
-    margin-bottom: 20px;
-    position: relative;
+    margin-bottom: 25px;
+    padding: 15px;
+    border-radius: 8px;
 }
 
 .habits-section:last-of-type {
     margin-bottom: 0;
 }
 
+/* Section headers with distinct styling */
 .section-header {
     font-family: 'Courier New', monospace;
-    font-size: 1rem;
-    margin-bottom: 15px;
-    padding-bottom: 8px;
-    border-bottom: 1px dashed rgba(100, 255, 218, 0.2);
-    color: #ccc;
+    font-size: 1.1rem;
+    margin-bottom: 18px;
+    padding-bottom: 10px;
+    border-bottom: 2px dashed rgba(100, 255, 218, 0.2);
+    font-weight: bold;
+    display: flex;
+    align-items: center;
 }
 
-/* Apply different styling to completed section */
+.section-header::before {
+    margin-right: 8px;
+    font-size: 16px;
+}
+
+/* PENDING section styling */
+.uncompleted-section {
+    background-color: rgba(255, 107, 107, 0.07);
+    border: 1px solid rgba(255, 107, 107, 0.2);
+}
+
+.uncompleted-section .section-header {
+    color: var(--habit-pending-color);
+    border-bottom-color: rgba(255, 107, 107, 0.2);
+}
+
+.uncompleted-section .section-header::before {
+    content: "⏳";
+}
+
+/* COMPLETED section styling */
+.completed-section {
+    background-color: rgba(100, 255, 218, 0.05);
+    border: 1px solid rgba(100, 255, 218, 0.15);
+}
+
 .completed-section .section-header {
-    color: var(--accent-color);
+    color: var(--habit-primary-color);
+    border-bottom-color: rgba(100, 255, 218, 0.2);
 }
 
-.uncompleted-section .habit-item {
-    border-left: 3px solid #ff6b6b;
-}
-
-.uncompleted-section .habit-item:hover {
-    border-left: 3px solid #ff6b6b;
-}
-
-.completed-section .habit-item {
-    opacity: 0.85;
-    border-left: 3px solid var(--accent-color);
+.completed-section .section-header::before {
+    content: "✅";
 }
 
 /* Section empty state messages */
@@ -829,6 +710,7 @@ body.disco-mode .habit-item:nth-child(3n+1)::after {
     font-style: italic;
     background-color: rgba(30, 30, 30, 0.5);
     border-radius: 6px;
+    margin-top: 10px;
 }
 
 .uncompleted-section:empty::after {
@@ -858,7 +740,7 @@ body.disco-mode .habit-item:nth-child(3n+1)::after {
 
 .stats-percentage {
     font-weight: bold;
-    color: var(--accent-color);
+    color: var(--habit-primary-color);
 }
 
 .stats-bar {
@@ -870,1993 +752,11 @@ body.disco-mode .habit-item:nth-child(3n+1)::after {
 
 .stats-bar-fill {
     height: 100%;
-    background-color: var(--accent-color);
+    background-color: var(--habit-primary-color);
     transition: width 0.3s ease;
 }
 
-/* Make sure habit tracker responds to main site's width changes */
-@media (max-width: 768px) {
-    /* ...existing media query rules... */
-
-    .habit-item {
-        flex-direction: column;
-    }
-
-    .habit-info,
-    .habit-actions {
-        width: 100%;
-    }
-
-    .habit-actions {
-        margin-top: 15px;
-        display: flex;
-        justify-content: space-between;
-    }
-
-    .habit-actions button {
-        flex: 1;
-        margin: 0 5px;
-    }
-}
-
-/* Enhanced section styling for better differentiation */
-.habits-section {
-    margin-bottom: 25px;
-    position: relative;
-    padding: 15px;
-    border-radius: 8px;
-}
-
-.habits-section:last-of-type {
-    margin-bottom: 0;
-}
-
-/* Make section headers much more distinct */
-.section-header {
-    font-family: 'Courier New', monospace;
-    font-size: 1.1rem;
-    margin-bottom: 18px;
-    padding-bottom: 10px;
-    border-bottom: 2px dashed rgba(100, 255, 218, 0.2);
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-}
-
-.section-header::before {
-    margin-right: 8px;
-    font-size: 16px;
-}
-
-/* PENDING section styling - more urgent look */
-.uncompleted-section {
-    background-color: rgba(255, 107, 107, 0.07);
-    border: 1px solid rgba(255, 107, 107, 0.2);
-}
-
-.uncompleted-section .section-header {
-    color: #ff6b6b;
-    border-bottom-color: rgba(255, 107, 107, 0.2);
-}
-
-.uncompleted-section .section-header::before {
-    content: "⏳";
-}
-
-.uncompleted-section .habit-item {
-    border-left: 3px solid #ff6b6b;
-    background-color: rgba(255, 107, 107, 0.05);
-}
-
-.uncompleted-section .habit-item:hover {
-    border-left: 3px solid #ff6b6b;
-    background-color: rgba(255, 107, 107, 0.1);
-}
-
-/* COMPLETED section styling - more muted look */
-.completed-section {
-    background-color: rgba(100, 255, 218, 0.05);
-    border: 1px solid rgba(100, 255, 218, 0.15);
-}
-
-.completed-section .section-header {
-    color: var(--accent-color);
-    border-bottom-color: rgba(100, 255, 218, 0.2);
-}
-
-.completed-section .section-header::before {
-    content: "✅";
-}
-
-.completed-section .habit-item {
-    opacity: 0.8;
-    border-left: 3px solid var(--accent-color);
-    background-color: rgba(100, 255, 218, 0.03);
-}
-
-.completed-section .habit-item:hover {
-    opacity: 0.9;
-    background-color: rgba(100, 255, 218, 0.08);
-}
-
-/* Improved completed habit styling */
-.completed-section .habit-name {
-    text-decoration: line-through;
-    color: #aaa;
-}
-
-/* Add visual differentiation to the buttons based on section */
-.uncompleted-section .btn-complete {
-    background-color: rgba(100, 255, 218, 0.25);
-    font-weight: bold;
-}
-
-.completed-section .btn-complete {
-    background-color: rgba(100, 255, 218, 0.1);
-}
-
-/* Section empty state messages */
-.habits-section:empty::after {
-    content: "No habits in this category";
-    display: block;
-    text-align: center;
-    padding: 15px;
-    color: #888;
-    font-style: italic;
-    background-color: rgba(30, 30, 30, 0.5);
-    border-radius: 6px;
-    margin-top: 10px;
-}
-
-.uncompleted-section:empty::after {
-    content: "All habits completed for today! 🎉";
-    background-color: rgba(100, 255, 218, 0.05);
-}
-
-.completed-section:empty::after {
-    content: "No completed habits yet today";
-    background-color: rgba(255, 107, 107, 0.05);
-}
-
-/* Ensure habit info elements scale properly with container width */
-.habit-info {
-    flex: 1;
-    width: 100%;
-    min-width: 0;
-    /* Prevent flex item from overflowing */
-}
-
-/* Habit Heatmap Visualization - Improved GitHub-style layout */
-.habit-heatmap-section {
-    margin-top: 30px;
-    padding-top: 20px;
-    border-top: 1px dashed rgba(100, 255, 218, 0.2);
-}
-
-.heatmap-container {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding: 15px;
-    background: rgba(30, 30, 30, 0.5);
-    border-radius: 8px;
-    overflow: auto;
-}
-
-/* Main heatmap layout */
-.heatmap-wrapper {
-    display: flex;
-    align-items: flex-start;
-    margin-top: 4px;
-}
-
-/* Day labels on the left side */
-.day-labels {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    margin-right: 4px;
-    padding-top: 5px;
-}
-
-.day-label {
-    color: #aaa;
-    font-size: 0.7rem;
-    height: 12px;
-    line-height: 12px;
-    width: 20px;
-    text-align: center;
-    padding-right: 0;
-}
-
-/* Month labels on top - fixed alignment */
-.month-labels {
-    display: flex;
-    margin-left: 24px;
-    /* Match day labels width + margin */
-    padding-bottom: 5px;
-}
-
-.month-label {
-    font-size: 0.8rem;
-    color: #aaa;
-    text-align: left;
-    padding-left: 6px;
-    /* Offset to align with cell columns */
-    min-width: 60px;
-}
-
-/* The heatmap grid itself - fixed layout with Monday as first day */
-.heatmap-grid {
-    display: grid;
-    grid-template-rows: repeat(7, 1fr);
-    /* 7 days per week, Monday to Sunday */
-    grid-auto-columns: 15px;
-    grid-auto-flow: column;
-    gap: 3px;
-}
-
-/* Enhanced tooltip styles */
-.tooltip {
-    position: fixed;
-    background: rgba(25, 25, 25, 0.95);
-    color: #eee;
-    border: 1px solid rgba(100, 255, 218, 0.3);
-    border-radius: 4px;
-    padding: 6px 10px;
-    font-size: 0.8rem;
-    pointer-events: none;
-    z-index: 100;
-    transform: translate(-50%, -100%);
-    margin-top: -8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-    opacity: 0;
-    transition: opacity 0.15s ease;
-    white-space: nowrap;
-}
-
-.tooltip::after {
-    content: '';
-    position: absolute;
-    bottom: -5px;
-    left: 50%;
-    transform: translateX(-50%);
-    border-width: 5px 5px 0;
-    border-style: solid;
-    border-color: rgba(25, 25, 25, 0.95) transparent transparent;
-}
-
-/* Fix interactive elements for better touch support on mobile */
-.heatmap-cell {
-    cursor: pointer;
-    touch-action: manipulation;
-}
-
-/* Intensity levels - improved contrast */
-.heatmap-cell.intensity-0 {
-    background-color: rgba(40, 40, 40, 0.6);
-}
-
-.heatmap-cell.intensity-1 {
-    background-color: rgba(100, 255, 218, 0.15);
-}
-
-.heatmap-cell.intensity-2 {
-    background-color: rgba(100, 255, 218, 0.3);
-}
-
-.heatmap-cell.intensity-3 {
-    background-color: rgba(100, 255, 218, 0.5);
-}
-
-.heatmap-cell.intensity-4 {
-    background-color: rgba(100, 255, 218, 0.75);
-}
-
-/* Legend */
-.heatmap-legend {
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-    margin-top: 15px;
-    padding: 5px;
-    font-size: 0.8rem;
-}
-
-.legend-item {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    color: #aaa;
-}
-
-.legend-color {
-    display: inline-block;
-    width: 12px;
-    height: 12px;
-    border-radius: 2px;
-    border: 1px solid rgba(70, 70, 70, 0.3);
-}
-
-.legend-color.intensity-0 {
-    background-color: rgba(40, 40, 40, 0.6);
-}
-
-.legend-color.intensity-1 {
-    background-color: rgba(100, 255, 218, 0.15);
-}
-
-.legend-color.intensity-2 {
-    background-color: rgba(100, 255, 218, 0.3);
-}
-
-.legend-color.intensity-3 {
-    background-color: rgba(100, 255, 218, 0.5);
-}
-
-.legend-color.intensity-4 {
-    background-color: rgba(100, 255, 218, 0.75);
-}
-
-/* Mobile responsive layout - improved for small screens */
-@media (max-width: 768px) {
-    .day-labels {
-        display: none;
-    }
-
-    .month-labels {
-        margin-left: 0;
-    }
-
-    .heatmap-grid {
-        grid-template-rows: repeat(7, 10px);
-        grid-auto-columns: 13px;
-    }
-
-    .heatmap-cell {
-        width: 10px;
-        height: 10px;
-    }
-}
-
-/* Category styling */
-.habit-category {
-    display: inline-block;
-    font-size: 0.7rem;
-    background-color: rgba(100, 100, 100, 0.3);
-    color: #ccc;
-    padding: 2px 8px;
-    border-radius: 10px;
-    margin-left: 8px;
-    vertical-align: middle;
-}
-
-/* Specific category colors */
-.habit-item[data-category="Health"] .habit-category {
-    background-color: rgba(46, 204, 113, 0.2);
-    color: #2ecc71;
-}
-
-.habit-item[data-category="Work"] .habit-category {
-    background-color: rgba(52, 152, 219, 0.2);
-    color: #3498db;
-}
-
-.habit-item[data-category="Learning"] .habit-category {
-    background-color: rgba(155, 89, 182, 0.2);
-    color: #9b59b6;
-}
-
-.habit-item[data-category="Personal"] .habit-category {
-    background-color: rgba(241, 196, 15, 0.2);
-    color: #f1c40f;
-}
-
-.habit-item[data-category="General"] .habit-category {
-    background-color: rgba(149, 165, 166, 0.2);
-    color: #95a5a6;
-}
-
-.habit-title {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 5px;
-}
-
-/* Category filter styling */
-.category-filters {
-    margin-bottom: 15px;
-    padding: 10px 0;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: center;
-    border-bottom: 1px dashed rgba(100, 255, 218, 0.15);
-    padding-bottom: 15px;
-}
-
-.filter-label {
-    color: #aaa;
-    font-size: 0.9rem;
-    margin-right: 5px;
-}
-
-.category-filter {
-    background-color: transparent;
-    color: #ccc;
-    border: 1px solid rgba(100, 100, 100, 0.3);
-    border-radius: 15px;
-    padding: 3px 12px;
-    font-size: 0.8rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.category-filter:hover {
-    background-color: rgba(100, 100, 100, 0.2);
-}
-
-.category-filter.active {
-    background-color: rgba(100, 255, 218, 0.1);
-    color: var(--accent-color);
-    border-color: var(--accent-color);
-}
-
-/* Custom category input styling */
-#custom-category-container {
-    display: none;
-    margin-top: 10px;
-}
-
-/* ...existing code... */
-
-/* Mobile responsive adjustments */
-@media (max-width: 600px) {
-    /* ...existing mobile styles... */
-
-    .habit-category {
-        margin-left: 0;
-    }
-
-    .category-filters {
-        justify-content: center;
-    }
-}
-
-/* ...existing code... */
-
-/* Goal type visual indicators */
-.habit-item .goal-type-indicator {
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    font-size: 0.8rem;
-    color: rgba(255, 255, 255, 0.6);
-    background-color: rgba(0, 0, 0, 0.3);
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-family: 'Courier New', monospace;
-}
-
-/* Streak goal styling */
-.habit-item[data-goal-type="streak"] .goal-type-indicator {
-    color: #ff9f1c;
-    background-color: rgba(255, 159, 28, 0.1);
-    border: 1px solid rgba(255, 159, 28, 0.3);
-}
-
-.habit-item[data-goal-type="streak"] .streak-badge {
-    background-color: rgba(255, 159, 28, 0.15);
-    color: #ff9f1c;
-    font-weight: bold;
-}
-
-.habit-item[data-goal-type="streak"] .goal-info {
-    color: #ff9f1c;
-}
-
-/* Weekly frequency goal styling */
-.habit-item[data-goal-type="frequency"] .goal-type-indicator {
-    color: #4cc9f0;
-    background-color: rgba(76, 201, 240, 0.1);
-    border: 1px solid rgba(76, 201, 240, 0.3);
-}
-
-.habit-item[data-goal-type="frequency"] .progress-fill {
-    background-color: #4cc9f0;
-}
-
-.habit-item[data-goal-type="frequency"] .day-marker.completed {
-    background-color: #4cc9f0;
-    border-color: rgba(76, 201, 240, 0.3);
-}
-
-.habit-item[data-goal-type="frequency"] .goal-info {
-    color: #4cc9f0;
-}
-
-/* Weekly stats for frequency habits */
-.weekly-stats {
-    display: flex;
-    flex-wrap: wrap;
-    /* Added to ensure stats wrap on small screens */
-    align-items: center;
-    gap: 10px;
-    margin-top: 8px;
-    font-size: 0.8rem;
-    color: #aaa;
-}
-
-.week-streak-badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 2px 8px;
-    border-radius: 12px;
-    background-color: rgba(76, 201, 240, 0.15);
-    color: #4cc9f0;
-    font-size: 0.75rem;
-}
-
-/* Completed items should maintain their style */
-.completed-section .habit-item[data-goal-type="streak"],
-.completed-section .habit-item[data-goal-type="frequency"] {
-    opacity: 0.8;
-    border-left: 3px solid var(--accent-color);
-}
-
-/* Add category-based right border styling */
-.habit-item[data-category="Health"] {
-    border-right: 3px solid #2ecc71;
-}
-
-.habit-item[data-category="Work"] {
-    border-right: 3px solid #3498db;
-}
-
-.habit-item[data-category="Learning"] {
-    border-right: 3px solid #9b59b6;
-}
-
-.habit-item[data-category="Personal"] {
-    border-right: 3px solid #f1c40f;
-}
-
-.habit-item[data-category="General"] {
-    border-right: 3px solid #95a5a6;
-}
-
-/* Enhance category indicator colors to match the border */
-.habit-item[data-category="Health"] .habit-category {
-    background-color: rgba(46, 204, 113, 0.2);
-    color: #2ecc71;
-}
-
-.habit-item[data-category="Work"] .habit-category {
-    background-color: rgba(52, 152, 219, 0.2);
-    color: #3498db;
-}
-
-.habit-item[data-category="Learning"] .habit-category {
-    background-color: rgba(155, 89, 182, 0.2);
-    color: #9b59b6;
-}
-
-.habit-item[data-category="Personal"] .habit-category {
-    background-color: rgba(241, 196, 15, 0.2);
-    color: #f1c40f;
-}
-
-.habit-item[data-category="General"] .habit-category {
-    background-color: rgba(149, 165, 166, 0.2);
-    color: #95a5a6;
-}
-
-/* Make sure completed items maintain their left border style but keep right category border */
-.completed-section .habit-item {
-    opacity: 0.8;
-    border-left: 3px solid var(--accent-color);
-    /* Right border is kept from category styling */
-}
-
-/* ...existing code... */
-
-/* Improved heatmap styling with visible grid outlines */
-.heatmap-cell {
-    width: 12px;
-    height: 12px;
-    border-radius: 2px;
-    /* Reduce from default rounded corners for better grid visibility */
-    border: 1px solid rgba(60, 60, 60, 0.5);
-    /* Add visible border for all cells */
-    box-sizing: border-box;
-    /* Ensure borders don't affect the layout */
-}
-
-.heatmap-grid {
-    display: grid;
-    grid-template-rows: repeat(7, 12px);
-    grid-auto-columns: 12px;
-    grid-auto-flow: column;
-    gap: 3px;
-    /* Space between cells */
-    background-color: rgba(40, 40, 40, 0.2);
-    /* Subtle background to make grid visible */
-    padding: 3px;
-    /* Add padding around grid */
-    border-radius: 4px;
-    /* Rounded corners for grid container */
-    border: 1px solid rgba(70, 70, 70, 0.3);
-    /* Subtle border around entire grid */
-}
-
-/* Intensity levels - improved contrast with borders */
-.heatmap-cell.intensity-0 {
-    background-color: rgba(40, 40, 40, 0.6);
-    border: 1px solid rgba(60, 60, 60, 0.8);
-}
-
-.heatmap-cell.intensity-1 {
-    background-color: rgba(100, 255, 218, 0.15);
-    border: 1px solid rgba(100, 255, 218, 0.3);
-}
-
-.heatmap-cell.intensity-2 {
-    background-color: rgba(100, 255, 218, 0.3);
-    border: 1px solid rgba(100, 255, 218, 0.4);
-}
-
-.heatmap-cell.intensity-3 {
-    background-color: rgba(100, 255, 218, 0.5);
-    border: 1px solid rgba(100, 255, 218, 0.6);
-}
-
-.heatmap-cell.intensity-4 {
-    background-color: rgba(100, 255, 218, 0.75);
-    border: 1px solid rgba(100, 255, 218, 0.85);
-}
-
-/* Highlight today's cell with a special border */
-.heatmap-cell.today {
-    border: 2px solid var(--accent-color);
-    box-shadow: 0 0 3px rgba(100, 255, 218, 0.5);
-}
-
-/* Empty cell styling for heatmap */
-.heatmap-cell.empty-cell {
-    background-color: transparent;
-    border: 1px dashed rgba(60, 60, 60, 0.2);
-}
-
-/* Enhance heatmap grid layout */
-.heatmap-grid {
-    display: grid;
-    grid-template-rows: repeat(7, 12px);
-    grid-auto-columns: 12px;
-    grid-auto-flow: column;
-    gap: 3px;
-    background-color: rgba(40, 40, 40, 0.2);
-    padding: 3px;
-    border-radius: 4px;
-    border: 1px solid rgba(70, 70, 70, 0.3);
-    min-width: fit-content;
-    /* Prevent grid from collapsing */
-}
-
-/* Ensure heatmap container scrolls properly on small screens */
-.heatmap-container {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding: 15px;
-    background: rgba(30, 30, 30, 0.5);
-    border-radius: 8px;
-    overflow-x: auto;
-    /* Allow horizontal scrolling */
-    -webkit-overflow-scrolling: touch;
-    /* Smooth scrolling on iOS */
-}
-
-/* ...existing code... */
-
-/* Update section styling to work with separate sections rather than nested */
-.section {
-    margin-bottom: 2rem;
-    /* Use the same width constraints as the main site */
-    max-width: 1100px;
-    margin-left: auto;
-    margin-right: auto;
-    padding: 1rem;
-    background-color: var(--secondary-color);
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-    border-left: 3px solid var(--accent-color);
-}
-
-/* Fix the issue with section styling in habit tracker */
-#habit-tracker-section .section {
-    background-color: var(--secondary-color);
-    border-radius: 8px;
-    border-left: 3px solid var(--accent-color);
-    margin-bottom: 2rem;
-}
-
-/* Adjust heading styles to be consistent across separate sections */
-.section h2 {
-    font-family: 'Courier New', monospace;
-    margin-bottom: 1.5rem;
-    color: var(--accent-color);
-    font-size: 1.5rem;
-}
-
-/* Specific styling for intro section - remove redundant width constraints */
-.intro-section {
-    /* Remove max-width as it's now handled by the .section class */
-    padding: 1rem;
-}
-
-/* Make sure habit tracker responds properly on GitHub Pages */
-#habit-tracker-section {
-    display: none;
-    /* Hidden by default, shown by router */
-    max-width: 1100px;
-    margin-left: auto;
-    margin-right: auto;
-}
-
-/* Fix any duplicated background issues */
-#habit-tracker-section .section {
-    background-color: var(--secondary-color);
-}
-
-/* Ensure habit actions are properly styled */
-.habit-actions button {
-    width: auto;
-    min-width: 100px;
-}
-
-/* ...existing code... */
-
-/* Fix the featured styling for habits section */
-.featured-section {
-    background-color: rgba(48, 48, 48, 0.95);
-    padding: 1.8rem;
-    border-radius: 8px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
-    border-left: 5px solid var(--accent-color);
-    position: relative;
-    overflow: hidden;
-}
-
-/* Ensure no double backgrounds */
-#habit-tracker-section .featured-section {
-    background-color: rgba(48, 48, 48, 0.95);
-}
-
-/* Fix any remaining issues with nested sections */
-.section.habits-section,
-.section.add-habit-section,
-.section.info-section,
-.section.intro-section {
-    /* Override any background from .section as needed for specific sections */
-    background-color: transparent;
-    /* Reset border-left since child containers already have it */
-    border-left: none;
-    /* Set proper padding */
-    padding: 0;
-}
-
-/* Remove unnecessary padding from nested containers */
-.section .add-habit-container,
-.section .info-box {
-    /* These elements already have their own padding */
-    margin-bottom: 0;
-}
-
-/* ...existing code... */
-
-/* Data Management Section */
-.data-section {
-    margin-bottom: 2rem;
-}
-
-.data-controls {
-    background-color: var(--secondary-color);
-    padding: 1.5rem;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-    border-left: 3px solid var(--accent-color);
-}
-
-.data-buttons {
-    display: flex;
-    gap: 15px;
-    margin: 20px 0;
-    flex-wrap: wrap;
-}
-
-.data-btn {
-    padding: 12px 20px;
-    border-radius: 6px;
-    font-size: 1rem;
-    font-weight: bold;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex: 1;
-    min-width: 180px;
-}
-
-.export-btn {
-    background-color: rgba(100, 255, 218, 0.1);
-    color: var(--accent-color);
-    border: 2px solid var(--accent-color);
-}
-
-.export-btn:hover {
-    background-color: rgba(100, 255, 218, 0.2);
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(100, 255, 218, 0.2);
-}
-
-.import-btn {
-    background-color: rgba(255, 255, 255, 0.05);
-    color: #ffffff;
-    border: 2px solid #888;
-}
-
-.import-btn:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    border-color: #fff;
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(255, 255, 255, 0.1);
-}
-
-.reset-btn {
-    background-color: rgba(244, 67, 54, 0.1);
-    color: #f44336;
-    border: 2px solid #f44336;
-}
-
-.reset-btn:hover {
-    background-color: rgba(244, 67, 54, 0.2);
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(244, 67, 54, 0.2);
-}
-
-.btn-icon {
-    margin-right: 10px;
-    font-size: 1.2rem;
-}
-
-.data-info {
-    margin-top: 15px;
-    padding: 10px 15px;
-    background-color: rgba(255, 193, 7, 0.1);
-    border-left: 3px solid #ffc107;
-    border-radius: 4px;
-}
-
-.data-info p {
-    color: #ffc107;
-    font-size: 0.9rem;
-    margin: 0;
-}
-
-/* Notification styling */
-.notification {
-    position: fixed;
-    bottom: 20px;
-    left: 20px;
-    padding: 12px 20px;
-    border-radius: 6px;
-    background-color: rgba(25, 25, 25, 0.95);
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    z-index: 1000;
-    opacity: 0;
-    transform: translateY(20px);
-    transition: opacity 0.3s ease, transform 0.3s ease;
-    max-width: 80vw;
-}
-
-.notification-icon {
-    font-size: 1.2rem;
-}
-
-.success-notification {
-    border-left: 4px solid var(--accent-color);
-    color: var(--accent-color);
-}
-
-.error-notification {
-    border-left: 4px solid #ff6b6b;
-    color: #ff6b6b;
-}
-
-.info-notification {
-    border-left: 4px solid #3498db;
-    color: #3498db;
-}
-
-/* Mobile responsive */
-@media (max-width: 600px) {
-    .data-buttons {
-        flex-direction: column;
-    }
-}
-
-/* ...existing code... */
-
-/* Storage Usage Indicator */
-.storage-usage {
-    margin-top: 15px;
-    padding: 15px;
-    border-top: 1px dashed rgba(100, 255, 218, 0.2);
-    font-size: 0.9rem;
-    color: #aaa;
-}
-
-.storage-usage h4 {
-    margin-bottom: 10px;
-    font-family: 'Courier New', monospace;
-    color: var(--accent-color);
-    font-size: 0.95rem;
-}
-
-.usage-details {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 10px;
-}
-
-.usage-value {
-    font-weight: bold;
-    color: var(--accent-color);
-    font-family: 'Courier New', monospace;
-}
-
-.usage-bar {
-    height: 6px;
-    background-color: rgba(255, 255, 255, 0.1);
-    border-radius: 3px;
-    overflow: hidden;
-    flex-grow: 1;
-    margin: 0 10px;
-}
-
-.usage-fill {
-    height: 100%;
-    background-color: var(--accent-color);
-    transition: width 0.3s ease;
-}
-
-.usage-percent {
-    font-size: 0.8rem;
-    white-space: nowrap;
-}
-
-/* Mobile responsive layout */
-@media (max-width: 600px) {
-    .usage-details {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .usage-bar {
-        width: 100%;
-        margin: 8px 0;
-    }
-}
-
-/* ...existing code... */
-
-/* Enhanced mobile view for heatmap */
-.heatmap-container.mobile-view {
-    padding: 10px;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-}
-
-.mobile-view .heatmap-grid {
-    grid-template-rows: repeat(7, 10px);
-    grid-auto-columns: 10px;
-    gap: 2px;
-}
-
-.mobile-view .heatmap-cell {
-    width: 10px;
-    height: 10px;
-    border-width: 1px;
-}
-
-.mobile-view .day-labels {
-    display: none;
-    /* Hide day labels on mobile */
-}
-
-.mobile-view .month-labels {
-    margin-left: 0;
-    font-size: 0.7rem;
-}
-
-.mobile-view .month-label {
-    min-width: 30px;
-    padding-left: 2px;
-}
-
-.mobile-view .heatmap-legend {
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 6px;
-    font-size: 0.7rem;
-}
-
-/* Enhance habit titling for touch interfaces */
-@media (max-width: 768px) {
-    .habit-item {
-        padding: 12px 10px;
-        /* Slightly reduce padding */
-    }
-
-    .habit-actions {
-        margin-top: 12px;
-    }
-
-    .btn-complete,
-    .btn-delete {
-        padding: 10px 8px;
-        /* Larger touch targets */
-        min-width: 0;
-        /* Allow buttons to be more flexible */
-        flex: 1;
-    }
-
-    .progress-area {
-        gap: 6px;
-    }
-
-    .day-marker {
-        width: 10px;
-        height: 10px;
-    }
-
-    /* Improve touch targets */
-    .category-filter {
-        padding: 5px 14px;
-        margin: 3px;
-    }
-
-    /* Better form layout on mobile */
-    #custom-category-container {
-        margin-top: 8px;
-        padding: 8px;
-        background-color: rgba(45, 45, 45, 0.5);
-        border-radius: 4px;
-    }
-
-    .goal-options {
-        grid-template-columns: 1fr;
-        /* Stack goal fields vertically on mobile */
-        gap: 10px;
-    }
-
-    .data-buttons {
-        flex-direction: column;
-        gap: 10px;
-    }
-}
-
-/* Improve notification appearance */
-.notification {
-    max-width: 90vw;
-    bottom: 10px;
-    left: 10px;
-    z-index: 1100;
-    /* Ensure it's above everything */
-}
-
-/* Success animation for action buttons */
-.btn-complete:active,
-.btn-delete:active {
-    transform: scale(0.95);
-    transition: transform 0.1s;
-}
-
-/* Add blinking effect for incomplete habits that have a nearly-broken streak */
-@keyframes streak-alert {
-    0% {
-        box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.4);
-    }
-
-    70% {
-        box-shadow: 0 0 0 10px rgba(255, 107, 107, 0);
-    }
-
-    100% {
-        box-shadow: 0 0 0 0 rgba(255, 107, 107, 0);
-    }
-}
-
-.habit-item.streak-alert {
-    animation: streak-alert 2s infinite;
-}
-
-/* ...existing code... */
-
-/* Statistics Dashboard Styling */
-.habits-tab-navigation {
-    display: flex;
-    margin-bottom: 20px;
-    border-bottom: 1px solid rgba(100, 255, 218, 0.2);
-}
-
-.tab-button {
-    background: transparent;
-    color: #ccc;
-    border: none;
-    padding: 10px 20px;
-    font-size: 1rem;
-    cursor: pointer;
-    font-family: 'Courier New', monospace;
-    transition: all 0.3s ease;
-    border-bottom: 2px solid transparent;
-    margin-right: 10px;
-}
-
-.tab-button:hover {
-    color: var(--accent-color);
-}
-
-.tab-button.active {
-    color: var(--accent-color);
-    border-bottom: 2px solid var(--accent-color);
-}
-
-.tab-content {
-    display: none;
-}
-
-.tab-content.active {
-    display: block;
-}
-
-/* Stats dashboard container */
-.stats-container {
-    padding: 10px 0;
-}
-
-.stats-dashboard {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 20px;
-}
-
-/* Individual stat card */
-.stat-card {
-    background-color: rgba(30, 30, 30, 0.5);
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
-    border-left: 3px solid var(--accent-color);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.stat-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
-}
-
-.stat-title {
-    font-family: 'Courier New', monospace;
-    color: var(--accent-color);
-    font-size: 1.1rem;
-    margin-bottom: 15px;
-    display: flex;
-    align-items: center;
-}
-
-.stat-title::before {
-    content: ">";
-    margin-right: 8px;
-    opacity: 0.8;
-}
-
-.stat-content {
-    margin-bottom: 15px;
-}
-
-.stat-description {
-    color: #888;
-    font-size: 0.85rem;
-    font-style: italic;
-}
-
-/* Status indicators */
-.stat-card.success {
-    border-left-color: #4BB543;
-}
-
-.stat-card.success .stat-title {
-    color: #4BB543;
-}
-
-.stat-card.warning {
-    border-left-color: #FFC107;
-}
-
-.stat-card.warning .stat-title {
-    color: #FFC107;
-}
-
-.stat-card.danger {
-    border-left-color: #F44336;
-}
-
-.stat-card.danger .stat-title {
-    color: #F44336;
-}
-
-/* Completion rate styles */
-.stat-card .stat-content:has(> .streaks-list) {
-    max-height: 300px;
-    overflow-y: auto;
-}
-
-.streaks-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.streak-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 12px;
-    border-radius: 6px;
-    background-color: rgba(30, 30, 30, 0.7);
-    transition: background-color 0.3s ease;
-}
-
-.streak-item:hover {
-    background-color: rgba(40, 40, 40, 0.9);
-}
-
-.streak-item .streak-badge {
-    background-color: rgba(100, 255, 218, 0.15);
-    color: var(--accent-color);
-    padding: 4px 10px;
-    border-radius: 12px;
-    font-size: 0.9rem;
-    font-weight: bold;
-    min-width: 55px;
-    text-align: center;
-}
-
-.streak-item .streak-details {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.streak-name {
-    color: #eee;
-    font-weight: 500;
-}
-
-.streak-category {
-    font-size: 0.75rem;
-    color: #aaa;
-}
-
-.streak-item.achieved {
-    border-left: 3px solid #4BB543;
-}
-
-.streak-item.achieved .streak-badge {
-    background-color: rgba(75, 181, 67, 0.2);
-    color: #4BB543;
-}
-
-.streak-item.almost {
-    border-left: 3px solid #FFC107;
-}
-
-.streak-item.almost .streak-badge {
-    background-color: rgba(255, 193, 7, 0.2);
-    color: #FFC107;
-}
-
-/* Category chart styles */
-.category-chart {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.chart-item {
-    display: grid;
-    grid-template-columns: 80px 1fr 50px;
-    align-items: center;
-    gap: 10px;
-}
-
-.chart-label {
-    color: #eee;
-    font-size: 0.9rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.chart-bar-container {
-    height: 8px;
-    background-color: rgba(100, 100, 100, 0.2);
-    border-radius: 4px;
-    overflow: hidden;
-    position: relative;
-}
-
-.chart-bar {
-    height: 100%;
-    background-color: var(--accent-color);
-    border-radius: 4px;
-}
-
-.chart-value {
-    position: absolute;
-    right: 0;
-    top: -16px;
-    font-size: 0.75rem;
-    color: #aaa;
-}
-
-.chart-details {
-    text-align: right;
-    font-size: 0.8rem;
-    color: #aaa;
-}
-
-/* Trends chart styles */
-.trends-chart {
-    display: flex;
-    align-items: flex-end;
-    height: 150px;
-    gap: 2px;
-    padding: 5px;
-    border-bottom: 1px solid rgba(100, 100, 100, 0.3);
-    margin-top: 20px;
-}
-
-.trend-bar-container {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    height: 100%;
-    position: relative;
-}
-
-.trend-bar {
-    width: 80%;
-    background-color: var(--accent-color);
-    border-radius: 2px;
-    transition: height 0.3s ease;
-    min-height: 1px;
-}
-
-.trend-bar.today {
-    background-color: #4BB543;
-    box-shadow: 0 0 5px rgba(75, 181, 67, 0.5);
-}
-
-.trend-date {
-    position: absolute;
-    bottom: -20px;
-    font-size: 0.7rem;
-    color: #aaa;
-    transform: rotate(-45deg);
-    transform-origin: left top;
-}
-
-/* Stats summary table */
-.stats-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 10px;
-    font-size: 0.9rem;
-}
-
-.stats-table th,
-.stats-table td {
-    padding: 8px 10px;
-    text-align: left;
-    border-bottom: 1px solid rgba(100, 100, 100, 0.2);
-}
-
-.stats-table th {
-    color: var(--accent-color);
-    font-weight: normal;
-    font-family: 'Courier New', monospace;
-}
-
-.stats-table tr:hover {
-    background-color: rgba(40, 40, 40, 0.6);
-}
-
-.table-habit-name {
-    color: #eee;
-    font-weight: 500;
-}
-
-.table-habit-category {
-    font-size: 0.75rem;
-    color: #aaa;
-    margin-top: 2px;
-}
-
-.completion-rate {
-    font-size: 0.85rem;
-    padding: 2px 6px;
-    border-radius: 10px;
-}
-
-.completion-rate.good {
-    background-color: rgba(75, 181, 67, 0.1);
-    color: #4BB543;
-}
-
-.completion-rate.low {
-    background-color: rgba(244, 67, 54, 0.1);
-    color: #F44336;
-}
-
-.progress-minibar-container {
-    width: 100%;
-    height: 4px;
-    background-color: rgba(100, 100, 100, 0.2);
-    border-radius: 2px;
-    overflow: hidden;
-    margin-bottom: 5px;
-}
-
-.progress-minibar {
-    height: 100%;
-    background-color: var(--accent-color);
-}
-
-.progress-minibar.achieved {
-    background-color: #4BB543;
-}
-
-.progress-minibar.good {
-    background-color: #00BCD4;
-}
-
-.progress-minibar.average {
-    background-color: #FFC107;
-}
-
-.progress-minibar.low {
-    background-color: #F44336;
-}
-
-.progress-text {
-    font-size: 0.75rem;
-    color: #aaa;
-    text-align: right;
-}
-
-/* Responsive adjustments for statistics */
-@media (max-width: 768px) {
-    .stats-dashboard {
-        grid-template-columns: 1fr;
-    }
-
-    .trends-chart {
-        height: 120px;
-    }
-
-    .chart-item {
-        grid-template-columns: 70px 1fr 40px;
-    }
-
-    .stats-table {
-        font-size: 0.8rem;
-    }
-
-    .stats-table th,
-    .stats-table td {
-        padding: 6px 8px;
-    }
-
-    .trends-chart {
-        margin-left: -10px;
-        margin-right: -10px;
-    }
-}
-
-@media (max-width: 480px) {
-    .streak-item {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .chart-item {
-        grid-template-columns: 60px 1fr 35px;
-        gap: 5px;
-    }
-
-    /* Hide some columns in mobile view */
-    .stats-table th:nth-child(3),
-    .stats-table td:nth-child(3) {
-        display: none;
-    }
-}
-
-/* Dark mode optimizations */
-.stat-content {
-    color: #ddd;
-}
-
-/* ...existing code... */
-
-/* Stats summary table - fix clipping issues */
-.stat-card:has(table.stats-table) {
-    overflow: visible;
-}
-
-.stats-table-wrapper {
-    width: 100%;
-    overflow-x: auto;
-    margin-bottom: 10px;
-    -webkit-overflow-scrolling: touch;
-}
-
-.stats-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 10px;
-    font-size: 0.9rem;
-    min-width: 500px;
-    /* Ensures the table doesn't compress too much */
-}
-
-.stats-table th,
-.stats-table td {
-    padding: 8px 10px;
-    text-align: left;
-    border-bottom: 1px solid rgba(100, 100, 100, 0.2);
-    white-space: nowrap;
-    /* Prevents text from wrapping in cells */
-}
-
-.stats-table th:first-child,
-.stats-table td:first-child {
-    white-space: normal;
-    /* Allow habit names to wrap */
-    min-width: 150px;
-    /* Minimum width for the habit name column */
-    max-width: 250px;
-    /* Maximum width for the habit name column */
-}
-
-/* ...existing code... */
-
-/* Responsive adjustments for statistics */
-@media (max-width: 768px) {
-    /* ...existing code... */
-
-    .stats-table {
-        font-size: 0.8rem;
-        min-width: 450px;
-        /* Slightly smaller minimum width on medium screens */
-    }
-
-    .stats-table th:first-child,
-    .stats-table td:first-child {
-        min-width: 120px;
-        /* Adjusted for mobile */
-    }
-}
-
-@media (max-width: 480px) {
-    /* ...existing code... */
-
-    /* Ensure hint for horizontal scrolling is visible */
-    .stat-card:has(.stats-table-wrapper):after {
-        content: "← Scroll →";
-        display: block;
-        text-align: center;
-        font-size: 0.7rem;
-        color: #aaa;
-        padding: 5px 0;
-        margin-top: 5px;
-    }
-}
-
-/* ...existing code... */
-
-/* Total Completions Card Styling */
-.total-completions {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 10px 0;
-    text-align: center;
-}
-
-.total-count {
-    font-size: 3.5rem;
-    font-weight: bold;
-    color: var(--accent-color);
-    line-height: 1.1;
-    margin-bottom: 5px;
-    font-family: 'Courier New', monospace;
-    text-shadow: 0 0 10px rgba(100, 255, 218, 0.3);
-}
-
-.total-label {
-    font-size: 1rem;
-    color: #aaa;
-    margin-bottom: 15px;
-}
-
-.achievement-badges {
-    display: flex;
-    gap: 10px;
-    margin-top: 5px;
-}
-
-.achievement {
-    font-size: 1.8rem;
-    cursor: help;
-    transition: transform 0.3s ease;
-    display: inline-block;
-}
-
-.achievement:hover {
-    transform: scale(1.2);
-}
-
-/* Apply a subtle glow animation to the total count when it's a high number */
-@keyframes count-glow {
-    0% {
-        text-shadow: 0 0 10px rgba(100, 255, 218, 0.3);
-    }
-
-    50% {
-        text-shadow: 0 0 20px rgba(100, 255, 218, 0.5);
-    }
-
-    100% {
-        text-shadow: 0 0 10px rgba(100, 255, 218, 0.3);
-    }
-}
-
-.total-count {
-    animation: count-glow 2s infinite ease-in-out;
-}
-
-/* Add a special effect for milestone achievements */
-.stat-card.success .total-count {
-    background: linear-gradient(to right, var(--accent-color), #4BB543);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    color: transparent;
-}
-
-/* Responsive adjustments */
-@media (max-width: 480px) {
-    .total-count {
-        font-size: 3rem;
-    }
-
-    .achievement {
-        font-size: 1.5rem;
-    }
-}
-
-/* ...existing code... */
-
-/* Improved Category chart styles */
-.category-chart {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    margin-top: 10px;
-}
-
-.chart-item {
-    display: grid;
-    grid-template-columns: 90px 1fr auto;
-    align-items: center;
-    gap: 12px;
-    background-color: rgba(25, 25, 25, 0.3);
-    border-radius: 6px;
-    padding: 10px;
-    transition: background-color 0.2s ease;
-}
-
-.chart-item:hover {
-    background-color: rgba(35, 35, 35, 0.5);
-}
-
-.chart-label {
-    color: #eee;
-    font-size: 0.9rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    font-weight: 500;
-    padding-left: 5px;
-}
-
-.chart-bar-container {
-    height: 10px;
-    background-color: rgba(100, 100, 100, 0.2);
-    border-radius: 5px;
-    overflow: hidden;
-    position: relative;
-}
-
-.chart-bar {
-    height: 100%;
-    background-color: var(--accent-color);
-    border-radius: 5px;
-}
-
-/* Color coding for chart bars */
-.chart-bar.good {
-    background-color: #4BB543;
-}
-
-.chart-bar.average {
-    background-color: #FFC107;
-}
-
-.chart-bar.low {
-    background-color: #F44336;
-}
-
-.chart-value {
-    position: absolute;
-    right: -25px;
-    bottom: -18px;
-    font-size: 0.75rem;
-    color: #ddd;
-    background: rgba(25, 25, 25, 0.7);
-    padding: 2px 6px;
-    border-radius: 10px;
-}
-
-.chart-details {
-    text-align: right;
-    font-size: 0.8rem;
-    color: #aaa;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.chart-details .completion-count {
-    color: #ddd;
-}
-
-.chart-details .habit-count {
-    font-size: 0.75rem;
-    opacity: 0.7;
-}
-
-/* Responsive adjustments for the category chart */
-@media (max-width: 768px) {
-    .chart-item {
-        grid-template-columns: 80px 1fr auto;
-        padding: 8px;
-        gap: 8px;
-    }
-
-    .chart-bar-container {
-        height: 8px;
-    }
-
-    .chart-value {
-        font-size: 0.7rem;
-        bottom: -16px;
-        right: -20px;
-    }
-}
-
-@media (max-width: 480px) {
-    .chart-item {
-        grid-template-columns: 70px 1fr auto;
-        gap: 6px;
-    }
-
-    .chart-label {
-        font-size: 0.8rem;
-    }
-
-    .chart-details {
-        font-size: 0.75rem;
-    }
-
-    .chart-value {
-        display: none;
-    }
-
-    /* Show percentage in details instead */
-    .chart-details:before {
-        content: attr(data-percent);
-        color: #eee;
-        font-weight: 500;
-    }
-}
-
-/* ...existing code... */
-
-/* Goal achievement styling */
-.goal-achieved-item {
-    position: relative;
-    overflow: hidden;
-    animation: goal-glow 2s infinite ease-in-out;
-}
-
-@keyframes goal-glow {
-    0% {
-        box-shadow: 0 0 5px rgba(100, 255, 218, 0.3);
-    }
-
-    50% {
-        box-shadow: 0 0 15px rgba(100, 255, 218, 0.5);
-    }
-
-    100% {
-        box-shadow: 0 0 5px rgba(100, 255, 218, 0.3);
-    }
-}
-
-.goal-achievement-actions {
-    background-color: rgba(100, 255, 218, 0.1);
-    padding: 12px;
-    border-radius: 6px;
-    margin-top: 12px;
-    border: 1px dashed var(--accent-color);
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    align-items: center;
-}
-
-.goal-achieved-message {
-    color: var(--accent-color);
-    font-weight: bold;
-    margin-right: auto;
-}
-
-.goal-action-btn {
-    background-color: rgba(100, 255, 218, 0.15);
-    color: var(--accent-color);
-    border: 1px solid var(--accent-color);
-    border-radius: 4px;
-    padding: 6px 12px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.3s ease;
-}
-
-.goal-action-btn:hover {
-    background-color: rgba(100, 255, 218, 0.25);
-    transform: translateY(-2px);
-}
-
-/* Achievement display in statistics */
-.achievements-list {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    max-height: 350px;
-    overflow-y: auto;
-    padding-right: 5px;
-}
-
-.achievement-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    background-color: rgba(100, 255, 218, 0.05);
-    border: 1px solid rgba(100, 255, 218, 0.2);
-    border-radius: 6px;
-    padding: 12px;
-    transition: transform 0.2s ease;
-}
-
-.achievement-item:hover {
-    transform: translateY(-3px);
-}
-
-.achievement-icon {
-    font-size: 1.8rem;
-    color: var(--accent-color);
-}
-
-.achievement-details {
-    flex: 1;
-}
-
-.achievement-title {
-    font-weight: bold;
-    color: var(--accent-color);
-}
-
-.achievement-desc {
-    color: #ddd;
-    margin: 3px 0;
-}
-
-.achievement-date {
-    color: #aaa;
-    font-size: 0.8rem;
-}
-
-.more-achievements {
-    text-align: center;
-    color: #aaa;
-    font-style: italic;
-    padding: 10px;
-}
-
-/* Celebration effect for goal completion */
-@keyframes celebration-confetti {
-    0% {
-        opacity: 1;
-        transform: translateY(0) rotate(0);
-    }
-
-    100% {
-        opacity: 0;
-        transform: translateY(100px) rotate(720deg);
-    }
-}
-
-.confetti-piece {
-    position: absolute;
-    width: 8px;
-    height: 8px;
-    background-color: var(--accent-color);
-    opacity: 0;
-}
-
-body.celebrating .confetti-piece {
-    animation: celebration-confetti 2s ease-out forwards;
-}
-
-/* Responsive adjustments for goal achievement actions */
-@media (max-width: 600px) {
-    .goal-achievement-actions {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .goal-achieved-message {
-        margin-right: 0;
-        margin-bottom: 10px;
-        text-align: center;
-    }
-}
-
-/* ...existing code... */
-
-/* Achievements Summary Section for Habits Tab */
+/* Achievements Summary Section */
 .achievements-summary-section {
     background-color: rgba(40, 40, 40, 0.7);
     border-radius: 8px;
@@ -2910,7 +810,7 @@ body.celebrating .confetti-piece {
 .total-count-small {
     font-size: 2.2rem;
     font-weight: bold;
-    color: var(--accent-color);
+    color: var(--habit-primary-color);
     line-height: 1;
     font-family: 'Courier New', monospace;
     text-shadow: 0 0 6px rgba(100, 255, 218, 0.3);
@@ -2925,20 +825,6 @@ body.celebrating .confetti-piece {
     font-family: 'Courier New', monospace;
     text-shadow: 0 0 6px rgba(255, 215, 0, 0.3);
     animation: count-glow-gold 3s infinite ease-in-out;
-}
-
-@keyframes count-glow-gold {
-    0% {
-        text-shadow: 0 0 6px rgba(255, 215, 0, 0.3);
-    }
-
-    50% {
-        text-shadow: 0 0 12px rgba(255, 215, 0, 0.5);
-    }
-
-    100% {
-        text-shadow: 0 0 6px rgba(255, 215, 0, 0.3);
-    }
 }
 
 .summary-label {
@@ -2960,7 +846,7 @@ body.celebrating .confetti-piece {
 
 .view-achievements-link {
     font-size: 0.75rem;
-    color: var(--accent-color);
+    color: var(--habit-primary-color);
     text-decoration: underline;
     margin-top: 5px;
     cursor: pointer;
@@ -2971,8 +857,1203 @@ body.celebrating .confetti-piece {
     color: #fff;
 }
 
-/* Responsive layout */
+/* --------------------------------------
+   6. DATA VISUALIZATION
+   -------------------------------------- */
+
+/* Habit Heatmap Visualization - GitHub-style layout */
+.habit-heatmap-section {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px dashed rgba(100, 255, 218, 0.2);
+}
+
+.heatmap-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 15px;
+    background: rgba(30, 30, 30, 0.5);
+    border-radius: 8px;
+    overflow: auto;
+}
+
+/* Main heatmap layout */
+.heatmap-wrapper {
+    display: flex;
+    align-items: flex-start;
+    margin-top: 4px;
+}
+
+/* Day labels on the left side */
+.day-labels {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-right: 4px;
+    padding-top: 5px;
+}
+
+.day-label {
+    color: #aaa;
+    font-size: 0.7rem;
+    height: 12px;
+    line-height: 12px;
+    width: 20px;
+    text-align: center;
+    padding-right: 0;
+}
+
+/* Month labels on top */
+.month-labels {
+    display: flex;
+    margin-left: 24px;
+    padding-bottom: 5px;
+}
+
+.month-label {
+    font-size: 0.8rem;
+    color: #aaa;
+    text-align: left;
+    padding-left: 6px;
+    min-width: 60px;
+}
+
+/* Heatmap grid */
+.heatmap-grid {
+    display: grid;
+    grid-template-rows: repeat(7, 12px);
+    grid-auto-columns: 12px;
+    grid-auto-flow: column;
+    gap: 3px;
+    background-color: rgba(40, 40, 40, 0.2);
+    padding: 3px;
+    border-radius: 4px;
+    border: 1px solid rgba(70, 70, 70, 0.3);
+    min-width: fit-content;
+}
+
+/* Heatmap cells */
+.heatmap-cell {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    border: 1px solid rgba(60, 60, 60, 0.5);
+    box-sizing: border-box;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+/* Intensity levels */
+.heatmap-cell.intensity-0 {
+    background-color: rgba(40, 40, 40, 0.6);
+    border: 1px solid rgba(60, 60, 60, 0.8);
+}
+
+.heatmap-cell.intensity-1 {
+    background-color: rgba(100, 255, 218, 0.15);
+    border: 1px solid rgba(100, 255, 218, 0.3);
+}
+
+.heatmap-cell.intensity-2 {
+    background-color: rgba(100, 255, 218, 0.3);
+    border: 1px solid rgba(100, 255, 218, 0.4);
+}
+
+.heatmap-cell.intensity-3 {
+    background-color: rgba(100, 255, 218, 0.5);
+    border: 1px solid rgba(100, 255, 218, 0.6);
+}
+
+.heatmap-cell.intensity-4 {
+    background-color: rgba(100, 255, 218, 0.75);
+    border: 1px solid rgba(100, 255, 218, 0.85);
+}
+
+/* Special heatmap cell states */
+.heatmap-cell.today {
+    border: 2px solid var(--habit-primary-color);
+    box-shadow: 0 0 3px rgba(100, 255, 218, 0.5);
+}
+
+.heatmap-cell.empty-cell {
+    background-color: transparent;
+    border: 1px dashed rgba(60, 60, 60, 0.2);
+}
+
+/* Heatmap legend */
+.heatmap-legend {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 15px;
+    padding: 5px;
+    font-size: 0.8rem;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #aaa;
+}
+
+.legend-color {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    border: 1px solid rgba(70, 70, 70, 0.3);
+}
+
+/* Legend color swatches */
+.legend-color.intensity-0 {
+    background-color: rgba(40, 40, 40, 0.6);
+}
+
+.legend-color.intensity-1 {
+    background-color: rgba(100, 255, 218, 0.15);
+}
+
+.legend-color.intensity-2 {
+    background-color: rgba(100, 255, 218, 0.3);
+}
+
+.legend-color.intensity-3 {
+    background-color: rgba(100, 255, 218, 0.5);
+}
+
+.legend-color.intensity-4 {
+    background-color: rgba(100, 255, 218, 0.75);
+}
+
+/* Tooltip for heatmap cells */
+.tooltip {
+    position: fixed;
+    background: rgba(25, 25, 25, 0.95);
+    color: #eee;
+    border: 1px solid rgba(100, 255, 218, 0.3);
+    border-radius: 4px;
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    pointer-events: none;
+    z-index: 100;
+    transform: translate(-50%, -100%);
+    margin-top: -8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    white-space: nowrap;
+}
+
+.tooltip::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 5px 5px 0;
+    border-style: solid;
+    border-color: rgba(25, 25, 25, 0.95) transparent transparent;
+}
+
+/* Statistics Dashboard Styling */
+.stats-dashboard {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+/* Individual stat card */
+.stat-card {
+    background-color: rgba(30, 30, 30, 0.5);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+    border-left: 3px solid var(--habit-primary-color);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+}
+
+.stat-title {
+    font-family: 'Courier New', monospace;
+    color: var(--habit-primary-color);
+    font-size: 1.1rem;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+}
+
+.stat-title::before {
+    content: ">";
+    margin-right: 8px;
+    opacity: 0.8;
+}
+
+.stat-content {
+    margin-bottom: 15px;
+    color: #ddd;
+}
+
+.stat-description {
+    color: #888;
+    font-size: 0.85rem;
+    font-style: italic;
+}
+
+/* Status indicators */
+.stat-card.success {
+    border-left-color: var(--habit-success-color);
+}
+
+.stat-card.success .stat-title {
+    color: var(--habit-success-color);
+}
+
+.stat-card.warning {
+    border-left-color: var(--habit-warning-color);
+}
+
+.stat-card.warning .stat-title {
+    color: var(--habit-warning-color);
+}
+
+.stat-card.danger {
+    border-left-color: var(--habit-error-color);
+}
+
+.stat-card.danger .stat-title {
+    color: var(--habit-error-color);
+}
+
+/* Total Completions Card Styling */
+.total-completions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 0;
+    text-align: center;
+}
+
+.total-count {
+    font-size: 3.5rem;
+    font-weight: bold;
+    color: var(--habit-primary-color);
+    line-height: 1.1;
+    margin-bottom: 5px;
+    font-family: 'Courier New', monospace;
+    text-shadow: 0 0 10px rgba(100, 255, 218, 0.3);
+    animation: count-glow 2s infinite ease-in-out;
+}
+
+.total-label {
+    font-size: 1rem;
+    color: #aaa;
+    margin-bottom: 15px;
+}
+
+.achievement-badges {
+    display: flex;
+    gap: 10px;
+    margin-top: 5px;
+}
+
+.achievement {
+    font-size: 1.8rem;
+    cursor: help;
+    transition: transform 0.3s ease;
+    display: inline-block;
+}
+
+.achievement:hover {
+    transform: scale(1.2);
+}
+
+/* Category chart styles */
+.category-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-top: 10px;
+}
+
+.chart-item {
+    display: grid;
+    grid-template-columns: 90px 1fr auto;
+    align-items: center;
+    gap: 12px;
+    background-color: rgba(25, 25, 25, 0.3);
+    border-radius: 6px;
+    padding: 10px;
+    transition: background-color 0.2s ease;
+}
+
+.chart-item:hover {
+    background-color: rgba(35, 35, 35, 0.5);
+}
+
+.chart-label {
+    color: #eee;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 500;
+    padding-left: 5px;
+}
+
+.chart-bar-container {
+    height: 10px;
+    background-color: rgba(100, 100, 100, 0.2);
+    border-radius: 5px;
+    overflow: hidden;
+    position: relative;
+}
+
+.chart-bar {
+    height: 100%;
+    background-color: var(--habit-primary-color);
+    border-radius: 5px;
+}
+
+/* Color coding for chart bars */
+.chart-bar.good {
+    background-color: var(--habit-success-color);
+}
+
+.chart-bar.average {
+    background-color: var(--habit-warning-color);
+}
+
+.chart-bar.low {
+    background-color: var(--habit-error-color);
+}
+
+.chart-value {
+    position: absolute;
+    right: -25px;
+    bottom: -18px;
+    font-size: 0.75rem;
+    color: #ddd;
+    background: rgba(25, 25, 25, 0.7);
+    padding: 2px 6px;
+    border-radius: 10px;
+}
+
+.chart-details {
+    text-align: right;
+    font-size: 0.8rem;
+    color: #aaa;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.chart-details .completion-count {
+    color: #ddd;
+}
+
+.chart-details .habit-count {
+    font-size: 0.75rem;
+    opacity: 0.7;
+}
+
+/* Trends chart styles */
+.trends-chart {
+    display: flex;
+    align-items: flex-end;
+    height: 150px;
+    gap: 2px;
+    padding: 5px;
+    border-bottom: 1px solid rgba(100, 100, 100, 0.3);
+    margin-top: 20px;
+}
+
+.trend-bar-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+    position: relative;
+}
+
+.trend-bar {
+    width: 80%;
+    background-color: var(--habit-primary-color);
+    border-radius: 2px;
+    transition: height 0.3s ease;
+    min-height: 1px;
+}
+
+.trend-bar.today {
+    background-color: var(--habit-success-color);
+    box-shadow: 0 0 5px rgba(75, 181, 67, 0.5);
+}
+
+.trend-date {
+    position: absolute;
+    bottom: -20px;
+    font-size: 0.7rem;
+    color: #aaa;
+    transform: rotate(-45deg);
+    transform-origin: left top;
+}
+
+/* Stats summary table */
+.stats-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    margin-bottom: 10px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.stats-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    font-size: 0.9rem;
+    min-width: 500px;
+}
+
+.stats-table th,
+.stats-table td {
+    padding: 8px 10px;
+    text-align: left;
+    border-bottom: 1px solid rgba(100, 100, 100, 0.2);
+    white-space: nowrap;
+}
+
+.stats-table th:first-child,
+.stats-table td:first-child {
+    white-space: normal;
+    min-width: 150px;
+    max-width: 250px;
+}
+
+.stats-table th {
+    color: var(--habit-primary-color);
+    font-weight: normal;
+    font-family: 'Courier New', monospace;
+}
+
+.stats-table tr:hover {
+    background-color: rgba(40, 40, 40, 0.6);
+}
+
+.table-habit-name {
+    color: #eee;
+    font-weight: 500;
+}
+
+.table-habit-category {
+    font-size: 0.75rem;
+    color: #aaa;
+    margin-top: 2px;
+}
+
+.completion-rate {
+    font-size: 0.85rem;
+    padding: 2px 6px;
+    border-radius: 10px;
+}
+
+.completion-rate.good {
+    background-color: rgba(75, 181, 67, 0.1);
+    color: var(--habit-success-color);
+}
+
+.completion-rate.low {
+    background-color: rgba(244, 67, 54, 0.1);
+    color: var(--habit-error-color);
+}
+
+.progress-minibar-container {
+    width: 100%;
+    height: 4px;
+    background-color: rgba(100, 100, 100, 0.2);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 5px;
+}
+
+.progress-minibar {
+    height: 100%;
+    background-color: var(--habit-primary-color);
+}
+
+.progress-minibar.achieved {
+    background-color: var(--habit-success-color);
+}
+
+.progress-minibar.good {
+    background-color: #00BCD4;
+}
+
+.progress-minibar.average {
+    background-color: var(--habit-warning-color);
+}
+
+.progress-minibar.low {
+    background-color: var(--habit-error-color);
+}
+
+.progress-text {
+    font-size: 0.75rem;
+    color: #aaa;
+    text-align: right;
+}
+
+/* Streaks list */
+.streaks-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.streak-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    background-color: rgba(30, 30, 30, 0.7);
+    transition: background-color 0.3s ease;
+}
+
+.streak-item:hover {
+    background-color: rgba(40, 40, 40, 0.9);
+}
+
+.streak-item .streak-badge {
+    background-color: rgba(100, 255, 218, 0.15);
+    color: var(--habit-primary-color);
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: bold;
+    min-width: 55px;
+    text-align: center;
+}
+
+.streak-item .streak-details {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.streak-name {
+    color: #eee;
+    font-weight: 500;
+}
+
+.streak-category {
+    font-size: 0.75rem;
+    color: #aaa;
+}
+
+.streak-item.achieved {
+    border-left: 3px solid var(--habit-success-color);
+}
+
+.streak-item.achieved .streak-badge {
+    background-color: rgba(75, 181, 67, 0.2);
+    color: var(--habit-success-color);
+}
+
+.streak-item.almost {
+    border-left: 3px solid var(--habit-warning-color);
+}
+
+.streak-item.almost .streak-badge {
+    background-color: rgba(255, 193, 7, 0.2);
+    color: var(--habit-warning-color);
+}
+
+/* --------------------------------------
+   7. INTERACTIVE ELEMENTS
+   -------------------------------------- */
+
+/* Category filter styling */
+.category-filters {
+    margin-bottom: 15px;
+    padding: 10px 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    border-bottom: 1px dashed rgba(100, 255, 218, 0.15);
+    padding-bottom: 15px;
+}
+
+.filter-label {
+    color: #aaa;
+    font-size: 0.9rem;
+    margin-right: 5px;
+}
+
+.category-filter {
+    background-color: transparent;
+    color: #ccc;
+    border: 1px solid rgba(100, 100, 100, 0.3);
+    border-radius: 15px;
+    padding: 3px 12px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: var(--habit-transition);
+}
+
+.category-filter:hover {
+    background-color: rgba(100, 100, 100, 0.2);
+}
+
+.category-filter.active {
+    background-color: rgba(100, 255, 218, 0.1);
+    color: var(--habit-primary-color);
+    border-color: var(--habit-primary-color);
+}
+
+/* Notification styling */
+.notification {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    padding: 12px 20px;
+    border-radius: var(--habit-border-radius);
+    background-color: rgba(25, 25, 25, 0.95);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 1000;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    max-width: 80vw;
+}
+
+.notification-icon {
+    font-size: 1.2rem;
+}
+
+.success-notification {
+    border-left: 4px solid var(--habit-success-color);
+    color: var(--habit-success-color);
+}
+
+.error-notification {
+    border-left: 4px solid var(--habit-error-color);
+    color: var(--habit-error-color);
+}
+
+.info-notification {
+    border-left: 4px solid #3498db;
+    color: #3498db;
+}
+
+/* Data management buttons */
+.data-controls {
+    background-color: var(--habit-bg-color);
+    padding: var(--habit-section-padding);
+    border-radius: var(--habit-border-radius);
+    box-shadow: var(--habit-box-shadow);
+    border-left: 3px solid var(--habit-primary-color);
+}
+
+.data-buttons {
+    display: flex;
+    gap: 15px;
+    margin: 20px 0;
+    flex-wrap: wrap;
+}
+
+.data-btn {
+    padding: 12px 20px;
+    border-radius: var(--habit-border-radius);
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: var(--habit-transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    min-width: 180px;
+}
+
+.export-btn {
+    background-color: rgba(100, 255, 218, 0.1);
+    color: var(--habit-primary-color);
+    border: 2px solid var(--habit-primary-color);
+}
+
+.export-btn:hover {
+    background-color: rgba(100, 255, 218, 0.2);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(100, 255, 218, 0.2);
+}
+
+.import-btn {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: #ffffff;
+    border: 2px solid #888;
+}
+
+.import-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(255, 255, 255, 0.1);
+}
+
+.reset-btn {
+    background-color: rgba(244, 67, 54, 0.1);
+    color: var(--habit-error-color);
+    border: 2px solid var(--habit-error-color);
+}
+
+.reset-btn:hover {
+    background-color: rgba(244, 67, 54, 0.2);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(244, 67, 54, 0.2);
+}
+
+.btn-icon {
+    margin-right: 10px;
+    font-size: 1.2rem;
+}
+
+.data-info {
+    margin-top: 15px;
+    padding: 10px 15px;
+    background-color: rgba(255, 193, 7, 0.1);
+    border-left: 3px solid var(--habit-warning-color);
+    border-radius: 4px;
+}
+
+.data-info p {
+    color: var(--habit-warning-color);
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+/* Achievements display */
+.achievements-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    max-height: 350px;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+.achievement-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background-color: rgba(100, 255, 218, 0.05);
+    border: 1px solid rgba(100, 255, 218, 0.2);
+    border-radius: var(--habit-border-radius);
+    padding: 12px;
+    transition: transform 0.2s ease;
+}
+
+.achievement-item:hover {
+    transform: translateY(-3px);
+}
+
+.achievement-icon {
+    font-size: 1.8rem;
+    color: var(--habit-primary-color);
+}
+
+.achievement-details {
+    flex: 1;
+}
+
+.achievement-title {
+    font-weight: bold;
+    color: var(--habit-primary-color);
+}
+
+.achievement-desc {
+    color: #ddd;
+    margin: 3px 0;
+}
+
+.achievement-date {
+    color: #aaa;
+    font-size: 0.8rem;
+}
+
+.more-achievements {
+    text-align: center;
+    color: #aaa;
+    font-style: italic;
+    padding: 10px;
+}
+
+/* File input hiding */
+input[type="file"] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}
+
+/* --------------------------------------
+   8. ANIMATION & EFFECTS
+   -------------------------------------- */
+
+/* Blink animation for cursor */
+.blink {
+    animation: blink-animation 1s steps(5, start) infinite;
+}
+
+@keyframes blink-animation {
+    to {
+        visibility: hidden;
+    }
+}
+
+/* Success pulse animation for buttons */
+@keyframes success-pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(100, 255, 218, 0.4);
+    }
+
+    70% {
+        box-shadow: 0 0 0 15px rgba(100, 255, 218, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(100, 255, 218, 0);
+    }
+}
+
+.success-submit {
+    animation: success-pulse 1s ease-out;
+}
+
+/* Animation for card flashing in disco mode */
+@keyframes card-flash {
+
+    0%,
+    50%,
+    100% {
+        opacity: 0;
+    }
+
+    51%,
+    99% {
+        opacity: 1;
+    }
+}
+
+/* Animation for completions and achievements counters */
+@keyframes count-glow {
+    0% {
+        text-shadow: 0 0 10px rgba(100, 255, 218, 0.3);
+    }
+
+    50% {
+        text-shadow: 0 0 20px rgba(100, 255, 218, 0.5);
+    }
+
+    100% {
+        text-shadow: 0 0 10px rgba(100, 255, 218, 0.3);
+    }
+}
+
+@keyframes count-glow-gold {
+    0% {
+        text-shadow: 0 0 6px rgba(255, 215, 0, 0.3);
+    }
+
+    50% {
+        text-shadow: 0 0 12px rgba(255, 215, 0, 0.5);
+    }
+
+    100% {
+        text-shadow: 0 0 6px rgba(255, 215, 0, 0.3);
+    }
+}
+
+/* Goal achievement glow effect */
+@keyframes goal-glow {
+    0% {
+        box-shadow: 0 0 5px rgba(100, 255, 218, 0.3);
+    }
+
+    50% {
+        box-shadow: 0 0 15px rgba(100, 255, 218, 0.5);
+    }
+
+    100% {
+        box-shadow: 0 0 5px rgba(100, 255, 218, 0.3);
+    }
+}
+
+.goal-achieved-item {
+    position: relative;
+    overflow: hidden;
+    animation: goal-glow 2s infinite ease-in-out;
+}
+
+/* Alert animation for habits with streak about to break */
+@keyframes streak-alert {
+    0% {
+        box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.4);
+    }
+
+    70% {
+        box-shadow: 0 0 0 10px rgba(255, 107, 107, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(255, 107, 107, 0);
+    }
+}
+
+.habit-item.streak-alert {
+    animation: streak-alert 2s infinite;
+}
+
+/* Confetti celebration animation for goal completion */
+@keyframes celebration-confetti {
+    0% {
+        opacity: 1;
+        transform: translateY(0) rotate(0);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translateY(100px) rotate(720deg);
+    }
+}
+
+.confetti-piece {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background-color: var(--habit-primary-color);
+    opacity: 0;
+}
+
+body.celebrating .confetti-piece {
+    animation: celebration-confetti 2s ease-out forwards;
+}
+
+/* Disco mode specific styling */
+body.disco-mode .habit-item {
+    position: relative;
+    overflow: hidden;
+}
+
+body.disco-mode .habit-item::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, transparent 95%, rgba(255, 255, 255, 0.35) 100%);
+    animation: card-flash 9s cubic-bezier(0.42, 0, 0.58, 1) infinite;
+    opacity: 0;
+    z-index: 1;
+    pointer-events: none;
+}
+
+/* Staggered timing for habit items to create rhythm in disco mode */
+body.disco-mode .habit-item:nth-child(3n)::after {
+    animation-delay: 0.5s;
+}
+
+body.disco-mode .habit-item:nth-child(3n+1)::after {
+    animation-delay: 1s;
+}
+
+/* --------------------------------------
+   9. RESPONSIVE DESIGN
+   -------------------------------------- */
+
+/* General responsive adjustments */
+@media (max-width: 768px) {
+    .section {
+        padding: 0.8rem;
+    }
+
+    .stats-dashboard {
+        grid-template-columns: 1fr;
+    }
+
+    .habit-item {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .habit-info,
+    .habit-actions {
+        width: 100%;
+    }
+
+    .habit-actions {
+        margin-left: 0;
+        margin-top: 15px;
+        flex-direction: row;
+        justify-content: space-between;
+    }
+
+    .habit-actions button {
+        flex: 1;
+        margin: 0 5px;
+    }
+
+    /* Heatmap layout on medium screens */
+    .heatmap-container:not(.mobile-view) .day-labels {
+        display: none;
+    }
+
+    .heatmap-container:not(.mobile-view) .month-labels {
+        margin-left: 0;
+    }
+
+    .heatmap-container:not(.mobile-view) .heatmap-grid {
+        grid-template-rows: repeat(7, 10px);
+        grid-auto-columns: 13px;
+    }
+
+    .heatmap-container:not(.mobile-view) .heatmap-cell {
+        width: 10px;
+        height: 10px;
+    }
+
+    /* Stats table adjustments */
+    .stats-table {
+        font-size: 0.8rem;
+        min-width: 450px;
+    }
+
+    .stats-table th:first-child,
+    .stats-table td:first-child {
+        min-width: 120px;
+    }
+
+    /* Chart adjustments */
+    .chart-item {
+        grid-template-columns: 80px 1fr auto;
+        padding: 8px;
+        gap: 8px;
+    }
+
+    .chart-bar-container {
+        height: 8px;
+    }
+
+    .chart-value {
+        font-size: 0.7rem;
+        bottom: -16px;
+        right: -20px;
+    }
+
+    /* Trends chart height */
+    .trends-chart {
+        height: 120px;
+    }
+}
+
+/* Small screen adjustments */
 @media (max-width: 600px) {
+
+    /* Form layout */
+    .goal-options {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    #goal-unit {
+        top: 42px;
+    }
+
+    /* Habit header on small screens */
+    .habit-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+    }
+
+    .streak-badge {
+        margin-left: 0;
+    }
+
+    /* Progress indicators */
+    .progress-bar-container {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+    }
+
+    .progress-bar {
+        width: 100%;
+        margin-bottom: 5px;
+    }
+
+    .goal-info {
+        align-self: flex-end;
+        text-align: right;
+    }
+
+    /* Improved weekly tracker layout */
+    .weekly-indicator {
+        margin-top: 8px;
+        justify-content: flex-start;
+    }
+
+    /* Data management buttons */
+    .data-buttons {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    /* Category filters */
+    .category-filters {
+        justify-content: center;
+    }
+
+    .habit-category {
+        margin-left: 0;
+    }
+
+    /* Category filter touch targets */
+    .category-filter {
+        padding: 5px 14px;
+        margin: 3px;
+    }
+
+    /* Goal achievement actions */
+    .goal-achievement-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .goal-achieved-message {
+        margin-right: 0;
+        margin-bottom: 10px;
+        text-align: center;
+    }
+
+    /* Achievements summary */
     .achievements-flex-container {
         flex-direction: column;
         gap: 20px;
@@ -2987,6 +2068,240 @@ body.celebrating .confetti-piece {
         right: 10%;
         background: linear-gradient(to right, transparent, rgba(100, 255, 218, 0.3), transparent);
     }
+
+    /* Storage usage indicator */
+    .usage-details {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .usage-bar {
+        width: 100%;
+        margin: 8px 0;
+    }
 }
 
-/* ...existing code... */
+/* Extra small screen adjustments */
+@media (max-width: 480px) {
+
+    /* Streak summary */
+    .streak-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    /* Chart further adjustments */
+    .chart-item {
+        grid-template-columns: 60px 1fr 35px;
+        gap: 5px;
+    }
+
+    /* Hide some columns in mobile view */
+    .stats-table th:nth-child(3),
+    .stats-table td:nth-child(3) {
+        display: none;
+    }
+
+    /* Ensure hint for horizontal scrolling is visible */
+    .stat-card:has(.stats-table-wrapper):after {
+        content: "← Scroll →";
+        display: block;
+        text-align: center;
+        font-size: 0.7rem;
+        color: #aaa;
+        padding: 5px 0;
+        margin-top: 5px;
+    }
+
+    /* Total completion stats on small screens */
+    .total-count {
+        font-size: 3rem;
+    }
+
+    .achievement {
+        font-size: 1.5rem;
+    }
+
+    /* Hide chart values on small screens */
+    .chart-value {
+        display: none;
+    }
+}
+
+/* Mobile heatmap view */
+.heatmap-container.mobile-view {
+    padding: 10px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.mobile-view .heatmap-grid {
+    grid-template-rows: repeat(7, 10px);
+    grid-auto-columns: 10px;
+    gap: 2px;
+}
+
+.mobile-view .heatmap-cell {
+    width: 10px;
+    height: 10px;
+    border-width: 1px;
+}
+
+.mobile-view .day-labels {
+    display: none;
+}
+
+.mobile-view .month-labels {
+    margin-left: 0;
+    font-size: 0.7rem;
+}
+
+.mobile-view .month-label {
+    min-width: 30px;
+    padding-left: 2px;
+}
+
+.mobile-view .heatmap-legend {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+    font-size: 0.7rem;
+}
+
+/* --------------------------------------
+   10. UTILITIES
+   -------------------------------------- */
+
+/* Storage usage indicator */
+.storage-usage {
+    margin-top: 15px;
+    padding: 15px;
+    border-top: 1px dashed rgba(100, 255, 218, 0.2);
+    font-size: 0.9rem;
+    color: #aaa;
+}
+
+.storage-usage h4 {
+    margin-bottom: 10px;
+    font-family: 'Courier New', monospace;
+    color: var(--habit-primary-color);
+    font-size: 0.95rem;
+}
+
+.usage-details {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.usage-value {
+    font-weight: bold;
+    color: var(--habit-primary-color);
+    font-family: 'Courier New', monospace;
+}
+
+.usage-bar {
+    height: 6px;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    overflow: hidden;
+    flex-grow: 1;
+    margin: 0 10px;
+}
+
+.usage-fill {
+    height: 100%;
+    background-color: var(--habit-primary-color);
+    transition: width 0.3s ease;
+}
+
+.usage-percent {
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+/* Helper classes for habit-tracker app */
+.hidden {
+    display: none !important;
+}
+
+.flex-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.text-left {
+    text-align: left;
+}
+
+.text-right {
+    text-align: right;
+}
+
+.mt-1 {
+    margin-top: 0.5rem;
+}
+
+.mt-2 {
+    margin-top: 1rem;
+}
+
+.mb-1 {
+    margin-bottom: 0.5rem;
+}
+
+.mb-2 {
+    margin-bottom: 1rem;
+}
+
+/* Visually hidden but accessible */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+/* Error message styling */
+.error-message {
+    color: var(--habit-error-color);
+    font-size: 0.9rem;
+    margin-top: 5px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.error-message::before {
+    content: "⚠";
+}
+
+/* GitHub Pages specific layout fixes */
+#habit-tracker-section {
+    display: none;
+    max-width: 1100px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Fix for nested sections */
+.section.habits-section,
+.section.add-habit-section,
+.section.info-section,
+.section.intro-section {
+    background-color: transparent;
+    border-left: none;
+    padding: 0;
+}

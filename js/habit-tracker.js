@@ -24,8 +24,8 @@ class Habit {
         const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
         // Calculate days to subtract to get to Monday (if today is Sunday, subtract -6 days)
         const daysToSubtract = dayOfWeek === 0 ? -6 : dayOfWeek - 1;
-        const diff = now.getDate() - daysToSubtract;
-        const weekStart = new Date(now.setDate(diff));
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - daysToSubtract);
         weekStart.setHours(0, 0, 0, 0);
         return weekStart.toISOString();
     }
@@ -72,21 +72,26 @@ class HabitTracker {
         this.categories = ['Health', 'Work', 'Learning', 'Personal', 'General']; // Default categories
         this.loadHabits();
 
-        // Set up event listeners
-        document.getElementById('habit-form').addEventListener('submit', (e) => {
+        // Helper method to safely add event listeners
+        const addListener = (selector, eventType, handler) => {
+            const element = document.getElementById(selector);
+            if (element) element.addEventListener(eventType, handler);
+        };
+
+        // Set up event listeners more concisely
+        addListener('habit-form', 'submit', (e) => {
             e.preventDefault();
             this.addHabit();
         });
 
-        // Add event for Enter key in habit input
-        document.getElementById('habit-input').addEventListener('keypress', (e) => {
+        addListener('habit-input', 'keypress', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 this.addHabit();
             }
         });
 
-        // Add event listener for category dropdown change - new code to handle custom categories
+        // Add category dropdown event
         const categorySelect = document.getElementById('habit-category');
         if (categorySelect) {
             categorySelect.addEventListener('change', (e) => {
@@ -100,58 +105,22 @@ class HabitTracker {
             });
         }
 
-        // Add event listeners for data import/export
-        const exportBtn = document.getElementById('export-data');
-        const importBtn = document.getElementById('import-data');
-        const importFile = document.getElementById('import-file');
-        const resetBtn = document.getElementById('reset-data');
+        // Add data management listeners
+        addListener('export-data', 'click', () => this.exportData());
+        addListener('import-data', 'click', () => document.getElementById('import-file').click());
+        addListener('import-file', 'change', (e) => this.importData(e));
+        addListener('reset-data', 'click', () => this.resetData());
 
-        if (exportBtn) exportBtn.addEventListener('click', () => this.exportData());
-        if (importBtn) importBtn.addEventListener('click', () => document.getElementById('import-file').click());
-        if (importFile) importFile.addEventListener('change', (e) => this.importData(e));
-        if (resetBtn) resetBtn.addEventListener('click', () => this.resetData());
+        // Tab navigation
+        addListener('stats-tab-button', 'click', () => this.showStatsTab());
+        addListener('habits-tab-button', 'click', () => this.showHabitsTab());
 
-        // Add console message for nerdy users who check the console
-        console.log("%c✅ Habit Tracker initialized", "color: #0f0; font-weight: bold;");
-        console.log("%c📊 Your data is stored locally in this browser", "color: #0cf;");
-
-        // Display week streak information on load (for debugging)
-        if (this.habits.length > 0) {
-            this.displayWeekStreakInfo();
-        }
-
-        // Initialize habits list
+        // Initialize UI elements
         this.renderHabits();
-
-        // Set up category filter event listeners
         this.setupCategoryFilter();
-
-        // Initialize storage usage display
         this.updateStorageUsage();
 
-        // Add event listener for goal type change to update the unit label
-        const goalTypeSelect = document.getElementById('goal-type');
-        if (goalTypeSelect) {
-            goalTypeSelect.addEventListener('change', (e) => {
-                const goalUnit = document.getElementById('goal-unit');
-                if (goalUnit) {
-                    goalUnit.textContent = e.target.value === 'streak' ? 'days' : 'times/week';
-                }
-            });
-        }
-
-        // Add new tab navigation for statistics
-        const statsTabButton = document.getElementById('stats-tab-button');
-        if (statsTabButton) {
-            statsTabButton.addEventListener('click', () => this.showStatsTab());
-        }
-
-        const habitsTabButton = document.getElementById('habits-tab-button');
-        if (habitsTabButton) {
-            habitsTabButton.addEventListener('click', () => this.showHabitsTab());
-        }
-
-        // Add event listener for goal achievement actions
+        // Use event delegation for goal actions
         document.addEventListener('click', (e) => {
             if (e.target.matches('.goal-action-btn')) {
                 const habitId = e.target.closest('.habit-item').dataset.habitId;
@@ -159,6 +128,28 @@ class HabitTracker {
                 this.handleGoalAction(habitId, action);
             }
         });
+    }
+
+    cleanup() {
+        // Store reference to resize handlers in the instance
+        if (this._resizeHandler) {
+            window.removeEventListener('resize', this._resizeHandler);
+        }
+
+        if (this._tooltipPositionHandler) {
+            window.removeEventListener('scroll', this._tooltipPositionHandler);
+            window.removeEventListener('resize', this._tooltipPositionHandler);
+        }
+
+        // Remove tooltip element
+        const tooltip = document.getElementById('heatmap-tooltip');
+        if (tooltip) tooltip.remove();
+
+        // Clear any cached data
+        this._completionCache = null;
+        this._weekStartDate = null;
+
+        console.log('Habit tracker cleaned up');
     }
 
     // Load habits from localStorage
@@ -173,17 +164,21 @@ class HabitTracker {
                     habit.name,
                     habit.goalType || 'streak',
                     habit.goalValue || 7,
-                    habit.category || 'General'  // Add the category parameter
+                    habit.category || 'General'
                 );
-                // Copy over properties that might be in the stored object
-                newHabit.streak = habit.streak || 0;
-                newHabit.lastCompletedDate = habit.lastCompletedDate;
-                newHabit.completedToday = habit.completedToday || false;
-                newHabit.weeklyCompletions = habit.weeklyCompletions || [];
-                newHabit.weekStartDate = habit.weekStartDate || newHabit.getWeekStartDate();
-                newHabit.completionHistory = habit.completionHistory || {}; // New: Load completion history
-                newHabit.weekStreak = habit.weekStreak || 0;
-                newHabit.completedWeeks = habit.completedWeeks || 0;
+
+                // Copy over properties using Object.assign for cleaner code
+                Object.assign(newHabit, {
+                    streak: habit.streak || 0,
+                    lastCompletedDate: habit.lastCompletedDate,
+                    completedToday: habit.completedToday || false,
+                    weeklyCompletions: habit.weeklyCompletions || [],
+                    weekStartDate: habit.weekStartDate || newHabit.getWeekStartDate(),
+                    completionHistory: habit.completionHistory || {},
+                    weekStreak: habit.weekStreak || 0,
+                    completedWeeks: habit.completedWeeks || 0
+                });
+
                 return newHabit;
             });
 
@@ -198,36 +193,96 @@ class HabitTracker {
             this.checkWeekChange();
         }
     }
+    // Helper method to get appropriate background color for toast type
+    getToastBackgroundColor(type) {
+        switch (type) {
+            case 'success': return '#4caf50';  // Green
+            case 'error': return '#f44336';    // Red
+            case 'save': return 'var(--accent-color)';
+            case 'info':
+            default: return '#2196f3';         // Blue
+        }
+    }
+    // Add this method to your HabitTracker class
+    showToast(message, options = {}) {
+        const {
+            type = 'info',      // 'info', 'success', 'error', 'save'
+            icon = null,        // Override icon if needed
+            duration = 3000,    // How long to show the toast
+            position = 'bottom-left', // Position on screen
+        } = options;
+
+        // Create the toast element
+        const toastElement = document.createElement('div');
+        toastElement.className = `toast toast-${type} toast-${position}`;
+
+        // Determine icon based on type
+        let iconContent;
+        if (icon) {
+            iconContent = icon;
+        } else {
+            switch (type) {
+                case 'success': iconContent = '✅'; break;
+                case 'error': iconContent = '❌'; break;
+                case 'save': iconContent = '💾'; break;
+                default: iconContent = 'ℹ️';
+            }
+        }
+
+        // Set toast content
+        toastElement.innerHTML = `
+        <span class="toast-icon">${iconContent}</span>
+        <span class="toast-message">${message}</span>
+    `;
+
+        // Position styles
+        Object.assign(toastElement.style, {
+            position: 'fixed',
+            bottom: position.includes('bottom') ? '20px' : 'auto',
+            top: position.includes('top') ? '20px' : 'auto',
+            left: position.includes('left') ? '20px' : 'auto',
+            right: position.includes('right') ? '20px' : 'auto',
+            backgroundColor: this.getToastBackgroundColor(type),
+            color: '#000',
+            padding: '5px 10px',
+            borderRadius: '4px',
+            opacity: '0',
+            transform: 'translateY(20px)',
+            transition: 'opacity 0.3s ease, transform 0.3s ease',
+            zIndex: '999',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+        });
+
+        // Add to DOM
+        document.body.appendChild(toastElement);
+
+        // Trigger animation
+        setTimeout(() => {
+            toastElement.style.opacity = '1';
+            toastElement.style.transform = 'translateY(0)';
+        }, 10);
+
+        // Remove after duration
+        setTimeout(() => {
+            toastElement.style.opacity = '0';
+            toastElement.style.transform = 'translateY(20px)';
+
+            setTimeout(() => {
+                if (document.body.contains(toastElement)) {
+                    document.body.removeChild(toastElement);
+                }
+            }, 300);
+        }, duration);
+
+        return toastElement;
+    }
 
     // Save habits to localStorage
     saveHabits() {
         localStorage.setItem('habits', JSON.stringify(this.habits));
-
-        // Update storage usage display when saving
         this.updateStorageUsage();
-
-        // Add visual feedback when saving - position on bottom-left to avoid disco button
-        const saveIndicator = document.createElement('div');
-        saveIndicator.textContent = '💾 Saved';
-        saveIndicator.style.position = 'fixed';
-        saveIndicator.style.bottom = '20px';
-        saveIndicator.style.left = '20px'; // Changed from right to left
-        saveIndicator.style.backgroundColor = 'var(--accent-color)'; // Using site's accent color
-        saveIndicator.style.color = '#000';
-        saveIndicator.style.padding = '5px 10px';
-        saveIndicator.style.borderRadius = '4px';
-        saveIndicator.style.opacity = '0.9';
-        saveIndicator.style.zIndex = '999'; // Ensure it's above other elements
-        document.body.appendChild(saveIndicator);
-
-        setTimeout(() => {
-            saveIndicator.style.opacity = '0';
-            saveIndicator.style.transition = 'opacity 0.5s ease';
-
-            setTimeout(() => {
-                document.body.removeChild(saveIndicator);
-            }, 500);
-        }, 1000);
     }
 
     // Calculate local storage usage
@@ -349,6 +404,8 @@ class HabitTracker {
             this.habits = this.habits.filter(habit => habit.id !== id);
             this.saveHabits();
             this.renderHabits();
+            //showNotification
+            this.showNotification('Habit deleted successfully.', 'success');
         }
     }
 
@@ -456,36 +513,36 @@ class HabitTracker {
 
     // Check if week has changed and reset weekly completions
     checkWeekChange() {
-        const currentWeekStart = new Habit(null, null).getWeekStartDate();
+        const currentWeekStart = new Date().toISOString().split('T')[0]; // Just get today for comparison
 
         this.habits.forEach(habit => {
-            if (habit.weekStartDate !== currentWeekStart) {
-                console.log(`Week changed for ${habit.name}`);
-
-                // Before resetting, check if previous week's goal was achieved
-                if (habit.goalType === 'frequency') {
-                    const previousGoalAchieved = habit.weeklyCompletions.length >= habit.goalValue;
-
-                    // Update week streak based on previous week's achievement
-                    if (previousGoalAchieved) {
-                        habit.weekStreak++;
-                        habit.completedWeeks++;
-                        console.log(`${habit.name}: Week completed! Streak now: ${habit.weekStreak}`);
-                    } else if (habit.weeklyCompletions.length > 0) {
-                        // Only reset streak if there was at least one completion but goal wasn't met
-                        // This avoids resetting streak for habits that weren't relevant that week
-                        if (habit.weekStreak > 0) {
-                            console.log(`${habit.name}: Week streak broken. Was: ${habit.weekStreak}`);
-                            habit.weekStreak = 0;
-                        }
-                    }
-                    // If there were zero completions and it's a recently added habit (this week),
-                    // we don't penalize by resetting streak
+            if (!habit.weekStartDate || habit.weekStartDate !== currentWeekStart) {
+                // Fix: Create a new Habit instance only once for getting the week start date
+                if (!this._weekStartDate) {
+                    this._weekStartDate = new Habit(null, null).getWeekStartDate();
                 }
 
-                // Week has changed, reset weekly tracking
-                habit.weeklyCompletions = [];
-                habit.weekStartDate = currentWeekStart;
+                if (habit.weekStartDate !== this._weekStartDate) {
+                    // Before resetting, check if previous week's goal was achieved
+                    if (habit.goalType === 'frequency') {
+                        const previousGoalAchieved = habit.weeklyCompletions.length >= habit.goalValue;
+
+                        // Update week streak based on previous week's achievement
+                        if (previousGoalAchieved) {
+                            habit.weekStreak++;
+                            habit.completedWeeks++;
+                        } else if (habit.weeklyCompletions.length > 0) {
+                            // Only reset streak if there was at least one completion but goal wasn't met
+                            if (habit.weekStreak > 0) {
+                                habit.weekStreak = 0;
+                            }
+                        }
+                    }
+
+                    // Week has changed, reset weekly tracking
+                    habit.weeklyCompletions = [];
+                    habit.weekStartDate = this._weekStartDate;
+                }
             }
         });
 
@@ -579,6 +636,7 @@ class HabitTracker {
             }, 0);
 
             habitsList.appendChild(achievementsSummary);
+
         }
 
         // Create container for uncompleted habits
@@ -618,7 +676,6 @@ class HabitTracker {
 
             habitsList.appendChild(completedSection);
         }
-
         // Show stats if we have habits
         if (this.habits.length > 0) {
             const statsSection = document.createElement('div');
@@ -634,6 +691,7 @@ class HabitTracker {
             `;
             habitsList.appendChild(statsSection);
         }
+
 
         // Add heatmap if we have habits with history
         if (this.habits.length > 0) {
@@ -797,26 +855,28 @@ class HabitTracker {
     getLastNWeeks(weeks = 13) { // About 3 months
         const dates = [];
         const today = new Date();
-        // Fix the conversion here as well
-        const dayOfWeek = today.getDay();
-        const mondayBasedIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-
-        // Calculate total days needed (weeks * 7)
         const totalDays = weeks * 7;
 
-        // Loop through days from today backwards
+        // Pre-calculate today string for comparison
+        const todayString = today.toISOString().split('T')[0];
+
+        // More efficient approach - calculate dates once and reuse
         for (let i = 0; i < totalDays; i++) {
             const date = new Date(today);
             date.setDate(today.getDate() - i);
 
-            // Convert day of week for the date to Monday-based index
+            // Calculate day of week once
             const dateDayOfWeek = date.getDay();
             const adjustedDayOfWeek = dateDayOfWeek === 0 ? 6 : dateDayOfWeek - 1;
 
+            // Format date string once
+            const dateString = date.toISOString().split('T')[0];
+
             dates.unshift({
-                date: date.toISOString().split('T')[0], // YYYY-MM-DD
-                dayOfWeek: adjustedDayOfWeek, // 0-6 for Monday-Sunday
-                month: date.getMonth(), // 0-11 for tracking month changes
+                date: dateString,
+                dayOfWeek: adjustedDayOfWeek,
+                month: date.getMonth(),
+                isToday: dateString === todayString
             });
         }
 
@@ -852,6 +912,37 @@ class HabitTracker {
 
         return weeks;
     }
+    // Add these methods to your HabitTracker class
+    createTooltip() {
+        // Remove any existing tooltip
+        const existingTooltip = document.getElementById('heatmap-tooltip');
+        if (existingTooltip) {
+            existingTooltip.remove();
+        }
+
+        // Create new tooltip element
+        const tooltip = document.createElement('div');
+        tooltip.className = 'tooltip';
+        tooltip.id = 'heatmap-tooltip';
+        document.body.appendChild(tooltip);
+
+        return tooltip;
+    }
+
+    updateTooltip(tooltip, content, rect) {
+        if (!tooltip) return;
+
+        tooltip.textContent = content;
+        tooltip.style.left = `${rect.left + rect.width / 2}px`;
+        tooltip.style.top = `${rect.top - 5}px`;
+        tooltip.style.opacity = '1';
+    }
+
+    hideTooltip(tooltip) {
+        if (!tooltip) return;
+        tooltip.style.opacity = '0';
+    }
+
 
     // New: Render GitHub-style heatmap visualization (improved alignment and fixed layout)
     renderHeatmap(container) {
@@ -948,10 +1039,7 @@ class HabitTracker {
         });
 
         // Create tooltip element
-        const tooltip = document.createElement('div');
-        tooltip.className = 'tooltip';
-        tooltip.id = 'heatmap-tooltip';
-        document.body.appendChild(tooltip);
+        const tooltip = this.createTooltip();
 
         // Organize dates by week columns - using our fixed function
         const weeks = this.organizeDatesByWeek(dates);
@@ -1003,17 +1091,12 @@ class HabitTracker {
                             day: 'numeric'
                         });
 
-                        tooltip.textContent = `${formattedDate}: ${stats.count} habit${stats.count !== 1 ? 's' : ''} completed`;
-                        tooltip.style.opacity = '1';
-
-                        // Position the tooltip - use fixed position relative to viewport
-                        const rect = cell.getBoundingClientRect();
-                        tooltip.style.left = `${rect.left + rect.width / 2}px`;
-                        tooltip.style.top = `${rect.top - 5}px`;
+                        const content = `${formattedDate}: ${stats.count} habit${stats.count !== 1 ? 's' : ''} completed`;
+                        this.updateTooltip(tooltip, content, cell.getBoundingClientRect());
                     });
 
                     cell.addEventListener('mouseleave', () => {
-                        tooltip.style.opacity = '0';
+                        this.hideTooltip(tooltip);
                     });
                 } else {
                     // Empty cell for padding/alignment
@@ -1052,8 +1135,7 @@ class HabitTracker {
             heatmapContainer.classList.add('mobile-view');
         }
 
-        // Add window resize listener to handle orientation changes
-        const resizeHandler = () => {
+        this._resizeHandler = () => {
             if (window.innerWidth < 768) {
                 heatmapContainer.classList.add('mobile-view');
             } else {
@@ -1061,10 +1143,8 @@ class HabitTracker {
             }
         };
 
-        window.addEventListener('resize', resizeHandler, { passive: true });
-
-        // Add window event listener to update tooltip position on scroll/resize
-        const updateTooltipPosition = () => {
+        // Store tooltip position handler reference
+        this._tooltipPositionHandler = () => {
             const activeCell = document.querySelector('.heatmap-cell:hover');
             if (activeCell && tooltip.style.opacity !== '0') {
                 const rect = activeCell.getBoundingClientRect();
@@ -1073,14 +1153,11 @@ class HabitTracker {
             }
         };
 
-        window.addEventListener('scroll', updateTooltipPosition, { passive: true });
-        window.addEventListener('resize', updateTooltipPosition, { passive: true });
+        // Add listeners with our stored references
+        window.addEventListener('resize', this._resizeHandler, { passive: true });
+        window.addEventListener('scroll', this._tooltipPositionHandler, { passive: true });
+        window.addEventListener('resize', this._tooltipPositionHandler, { passive: true });
 
-        // Clean up any existing tooltip to prevent duplicates
-        const existingTooltip = document.getElementById('heatmap-tooltip');
-        if (existingTooltip && existingTooltip !== tooltip) {
-            existingTooltip.remove();
-        }
     }
 
     // Setup category filter
@@ -1309,47 +1386,7 @@ class HabitTracker {
 
     // Display notification message
     showNotification(message, type = 'info') {
-        const notificationElement = document.createElement('div');
-        notificationElement.className = `notification ${type}-notification`;
-        notificationElement.textContent = message;
-
-        // Add icon based on notification type
-        const icon = document.createElement('span');
-        icon.className = 'notification-icon';
-
-        switch (type) {
-            case 'success':
-                icon.innerHTML = '✅';
-                break;
-            case 'error':
-                icon.innerHTML = '❌';
-                break;
-            case 'info':
-            default:
-                icon.innerHTML = 'ℹ️';
-                break;
-        }
-
-        notificationElement.prepend(icon);
-
-        // Add to the DOM - position on bottom-left similar to save indicator
-        document.body.appendChild(notificationElement);
-
-        // Fade in
-        setTimeout(() => {
-            notificationElement.style.opacity = '1';
-            notificationElement.style.transform = 'translateY(0)';
-        }, 10);
-
-        // Fade out and remove
-        setTimeout(() => {
-            notificationElement.style.opacity = '0';
-            notificationElement.style.transform = 'translateY(20px)';
-
-            setTimeout(() => {
-                document.body.removeChild(notificationElement);
-            }, 500);
-        }, 3000);
+        this.showToast(message, { type });
     }
 
     // New method: Show statistics tab
@@ -2009,102 +2046,41 @@ class HabitTracker {
 
 // Enhanced initialization to handle GitHub Pages routing
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("DOM Content Loaded, checking for habit tracker page");
-
-    // Only initialize if we're on the habit tracker page
     if (window.location.hash === '#/habit-tracker') {
-        console.log("On habit tracker page, initializing");
         const habitTrackerSection = document.getElementById('habit-tracker-section');
         if (habitTrackerSection) {
             habitTrackerSection.style.display = 'block';
-
             if (!window.habitTrackerInstance) {
                 window.habitTrackerInstance = new HabitTracker();
-                console.log("Habit Tracker initialized on page load");
             } else {
-                // If it already exists, refresh its view
                 window.habitTrackerInstance.renderHabits();
-                console.log("Habit Tracker refreshed on page load");
             }
-        } else {
-            console.error("Habit tracker section not found in DOM");
         }
-    } else {
-        console.log("Not on habit tracker page, hash is: " + window.location.hash);
     }
 
-    // Set the current year in the footer if it exists
     const yearElement = document.getElementById('year');
     if (yearElement) {
         yearElement.textContent = new Date().getFullYear();
     }
-
-    // Initialize navigation click event for the habit tracker link
-    const habitTrackerLink = document.getElementById('habit-tracker-link');
-    if (habitTrackerLink) {
-        habitTrackerLink.addEventListener('click', () => {
-            console.log("Habit tracker link clicked");
-            // Wait for the hash change to trigger the router
-            setTimeout(() => {
-                // Ensure the tracker initializes after routing
-                if (!window.habitTrackerInstance && window.location.hash === '#/habit-tracker') {
-                    window.habitTrackerInstance = new HabitTracker();
-                    console.log("Habit Tracker initialized via direct link click");
-                } else if (window.habitTrackerInstance && window.location.hash === '#/habit-tracker') {
-                    window.habitTrackerInstance.renderHabits();
-                    console.log("Habit Tracker refreshed via direct link click");
-                }
-            }, 100);
-        });
-    }
 });
 
-// More robust check to handle direct URLs with hash
-if (window.location.hash === '#/habit-tracker') {
-    console.log("Direct access to habit tracker page detected");
-    // Use timeout to ensure DOM is ready
-    setTimeout(() => {
-        const habitTrackerSection = document.getElementById('habit-tracker-section');
-        if (habitTrackerSection) {
-            habitTrackerSection.style.display = 'block';
-
-            if (!window.habitTrackerInstance) {
-                window.habitTrackerInstance = new HabitTracker();
-                console.log("Habit Tracker initialized on direct page access");
-            }
-        } else {
-            console.error("Habit tracker section not found on direct access");
-        }
-    }, 200);
-}
-
-// Improved hash change handler with logging
+// At the end of your file, update the hashchange handler
 window.addEventListener('hashchange', () => {
-    console.log("Hash changed to: " + window.location.hash);
-
-    // Check if navigating to habit tracker
+    const habitTrackerSection = document.getElementById('habit-tracker-section');
     if (window.location.hash === '#/habit-tracker') {
-        const habitTrackerSection = document.getElementById('habit-tracker-section');
         if (habitTrackerSection) {
             habitTrackerSection.style.display = 'block';
-
-            // If tracker is not initialized, create it
             if (!window.habitTrackerInstance) {
                 window.habitTrackerInstance = new HabitTracker();
-                console.log("Habit Tracker initialized on navigation");
             } else {
-                // If already exists, refresh the habits display
                 window.habitTrackerInstance.renderHabits();
-                console.log("Habit Tracker refreshed on navigation");
             }
-        } else {
-            console.error("Habit tracker section not found on hash change");
         }
-    } else {
-        // Hide the habit tracker section when navigating away
-        const habitTrackerSection = document.getElementById('habit-tracker-section');
-        if (habitTrackerSection) {
-            habitTrackerSection.style.display = 'none';
+    } else if (habitTrackerSection) {
+        habitTrackerSection.style.display = 'none';
+        // Clean up when navigating away from habit tracker
+        if (window.habitTrackerInstance) {
+            window.habitTrackerInstance.cleanup();
         }
     }
 });
