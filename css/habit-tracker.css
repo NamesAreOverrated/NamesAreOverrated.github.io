@@ -78,7 +78,7 @@ h3 {
 .form-row select:focus,
 .form-row input[type="number"]:focus {
     outline: none;
-    border-color: var (--accent-color);
+    border-color: var(--accent-color);
     box-shadow: 0 0 10px rgba(100, 255, 218, 0.2);
 }
 
@@ -1568,7 +1568,17 @@ body.disco-mode .habit-item:nth-child(3n+1)::after {
     margin-right: auto;
     padding: 1rem;
     background-color: var(--secondary-color);
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
     border-left: 3px solid var(--accent-color);
+}
+
+/* Fix the issue with section styling in habit tracker */
+#habit-tracker-section .section {
+    background-color: var(--secondary-color);
+    border-radius: 8px;
+    border-left: 3px solid var(--accent-color);
+    margin-bottom: 2rem;
 }
 
 /* Adjust heading styles to be consistent across separate sections */
@@ -1585,41 +1595,29 @@ body.disco-mode .habit-item:nth-child(3n+1)::after {
     padding: 1rem;
 }
 
-
-
-.add-habit-container {
-    background-color: var(--secondary-color);
-    padding: 1.5rem;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-    margin-bottom: 0;
-    /* Adjusted as it's now in its own section */
-    border-left: 3px solid var(--accent-color);
+/* Make sure habit tracker responds properly on GitHub Pages */
+#habit-tracker-section {
+    display: none;
+    /* Hidden by default, shown by router */
+    max-width: 1100px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
-/* Update habits section styling - remove redundant width constraints */
-.habits-section {
-    /* Replace habits-container with habits-section to match HTML and avoid width conflicts */
-    /* Remove max-width as it's now handled by the .section class */
+/* Fix any duplicated background issues */
+#habit-tracker-section .section {
     background-color: var(--secondary-color);
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-    border-left: 3px solid var(--accent-color);
 }
 
-
-
-.info-box {
-    background-color: var(--secondary-color);
-    padding: 1.5rem;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-    border-left: 3px solid var(--accent-color);
-    margin-top: 0;
-    /* Adjusted as it's now in its own section */
+/* Ensure habit actions are properly styled */
+.habit-actions button {
+    width: auto;
+    min-width: 100px;
 }
 
-/* Keep the featured styling for habits section */
+/* ...existing code... */
+
+/* Fix the featured styling for habits section */
 .featured-section {
     background-color: rgba(48, 48, 48, 0.95);
     padding: 1.8rem;
@@ -1628,6 +1626,11 @@ body.disco-mode .habit-item:nth-child(3n+1)::after {
     border-left: 5px solid var(--accent-color);
     position: relative;
     overflow: hidden;
+}
+
+/* Ensure no double backgrounds */
+#habit-tracker-section .featured-section {
+    background-color: rgba(48, 48, 48, 0.95);
 }
 
 /* Fix any remaining issues with nested sections */
@@ -1784,6 +1787,1205 @@ body.disco-mode .habit-item:nth-child(3n+1)::after {
 @media (max-width: 600px) {
     .data-buttons {
         flex-direction: column;
+    }
+}
+
+/* ...existing code... */
+
+/* Storage Usage Indicator */
+.storage-usage {
+    margin-top: 15px;
+    padding: 15px;
+    border-top: 1px dashed rgba(100, 255, 218, 0.2);
+    font-size: 0.9rem;
+    color: #aaa;
+}
+
+.storage-usage h4 {
+    margin-bottom: 10px;
+    font-family: 'Courier New', monospace;
+    color: var(--accent-color);
+    font-size: 0.95rem;
+}
+
+.usage-details {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.usage-value {
+    font-weight: bold;
+    color: var(--accent-color);
+    font-family: 'Courier New', monospace;
+}
+
+.usage-bar {
+    height: 6px;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    overflow: hidden;
+    flex-grow: 1;
+    margin: 0 10px;
+}
+
+.usage-fill {
+    height: 100%;
+    background-color: var(--accent-color);
+    transition: width 0.3s ease;
+}
+
+.usage-percent {
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+/* Mobile responsive layout */
+@media (max-width: 600px) {
+    .usage-details {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .usage-bar {
+        width: 100%;
+        margin: 8px 0;
+    }
+}
+
+/* ...existing code... */
+
+/* Enhanced mobile view for heatmap */
+.heatmap-container.mobile-view {
+    padding: 10px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.mobile-view .heatmap-grid {
+    grid-template-rows: repeat(7, 10px);
+    grid-auto-columns: 10px;
+    gap: 2px;
+}
+
+.mobile-view .heatmap-cell {
+    width: 10px;
+    height: 10px;
+    border-width: 1px;
+}
+
+.mobile-view .day-labels {
+    display: none;
+    /* Hide day labels on mobile */
+}
+
+.mobile-view .month-labels {
+    margin-left: 0;
+    font-size: 0.7rem;
+}
+
+.mobile-view .month-label {
+    min-width: 30px;
+    padding-left: 2px;
+}
+
+.mobile-view .heatmap-legend {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+    font-size: 0.7rem;
+}
+
+/* Enhance habit titling for touch interfaces */
+@media (max-width: 768px) {
+    .habit-item {
+        padding: 12px 10px;
+        /* Slightly reduce padding */
+    }
+
+    .habit-actions {
+        margin-top: 12px;
+    }
+
+    .btn-complete,
+    .btn-delete {
+        padding: 10px 8px;
+        /* Larger touch targets */
+        min-width: 0;
+        /* Allow buttons to be more flexible */
+        flex: 1;
+    }
+
+    .progress-area {
+        gap: 6px;
+    }
+
+    .day-marker {
+        width: 10px;
+        height: 10px;
+    }
+
+    /* Improve touch targets */
+    .category-filter {
+        padding: 5px 14px;
+        margin: 3px;
+    }
+
+    /* Better form layout on mobile */
+    #custom-category-container {
+        margin-top: 8px;
+        padding: 8px;
+        background-color: rgba(45, 45, 45, 0.5);
+        border-radius: 4px;
+    }
+
+    .goal-options {
+        grid-template-columns: 1fr;
+        /* Stack goal fields vertically on mobile */
+        gap: 10px;
+    }
+
+    .data-buttons {
+        flex-direction: column;
+        gap: 10px;
+    }
+}
+
+/* Improve notification appearance */
+.notification {
+    max-width: 90vw;
+    bottom: 10px;
+    left: 10px;
+    z-index: 1100;
+    /* Ensure it's above everything */
+}
+
+/* Success animation for action buttons */
+.btn-complete:active,
+.btn-delete:active {
+    transform: scale(0.95);
+    transition: transform 0.1s;
+}
+
+/* Add blinking effect for incomplete habits that have a nearly-broken streak */
+@keyframes streak-alert {
+    0% {
+        box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.4);
+    }
+
+    70% {
+        box-shadow: 0 0 0 10px rgba(255, 107, 107, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(255, 107, 107, 0);
+    }
+}
+
+.habit-item.streak-alert {
+    animation: streak-alert 2s infinite;
+}
+
+/* ...existing code... */
+
+/* Statistics Dashboard Styling */
+.habits-tab-navigation {
+    display: flex;
+    margin-bottom: 20px;
+    border-bottom: 1px solid rgba(100, 255, 218, 0.2);
+}
+
+.tab-button {
+    background: transparent;
+    color: #ccc;
+    border: none;
+    padding: 10px 20px;
+    font-size: 1rem;
+    cursor: pointer;
+    font-family: 'Courier New', monospace;
+    transition: all 0.3s ease;
+    border-bottom: 2px solid transparent;
+    margin-right: 10px;
+}
+
+.tab-button:hover {
+    color: var(--accent-color);
+}
+
+.tab-button.active {
+    color: var(--accent-color);
+    border-bottom: 2px solid var(--accent-color);
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* Stats dashboard container */
+.stats-container {
+    padding: 10px 0;
+}
+
+.stats-dashboard {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+/* Individual stat card */
+.stat-card {
+    background-color: rgba(30, 30, 30, 0.5);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+    border-left: 3px solid var(--accent-color);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+}
+
+.stat-title {
+    font-family: 'Courier New', monospace;
+    color: var(--accent-color);
+    font-size: 1.1rem;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+}
+
+.stat-title::before {
+    content: ">";
+    margin-right: 8px;
+    opacity: 0.8;
+}
+
+.stat-content {
+    margin-bottom: 15px;
+}
+
+.stat-description {
+    color: #888;
+    font-size: 0.85rem;
+    font-style: italic;
+}
+
+/* Status indicators */
+.stat-card.success {
+    border-left-color: #4BB543;
+}
+
+.stat-card.success .stat-title {
+    color: #4BB543;
+}
+
+.stat-card.warning {
+    border-left-color: #FFC107;
+}
+
+.stat-card.warning .stat-title {
+    color: #FFC107;
+}
+
+.stat-card.danger {
+    border-left-color: #F44336;
+}
+
+.stat-card.danger .stat-title {
+    color: #F44336;
+}
+
+/* Completion rate styles */
+.stat-card .stat-content:has(> .streaks-list) {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.streaks-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.streak-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    background-color: rgba(30, 30, 30, 0.7);
+    transition: background-color 0.3s ease;
+}
+
+.streak-item:hover {
+    background-color: rgba(40, 40, 40, 0.9);
+}
+
+.streak-item .streak-badge {
+    background-color: rgba(100, 255, 218, 0.15);
+    color: var(--accent-color);
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: bold;
+    min-width: 55px;
+    text-align: center;
+}
+
+.streak-item .streak-details {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.streak-name {
+    color: #eee;
+    font-weight: 500;
+}
+
+.streak-category {
+    font-size: 0.75rem;
+    color: #aaa;
+}
+
+.streak-item.achieved {
+    border-left: 3px solid #4BB543;
+}
+
+.streak-item.achieved .streak-badge {
+    background-color: rgba(75, 181, 67, 0.2);
+    color: #4BB543;
+}
+
+.streak-item.almost {
+    border-left: 3px solid #FFC107;
+}
+
+.streak-item.almost .streak-badge {
+    background-color: rgba(255, 193, 7, 0.2);
+    color: #FFC107;
+}
+
+/* Category chart styles */
+.category-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.chart-item {
+    display: grid;
+    grid-template-columns: 80px 1fr 50px;
+    align-items: center;
+    gap: 10px;
+}
+
+.chart-label {
+    color: #eee;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.chart-bar-container {
+    height: 8px;
+    background-color: rgba(100, 100, 100, 0.2);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+}
+
+.chart-bar {
+    height: 100%;
+    background-color: var(--accent-color);
+    border-radius: 4px;
+}
+
+.chart-value {
+    position: absolute;
+    right: 0;
+    top: -16px;
+    font-size: 0.75rem;
+    color: #aaa;
+}
+
+.chart-details {
+    text-align: right;
+    font-size: 0.8rem;
+    color: #aaa;
+}
+
+/* Trends chart styles */
+.trends-chart {
+    display: flex;
+    align-items: flex-end;
+    height: 150px;
+    gap: 2px;
+    padding: 5px;
+    border-bottom: 1px solid rgba(100, 100, 100, 0.3);
+    margin-top: 20px;
+}
+
+.trend-bar-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+    position: relative;
+}
+
+.trend-bar {
+    width: 80%;
+    background-color: var(--accent-color);
+    border-radius: 2px;
+    transition: height 0.3s ease;
+    min-height: 1px;
+}
+
+.trend-bar.today {
+    background-color: #4BB543;
+    box-shadow: 0 0 5px rgba(75, 181, 67, 0.5);
+}
+
+.trend-date {
+    position: absolute;
+    bottom: -20px;
+    font-size: 0.7rem;
+    color: #aaa;
+    transform: rotate(-45deg);
+    transform-origin: left top;
+}
+
+/* Stats summary table */
+.stats-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    font-size: 0.9rem;
+}
+
+.stats-table th,
+.stats-table td {
+    padding: 8px 10px;
+    text-align: left;
+    border-bottom: 1px solid rgba(100, 100, 100, 0.2);
+}
+
+.stats-table th {
+    color: var(--accent-color);
+    font-weight: normal;
+    font-family: 'Courier New', monospace;
+}
+
+.stats-table tr:hover {
+    background-color: rgba(40, 40, 40, 0.6);
+}
+
+.table-habit-name {
+    color: #eee;
+    font-weight: 500;
+}
+
+.table-habit-category {
+    font-size: 0.75rem;
+    color: #aaa;
+    margin-top: 2px;
+}
+
+.completion-rate {
+    font-size: 0.85rem;
+    padding: 2px 6px;
+    border-radius: 10px;
+}
+
+.completion-rate.good {
+    background-color: rgba(75, 181, 67, 0.1);
+    color: #4BB543;
+}
+
+.completion-rate.low {
+    background-color: rgba(244, 67, 54, 0.1);
+    color: #F44336;
+}
+
+.progress-minibar-container {
+    width: 100%;
+    height: 4px;
+    background-color: rgba(100, 100, 100, 0.2);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 5px;
+}
+
+.progress-minibar {
+    height: 100%;
+    background-color: var(--accent-color);
+}
+
+.progress-minibar.achieved {
+    background-color: #4BB543;
+}
+
+.progress-minibar.good {
+    background-color: #00BCD4;
+}
+
+.progress-minibar.average {
+    background-color: #FFC107;
+}
+
+.progress-minibar.low {
+    background-color: #F44336;
+}
+
+.progress-text {
+    font-size: 0.75rem;
+    color: #aaa;
+    text-align: right;
+}
+
+/* Responsive adjustments for statistics */
+@media (max-width: 768px) {
+    .stats-dashboard {
+        grid-template-columns: 1fr;
+    }
+
+    .trends-chart {
+        height: 120px;
+    }
+
+    .chart-item {
+        grid-template-columns: 70px 1fr 40px;
+    }
+
+    .stats-table {
+        font-size: 0.8rem;
+    }
+
+    .stats-table th,
+    .stats-table td {
+        padding: 6px 8px;
+    }
+
+    .trends-chart {
+        margin-left: -10px;
+        margin-right: -10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .streak-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .chart-item {
+        grid-template-columns: 60px 1fr 35px;
+        gap: 5px;
+    }
+
+    /* Hide some columns in mobile view */
+    .stats-table th:nth-child(3),
+    .stats-table td:nth-child(3) {
+        display: none;
+    }
+}
+
+/* Dark mode optimizations */
+.stat-content {
+    color: #ddd;
+}
+
+/* ...existing code... */
+
+/* Stats summary table - fix clipping issues */
+.stat-card:has(table.stats-table) {
+    overflow: visible;
+}
+
+.stats-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    margin-bottom: 10px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.stats-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    font-size: 0.9rem;
+    min-width: 500px;
+    /* Ensures the table doesn't compress too much */
+}
+
+.stats-table th,
+.stats-table td {
+    padding: 8px 10px;
+    text-align: left;
+    border-bottom: 1px solid rgba(100, 100, 100, 0.2);
+    white-space: nowrap;
+    /* Prevents text from wrapping in cells */
+}
+
+.stats-table th:first-child,
+.stats-table td:first-child {
+    white-space: normal;
+    /* Allow habit names to wrap */
+    min-width: 150px;
+    /* Minimum width for the habit name column */
+    max-width: 250px;
+    /* Maximum width for the habit name column */
+}
+
+/* ...existing code... */
+
+/* Responsive adjustments for statistics */
+@media (max-width: 768px) {
+    /* ...existing code... */
+
+    .stats-table {
+        font-size: 0.8rem;
+        min-width: 450px;
+        /* Slightly smaller minimum width on medium screens */
+    }
+
+    .stats-table th:first-child,
+    .stats-table td:first-child {
+        min-width: 120px;
+        /* Adjusted for mobile */
+    }
+}
+
+@media (max-width: 480px) {
+    /* ...existing code... */
+
+    /* Ensure hint for horizontal scrolling is visible */
+    .stat-card:has(.stats-table-wrapper):after {
+        content: "← Scroll →";
+        display: block;
+        text-align: center;
+        font-size: 0.7rem;
+        color: #aaa;
+        padding: 5px 0;
+        margin-top: 5px;
+    }
+}
+
+/* ...existing code... */
+
+/* Total Completions Card Styling */
+.total-completions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 0;
+    text-align: center;
+}
+
+.total-count {
+    font-size: 3.5rem;
+    font-weight: bold;
+    color: var(--accent-color);
+    line-height: 1.1;
+    margin-bottom: 5px;
+    font-family: 'Courier New', monospace;
+    text-shadow: 0 0 10px rgba(100, 255, 218, 0.3);
+}
+
+.total-label {
+    font-size: 1rem;
+    color: #aaa;
+    margin-bottom: 15px;
+}
+
+.achievement-badges {
+    display: flex;
+    gap: 10px;
+    margin-top: 5px;
+}
+
+.achievement {
+    font-size: 1.8rem;
+    cursor: help;
+    transition: transform 0.3s ease;
+    display: inline-block;
+}
+
+.achievement:hover {
+    transform: scale(1.2);
+}
+
+/* Apply a subtle glow animation to the total count when it's a high number */
+@keyframes count-glow {
+    0% {
+        text-shadow: 0 0 10px rgba(100, 255, 218, 0.3);
+    }
+
+    50% {
+        text-shadow: 0 0 20px rgba(100, 255, 218, 0.5);
+    }
+
+    100% {
+        text-shadow: 0 0 10px rgba(100, 255, 218, 0.3);
+    }
+}
+
+.total-count {
+    animation: count-glow 2s infinite ease-in-out;
+}
+
+/* Add a special effect for milestone achievements */
+.stat-card.success .total-count {
+    background: linear-gradient(to right, var(--accent-color), #4BB543);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    color: transparent;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+    .total-count {
+        font-size: 3rem;
+    }
+
+    .achievement {
+        font-size: 1.5rem;
+    }
+}
+
+/* ...existing code... */
+
+/* Improved Category chart styles */
+.category-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-top: 10px;
+}
+
+.chart-item {
+    display: grid;
+    grid-template-columns: 90px 1fr auto;
+    align-items: center;
+    gap: 12px;
+    background-color: rgba(25, 25, 25, 0.3);
+    border-radius: 6px;
+    padding: 10px;
+    transition: background-color 0.2s ease;
+}
+
+.chart-item:hover {
+    background-color: rgba(35, 35, 35, 0.5);
+}
+
+.chart-label {
+    color: #eee;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 500;
+    padding-left: 5px;
+}
+
+.chart-bar-container {
+    height: 10px;
+    background-color: rgba(100, 100, 100, 0.2);
+    border-radius: 5px;
+    overflow: hidden;
+    position: relative;
+}
+
+.chart-bar {
+    height: 100%;
+    background-color: var(--accent-color);
+    border-radius: 5px;
+}
+
+/* Color coding for chart bars */
+.chart-bar.good {
+    background-color: #4BB543;
+}
+
+.chart-bar.average {
+    background-color: #FFC107;
+}
+
+.chart-bar.low {
+    background-color: #F44336;
+}
+
+.chart-value {
+    position: absolute;
+    right: -25px;
+    bottom: -18px;
+    font-size: 0.75rem;
+    color: #ddd;
+    background: rgba(25, 25, 25, 0.7);
+    padding: 2px 6px;
+    border-radius: 10px;
+}
+
+.chart-details {
+    text-align: right;
+    font-size: 0.8rem;
+    color: #aaa;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.chart-details .completion-count {
+    color: #ddd;
+}
+
+.chart-details .habit-count {
+    font-size: 0.75rem;
+    opacity: 0.7;
+}
+
+/* Responsive adjustments for the category chart */
+@media (max-width: 768px) {
+    .chart-item {
+        grid-template-columns: 80px 1fr auto;
+        padding: 8px;
+        gap: 8px;
+    }
+
+    .chart-bar-container {
+        height: 8px;
+    }
+
+    .chart-value {
+        font-size: 0.7rem;
+        bottom: -16px;
+        right: -20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .chart-item {
+        grid-template-columns: 70px 1fr auto;
+        gap: 6px;
+    }
+
+    .chart-label {
+        font-size: 0.8rem;
+    }
+
+    .chart-details {
+        font-size: 0.75rem;
+    }
+
+    .chart-value {
+        display: none;
+    }
+
+    /* Show percentage in details instead */
+    .chart-details:before {
+        content: attr(data-percent);
+        color: #eee;
+        font-weight: 500;
+    }
+}
+
+/* ...existing code... */
+
+/* Goal achievement styling */
+.goal-achieved-item {
+    position: relative;
+    overflow: hidden;
+    animation: goal-glow 2s infinite ease-in-out;
+}
+
+@keyframes goal-glow {
+    0% {
+        box-shadow: 0 0 5px rgba(100, 255, 218, 0.3);
+    }
+
+    50% {
+        box-shadow: 0 0 15px rgba(100, 255, 218, 0.5);
+    }
+
+    100% {
+        box-shadow: 0 0 5px rgba(100, 255, 218, 0.3);
+    }
+}
+
+.goal-achievement-actions {
+    background-color: rgba(100, 255, 218, 0.1);
+    padding: 12px;
+    border-radius: 6px;
+    margin-top: 12px;
+    border: 1px dashed var(--accent-color);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+.goal-achieved-message {
+    color: var(--accent-color);
+    font-weight: bold;
+    margin-right: auto;
+}
+
+.goal-action-btn {
+    background-color: rgba(100, 255, 218, 0.15);
+    color: var(--accent-color);
+    border: 1px solid var(--accent-color);
+    border-radius: 4px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+.goal-action-btn:hover {
+    background-color: rgba(100, 255, 218, 0.25);
+    transform: translateY(-2px);
+}
+
+/* Achievement display in statistics */
+.achievements-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    max-height: 350px;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+.achievement-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background-color: rgba(100, 255, 218, 0.05);
+    border: 1px solid rgba(100, 255, 218, 0.2);
+    border-radius: 6px;
+    padding: 12px;
+    transition: transform 0.2s ease;
+}
+
+.achievement-item:hover {
+    transform: translateY(-3px);
+}
+
+.achievement-icon {
+    font-size: 1.8rem;
+    color: var(--accent-color);
+}
+
+.achievement-details {
+    flex: 1;
+}
+
+.achievement-title {
+    font-weight: bold;
+    color: var(--accent-color);
+}
+
+.achievement-desc {
+    color: #ddd;
+    margin: 3px 0;
+}
+
+.achievement-date {
+    color: #aaa;
+    font-size: 0.8rem;
+}
+
+.more-achievements {
+    text-align: center;
+    color: #aaa;
+    font-style: italic;
+    padding: 10px;
+}
+
+/* Celebration effect for goal completion */
+@keyframes celebration-confetti {
+    0% {
+        opacity: 1;
+        transform: translateY(0) rotate(0);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translateY(100px) rotate(720deg);
+    }
+}
+
+.confetti-piece {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background-color: var(--accent-color);
+    opacity: 0;
+}
+
+body.celebrating .confetti-piece {
+    animation: celebration-confetti 2s ease-out forwards;
+}
+
+/* Responsive adjustments for goal achievement actions */
+@media (max-width: 600px) {
+    .goal-achievement-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .goal-achieved-message {
+        margin-right: 0;
+        margin-bottom: 10px;
+        text-align: center;
+    }
+}
+
+/* ...existing code... */
+
+/* Achievements Summary Section for Habits Tab */
+.achievements-summary-section {
+    background-color: rgba(40, 40, 40, 0.7);
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(100, 255, 218, 0.2);
+    position: relative;
+    overflow: hidden;
+}
+
+.achievements-summary-section::before {
+    content: '🏆';
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 2rem;
+    opacity: 0.1;
+    transform: rotate(15deg);
+}
+
+.achievements-flex-container {
+    display: flex;
+    justify-content: space-around;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.total-completions-summary,
+.recent-achievements-summary {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    text-align: center;
+    min-width: 120px;
+    flex: 1;
+    position: relative;
+}
+
+.total-completions-summary::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 15%;
+    bottom: 15%;
+    width: 1px;
+    background: linear-gradient(to bottom, transparent, rgba(100, 255, 218, 0.3), transparent);
+}
+
+.total-count-small {
+    font-size: 2.2rem;
+    font-weight: bold;
+    color: var(--accent-color);
+    line-height: 1;
+    font-family: 'Courier New', monospace;
+    text-shadow: 0 0 6px rgba(100, 255, 218, 0.3);
+    animation: count-glow 3s infinite ease-in-out;
+}
+
+.achievement-count {
+    font-size: 2.2rem;
+    font-weight: bold;
+    color: #ffd700;
+    line-height: 1;
+    font-family: 'Courier New', monospace;
+    text-shadow: 0 0 6px rgba(255, 215, 0, 0.3);
+    animation: count-glow-gold 3s infinite ease-in-out;
+}
+
+@keyframes count-glow-gold {
+    0% {
+        text-shadow: 0 0 6px rgba(255, 215, 0, 0.3);
+    }
+
+    50% {
+        text-shadow: 0 0 12px rgba(255, 215, 0, 0.5);
+    }
+
+    100% {
+        text-shadow: 0 0 6px rgba(255, 215, 0, 0.3);
+    }
+}
+
+.summary-label {
+    font-size: 0.85rem;
+    color: #aaa;
+    margin-top: 5px;
+    font-family: 'Courier New', monospace;
+}
+
+.achievement-badges-small {
+    display: flex;
+    gap: 5px;
+    margin-top: 5px;
+}
+
+.achievement-badges-small .achievement {
+    font-size: 1.2rem;
+}
+
+.view-achievements-link {
+    font-size: 0.75rem;
+    color: var(--accent-color);
+    text-decoration: underline;
+    margin-top: 5px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.view-achievements-link:hover {
+    color: #fff;
+}
+
+/* Responsive layout */
+@media (max-width: 600px) {
+    .achievements-flex-container {
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .total-completions-summary::after {
+        width: 80%;
+        height: 1px;
+        top: auto;
+        bottom: -10px;
+        left: 10%;
+        right: 10%;
+        background: linear-gradient(to right, transparent, rgba(100, 255, 218, 0.3), transparent);
     }
 }
 

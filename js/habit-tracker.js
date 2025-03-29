@@ -86,6 +86,20 @@ class HabitTracker {
             }
         });
 
+        // Add event listener for category dropdown change - new code to handle custom categories
+        const categorySelect = document.getElementById('habit-category');
+        if (categorySelect) {
+            categorySelect.addEventListener('change', (e) => {
+                const customCategoryContainer = document.getElementById('custom-category-container');
+                if (e.target.value === 'custom') {
+                    customCategoryContainer.style.display = 'block';
+                    document.getElementById('custom-category').focus();
+                } else {
+                    customCategoryContainer.style.display = 'none';
+                }
+            });
+        }
+
         // Add event listeners for data import/export
         const exportBtn = document.getElementById('export-data');
         const importBtn = document.getElementById('import-data');
@@ -111,6 +125,40 @@ class HabitTracker {
 
         // Set up category filter event listeners
         this.setupCategoryFilter();
+
+        // Initialize storage usage display
+        this.updateStorageUsage();
+
+        // Add event listener for goal type change to update the unit label
+        const goalTypeSelect = document.getElementById('goal-type');
+        if (goalTypeSelect) {
+            goalTypeSelect.addEventListener('change', (e) => {
+                const goalUnit = document.getElementById('goal-unit');
+                if (goalUnit) {
+                    goalUnit.textContent = e.target.value === 'streak' ? 'days' : 'times/week';
+                }
+            });
+        }
+
+        // Add new tab navigation for statistics
+        const statsTabButton = document.getElementById('stats-tab-button');
+        if (statsTabButton) {
+            statsTabButton.addEventListener('click', () => this.showStatsTab());
+        }
+
+        const habitsTabButton = document.getElementById('habits-tab-button');
+        if (habitsTabButton) {
+            habitsTabButton.addEventListener('click', () => this.showHabitsTab());
+        }
+
+        // Add event listener for goal achievement actions
+        document.addEventListener('click', (e) => {
+            if (e.target.matches('.goal-action-btn')) {
+                const habitId = e.target.closest('.habit-item').dataset.habitId;
+                const action = e.target.dataset.action;
+                this.handleGoalAction(habitId, action);
+            }
+        });
     }
 
     // Load habits from localStorage
@@ -155,6 +203,9 @@ class HabitTracker {
     saveHabits() {
         localStorage.setItem('habits', JSON.stringify(this.habits));
 
+        // Update storage usage display when saving
+        this.updateStorageUsage();
+
         // Add visual feedback when saving - position on bottom-left to avoid disco button
         const saveIndicator = document.createElement('div');
         saveIndicator.textContent = '💾 Saved';
@@ -179,6 +230,47 @@ class HabitTracker {
         }, 1000);
     }
 
+    // Calculate local storage usage
+    calculateStorageUsage() {
+        let totalBytes = 0;
+
+        // Calculate habits data size
+        const habitsData = JSON.stringify(this.habits);
+        totalBytes += habitsData.length * 2; // Each character is 2 bytes in UTF-16
+
+        // Return size in KB with 2 decimal places
+        return {
+            bytes: totalBytes,
+            kb: (totalBytes / 1024).toFixed(2),
+            percent: ((totalBytes / (5 * 1024 * 1024)) * 100).toFixed(2) // 5MB is typical localStorage limit
+        };
+    }
+
+    // Update storage usage display
+    updateStorageUsage() {
+        const storageUsageElement = document.getElementById('storage-usage');
+        if (storageUsageElement) {
+            const usage = this.calculateStorageUsage();
+
+            // Update the display
+            storageUsageElement.innerHTML = `
+                <div class="usage-value">${usage.kb} KB</div>
+                <div class="usage-bar">
+                    <div class="usage-fill" style="width: ${Math.min(100, usage.percent)}%"></div>
+                </div>
+                <div class="usage-percent">${usage.percent}% used</div>
+            `;
+
+            // Change color based on usage
+            const usageFill = storageUsageElement.querySelector('.usage-fill');
+            if (parseFloat(usage.percent) > 80) {
+                usageFill.style.backgroundColor = '#f44336';
+            } else if (parseFloat(usage.percent) > 50) {
+                usageFill.style.backgroundColor = '#ff9800';
+            }
+        }
+    }
+
     // Add a new habit
     addHabit() {
         const habitInput = document.getElementById('habit-input');
@@ -191,9 +283,19 @@ class HabitTracker {
             const categorySelect = document.getElementById('habit-category');
             let category = categorySelect.value;
 
-            // Validate goal value is a positive number
+            // Better validation with specific error messages
             if (isNaN(goalValue) || goalValue <= 0) {
-                alert('Please enter a valid positive number for your goal target.');
+                this.showNotification('Please enter a positive number for your goal target.', 'error');
+                return;
+            }
+
+            // Reasonable upper limits to prevent unrealistic goals
+            if (goalType === 'streak' && goalValue > 365) {
+                this.showNotification('Streak goal should be 365 days or less.', 'error');
+                return;
+            }
+            if (goalType === 'frequency' && goalValue > 7) {
+                this.showNotification('Weekly frequency should be 7 times or less.', 'error');
                 return;
             }
 
@@ -206,7 +308,7 @@ class HabitTracker {
                         this.categories.push(customCategory);
                     }
                 } else {
-                    alert('Please enter a valid custom category name');
+                    this.showNotification('Please enter a valid category name.', 'error');
                     return;
                 }
             }
@@ -229,13 +331,14 @@ class HabitTracker {
             categorySelect.value = 'General';
             document.getElementById('custom-category-container').style.display = 'none';
             document.getElementById('custom-category').value = '';
+            document.getElementById('goal-type').value = 'streak';
+            document.getElementById('goal-value').value = '7';
+            document.getElementById('goal-unit').textContent = 'days';
 
             // Visual feedback
-            const formElement = document.getElementById('habit-form');
-            formElement.classList.add('success-submit');
-            setTimeout(() => {
-                formElement.classList.remove('success-submit');
-            }, 1000);
+            this.showNotification(`New habit "${habitName}" added!`, 'success');
+        } else {
+            this.showNotification('Please enter a habit name.', 'error');
         }
     }
 
@@ -263,13 +366,28 @@ class HabitTracker {
                 habit.completedToday = true;
                 habit.lastCompletedDate = todayString;
 
-                // Update streak logic
+                // Handle streak logic
                 const yesterday = new Date();
                 yesterday.setDate(yesterday.getDate() - 1);
                 const yesterdayString = yesterday.toDateString();
 
-                if (habit.lastCompletedDate === yesterdayString || habit.streak === 0) {
+                // Increase streak if this is first completion or if yesterday was completed
+                if (habit.streak === 0 || habit.lastCompletedDate === yesterdayString) {
                     habit.streak++;
+
+                    // Celebrate milestone streak achievements
+                    if (habit.streak % 7 === 0) { // Weekly milestone
+                        this.showNotification(`🔥 ${habit.streak} day streak for "${habit.name}"!`, 'success');
+                    } else if (habit.streak % 30 === 0) { // Monthly milestone
+                        this.showNotification(`🏆 Amazing! ${habit.streak} day streak for "${habit.name}"!`, 'success');
+                    } else if (habit.streak % 100 === 0) { // Major milestone
+                        this.showNotification(`🌟 INCREDIBLE! ${habit.streak} day streak for "${habit.name}"!`, 'success');
+                    }
+
+                    // NEW: Check if goal was just achieved with this completion
+                    if (habit.goalType === 'streak' && habit.streak === habit.goalValue) {
+                        this.handleGoalAchievement(habit);
+                    }
                 }
 
                 // Add to weekly completions if not already there
@@ -279,7 +397,9 @@ class HabitTracker {
                     // Check if this completion achieves the weekly goal
                     if (habit.goalType === 'frequency' &&
                         habit.weeklyCompletions.length === habit.goalValue) {
-                        console.log(`${habit.name}: Weekly goal achieved! (${habit.goalValue} times this week)`);
+                        this.showNotification(`Weekly goal achieved for "${habit.name}"! 🎯`, 'success');
+                        // NEW: Handle frequency goal achievement
+                        this.handleGoalAchievement(habit);
                     }
                 }
 
@@ -300,11 +420,6 @@ class HabitTracker {
                 if (habit.streak > 0) {
                     habit.streak--;
                 }
-
-                // If streak is now 0, also reset the lastCompletedDate
-                if (habit.streak === 0) {
-                    habit.lastCompletedDate = null;
-                }
             }
 
             this.saveHabits();
@@ -317,19 +432,21 @@ class HabitTracker {
         const today = new Date().toDateString();
 
         this.habits.forEach(habit => {
+            // If habit was completed on a previous day (not today)
             if (habit.lastCompletedDate && habit.lastCompletedDate !== today) {
                 habit.completedToday = false;
 
-                // Check if streak should be broken
-                const lastCompleted = new Date(habit.lastCompletedDate);
-                const yesterday = new Date();
-                yesterday.setDate(yesterday.getDate() - 1);
+                // If we have a streak, check if it should be broken
+                if (habit.streak > 0) {
+                    const lastCompletedDate = new Date(habit.lastCompletedDate);
+                    const yesterday = new Date();
+                    yesterday.setDate(yesterday.getDate() - 1);
 
-                // Only break streak if it's more than 1 day since last completion AND we have a streak
-                if (habit.streak > 0 && lastCompleted.toDateString() !== yesterday.toDateString()) {
-                    console.log(`${habit.name}: Streak broken. Was: ${habit.streak}`);
-                    habit.streak = 0;
-                    habit.lastCompletedDate = null; // Reset last completed date when streak is broken
+                    // Break streak only if last completion was before yesterday
+                    if (lastCompletedDate.toDateString() !== yesterday.toDateString()) {
+                        console.log(`${habit.name}: Streak broken. Was: ${habit.streak}`);
+                        habit.streak = 0;
+                    }
                 }
             }
         });
@@ -420,6 +537,50 @@ class HabitTracker {
         const completedHabits = this.habits.filter(habit => habit.completedToday);
         const uncompletedHabits = this.habits.filter(habit => !habit.completedToday);
 
+        // NEW: Add achievements summary at the top if there are any achievements
+        const achievements = this.getAchievements();
+        if (achievements.length > 0 || this.calculateTotalCompletions() > 0) {
+            const achievementsSummary = document.createElement('div');
+            achievementsSummary.className = 'achievements-summary-section';
+
+            // Add total completions counter
+            const totalCompletions = this.calculateTotalCompletions();
+            const totalCompletionsHTML = `
+                <div class="total-completions-summary">
+                    <div class="total-count-small">${totalCompletions}</div>
+                    <div class="summary-label">Total Completions</div>
+                    ${this.getTotalCompletionAchievements(totalCompletions) ?
+                    `<div class="achievement-badges-small">${this.getTotalCompletionAchievements(totalCompletions)}</div>` : ''}
+                </div>
+            `;
+
+            // Add recent achievement counter
+            const recentAchievementsHTML = `
+                <div class="recent-achievements-summary">
+                    <div class="achievement-count">${achievements.length}</div>
+                    <div class="summary-label">Goals Achieved</div>
+                    ${achievements.length > 0 ? '<div class="view-achievements-link">View in Statistics tab</div>' : ''}
+                </div>
+            `;
+
+            achievementsSummary.innerHTML = `
+                <div class="achievements-flex-container">
+                    ${totalCompletionsHTML}
+                    ${recentAchievementsHTML}
+                </div>
+            `;
+
+            // Add click event to switch to statistics tab
+            setTimeout(() => {
+                const viewLink = achievementsSummary.querySelector('.view-achievements-link');
+                if (viewLink) {
+                    viewLink.addEventListener('click', () => this.showStatsTab());
+                }
+            }, 0);
+
+            habitsList.appendChild(achievementsSummary);
+        }
+
         // Create container for uncompleted habits
         if (uncompletedHabits.length > 0) {
             const uncompletedSection = document.createElement('div');
@@ -483,6 +644,14 @@ class HabitTracker {
         if (this.habits.length > 0) {
             this.setupCategoryFilter();
         }
+
+        // Update storage usage when rendering habits
+        this.updateStorageUsage();
+
+        // Add statistics dashboard if we have habits
+        if (this.habits.length > 0) {
+            this.renderStatisticsDashboard();
+        }
     }
 
     // Helper method to create a habit element (extracted from renderHabits)
@@ -491,6 +660,7 @@ class HabitTracker {
         habitElement.className = `habit-item ${habit.completedToday ? 'completed' : ''}`;
         habitElement.dataset.category = habit.category;  // Add category as a data attribute
         habitElement.dataset.goalType = habit.goalType;  // Add goal type as a data attribute
+        habitElement.dataset.habitId = habit.id; // NEW: Add habit ID as data attribute
 
         // For custom categories that aren't in our predefined list, generate a color
         if (habit.category && !['Health', 'Work', 'Learning', 'Personal', 'General'].includes(habit.category)) {
@@ -540,6 +710,23 @@ class HabitTracker {
               </div>`
             : '';
 
+        // NEW: Add special class for achieved goals
+        if (isGoalAchieved) {
+            habitElement.classList.add('goal-achieved-item');
+        }
+
+        // NEW: Add goal achievement actions if goal is achieved
+        let goalActionsHtml = '';
+        if (isGoalAchieved && !habit.goalAcknowledged) {
+            goalActionsHtml = `
+                <div class="goal-achievement-actions">
+                    <div class="goal-achieved-message">🎉 Goal achieved! What's next?</div>
+                    <button class="goal-action-btn" data-action="increaseGoal">Increase Goal</button>
+                    <button class="goal-action-btn" data-action="acknowledgeGoal">Keep Going</button>
+                </div>
+            `;
+        }
+
         // Simplified habit display - removed goal type indicator
         habitElement.innerHTML = `
             <div class="habit-info">
@@ -569,6 +756,8 @@ class HabitTracker {
                     
                     ${weeklyStatsHtml}
                 </div>
+                
+                ${goalActionsHtml}
             </div>
             <div class="habit-actions">
                 <button class="btn-complete">${habit.completedToday ? '↩️ Undo' : '✅ Complete'}</button>
@@ -857,6 +1046,23 @@ class HabitTracker {
         heatmapSection.appendChild(heatmapContainer);
         container.appendChild(heatmapSection);
 
+        // Add responsive class for mobile view
+        const isMobile = window.innerWidth < 768;
+        if (isMobile) {
+            heatmapContainer.classList.add('mobile-view');
+        }
+
+        // Add window resize listener to handle orientation changes
+        const resizeHandler = () => {
+            if (window.innerWidth < 768) {
+                heatmapContainer.classList.add('mobile-view');
+            } else {
+                heatmapContainer.classList.remove('mobile-view');
+            }
+        };
+
+        window.addEventListener('resize', resizeHandler, { passive: true });
+
         // Add window event listener to update tooltip position on scroll/resize
         const updateTooltipPosition = () => {
             const activeCell = document.querySelector('.heatmap-cell:hover');
@@ -1045,6 +1251,9 @@ class HabitTracker {
                     this.saveHabits();
                     this.renderHabits();
 
+                    // Update storage usage after import
+                    this.updateStorageUsage();
+
                     // Check for day/week changes
                     this.checkDayChange();
                     this.checkWeekChange();
@@ -1082,6 +1291,9 @@ class HabitTracker {
 
                 // Render empty habits list
                 this.renderHabits();
+
+                // Update storage usage after reset
+                this.updateStorageUsage();
 
                 // Show notification
                 this.showNotification('All habit data has been reset!', 'error');
@@ -1139,14 +1351,686 @@ class HabitTracker {
             }, 500);
         }, 3000);
     }
+
+    // New method: Show statistics tab
+    showStatsTab() {
+        const statsTab = document.getElementById('stats-tab');
+        const habitsTab = document.getElementById('habits-tab');
+        const statsButton = document.getElementById('stats-tab-button');
+        const habitsButton = document.getElementById('habits-tab-button');
+
+        if (statsTab && habitsTab) {
+            statsTab.style.display = 'block';
+            habitsTab.style.display = 'none';
+            statsButton.classList.add('active');
+            habitsButton.classList.remove('active');
+
+            // Render statistics when tab is shown
+            this.renderStatisticsDashboard();
+        }
+    }
+
+    // New method: Show habits tab
+    showHabitsTab() {
+        const statsTab = document.getElementById('stats-tab');
+        const habitsTab = document.getElementById('habits-tab');
+        const statsButton = document.getElementById('stats-tab-button');
+        const habitsButton = document.getElementById('habits-tab-button');
+
+        if (statsTab && habitsTab) {
+            statsTab.style.display = 'none';
+            habitsTab.style.display = 'block';
+            statsButton.classList.remove('active');
+            habitsButton.classList.add('active');
+        }
+    }
+
+    // New method: Generate statistics dashboard
+    renderStatisticsDashboard() {
+        const statsContainer = document.getElementById('stats-container');
+        if (!statsContainer) return;
+
+        // Clear previous content
+        statsContainer.innerHTML = '';
+
+        if (this.habits.length === 0) {
+            statsContainer.innerHTML = '<p style="color: #888; text-align: center; padding: 20px;">Add some habits to see statistics!</p>';
+            return;
+        }
+
+        // Create dashboard structure
+        const dashboard = document.createElement('div');
+        dashboard.className = 'stats-dashboard';
+
+        // Keep Total Completions card in the stats tab too for consistency
+        const totalCompletions = this.calculateTotalCompletions();
+        const totalCompletionsCard = this.createStatCard(
+            'Total Habit Completions',
+            this.generateTotalCompletionsHTML(totalCompletions),
+            'The total number of times you\'ve completed habits since you started tracking',
+            'success'
+        );
+        dashboard.appendChild(totalCompletionsCard);
+
+        // 1. Overall Completion Rate
+        const completionRate = this.calculateOverallCompletionRate();
+        const completionRateCard = this.createStatCard(
+            'Overall Completion Rate',
+            `${completionRate}%`,
+            'The percentage of habit completions over the last 30 days',
+            completionRate > 80 ? 'success' : completionRate > 50 ? 'warning' : 'danger'
+        );
+        dashboard.appendChild(completionRateCard);
+
+        // 2. Current Streaks Summary
+        const streaksHTML = this.generateStreaksSummary();
+        const streaksCard = this.createStatCard(
+            'Current Streaks',
+            streaksHTML,
+            'Your longest active streaks across all habits'
+        );
+        dashboard.appendChild(streaksCard);
+
+        // 3. Category Performance
+        const categoryPerformance = this.calculateCategoryPerformance();
+        const categoryCard = this.createStatCard(
+            'Category Performance',
+            this.generateCategoryChart(categoryPerformance),
+            'Completion rates by habit category'
+        );
+        dashboard.appendChild(categoryCard);
+
+        // 4. Daily Trends Chart (Last 30 Days)
+        const trendsData = this.calculateDailyTrends();
+        const trendsCard = this.createStatCard(
+            'Daily Completion Trend (Last 30 Days)',
+            this.generateTrendsChart(trendsData),
+            'Number of habits completed each day'
+        );
+        dashboard.appendChild(trendsCard);
+
+        // 5. Statistics Summary Table
+        const summaryTable = this.generateStatsSummaryTable();
+        const summaryCard = this.createStatCard(
+            'Habit Statistics Summary',
+            summaryTable,
+            'Key metrics for all your habits'
+        );
+        dashboard.appendChild(summaryCard);
+
+        // Add dashboard to the page
+        statsContainer.appendChild(dashboard);
+
+        // Add achievements card if we have any
+        const achievements = this.getAchievements();
+        if (achievements.length > 0) {
+            const achievementsCard = this.createStatCard(
+                'Recent Achievements',
+                this.generateAchievementsHTML(achievements),
+                'Goals you\'ve successfully completed',
+                'success'
+            );
+            dashboard.appendChild(achievementsCard);
+        }
+    }
+
+    // New helper: Calculate total completions across all habits
+    calculateTotalCompletions() {
+        let totalCount = 0;
+
+        // Sum up all completions from each habit's history
+        this.habits.forEach(habit => {
+            if (habit.completionHistory) {
+                totalCount += Object.keys(habit.completionHistory).length;
+            }
+        });
+
+        return totalCount;
+    }
+
+    // New helper: Generate HTML for total completions card
+    generateTotalCompletionsHTML(count) {
+        const achievements = this.getTotalCompletionAchievements(count);
+
+        return `
+            <div class="total-completions">
+                <div class="total-count">${count}</div>
+                <div class="total-label">Total Completions</div>
+                ${achievements ? `<div class="achievement-badges">${achievements}</div>` : ''}
+            </div>
+        `;
+    }
+
+    // New helper: Generate achievement badges based on total count
+    getTotalCompletionAchievements(count) {
+        const badges = [];
+
+        // Add achievement badges based on milestones
+        if (count >= 10) badges.push('<span class="achievement" title="Beginner: 10+ completions">🌱</span>');
+        if (count >= 50) badges.push('<span class="achievement" title="Consistent: 50+ completions">🌿</span>');
+        if (count >= 100) badges.push('<span class="achievement" title="Dedicated: 100+ completions">🌳</span>');
+        if (count >= 500) badges.push('<span class="achievement" title="Master: 500+ completions">🏆</span>');
+        if (count >= 1000) badges.push('<span class="achievement" title="Legend: 1000+ completions">🏅</span>');
+
+        return badges.length > 0 ? badges.join('') : null;
+    }
+
+    // Helper: Create a stat card
+    createStatCard(title, content, description, status = '') {
+        const card = document.createElement('div');
+        card.className = `stat-card ${status}`;
+
+        card.innerHTML = `
+            <h4 class="stat-title">${title}</h4>
+            <div class="stat-content">${content}</div>
+            ${description ? `<p class="stat-description">${description}</p>` : ''}
+        `;
+
+        return card;
+    }
+
+    // Helper: Calculate overall completion rate
+    calculateOverallCompletionRate() {
+        // Get the last 30 days
+        const last30Days = [];
+        for (let i = 0; i < 30; i++) {
+            const date = new Date();
+            date.setDate(date.getDate() - i);
+            last30Days.push(date.toISOString().split('T')[0]);
+        }
+
+        // Count completions and total opportunities
+        let totalCompletions = 0;
+        let totalOpportunities = 0;
+
+        // Only count habits that existed during this period
+        this.habits.forEach(habit => {
+            // Skip habits without any completion history
+            if (!habit.completionHistory || Object.keys(habit.completionHistory).length === 0) {
+                return;
+            }
+
+            last30Days.forEach(date => {
+                // Only count days since the habit was created
+                // Assuming the first completion date is close to creation date
+                const firstCompletionDate = this.getFirstCompletionDate(habit);
+                if (!firstCompletionDate || new Date(date) >= new Date(firstCompletionDate)) {
+                    totalOpportunities++;
+                    if (habit.completionHistory[date]) {
+                        totalCompletions++;
+                    }
+                }
+            });
+        });
+
+        return totalOpportunities > 0 ? Math.round((totalCompletions / totalOpportunities) * 100) : 0;
+    }
+
+    // Helper: Get first completion date for a habit
+    getFirstCompletionDate(habit) {
+        if (!habit.completionHistory || Object.keys(habit.completionHistory).length === 0) {
+            return null;
+        }
+
+        const dates = Object.keys(habit.completionHistory).sort();
+        return dates[0];
+    }
+
+    // Helper: Generate streaks summary HTML
+    generateStreaksSummary() {
+        // Find habits with longest streaks
+        const withStreaks = this.habits.filter(h => h.streak > 0)
+            .sort((a, b) => b.streak - a.streak)
+            .slice(0, 5);
+
+        if (withStreaks.length === 0) {
+            return '<p>No active streaks yet. Complete habits to build streaks!</p>';
+        }
+
+        let html = '<div class="streaks-list">';
+        withStreaks.forEach(habit => {
+            const streakClass = habit.streak >= habit.goalValue ? 'achieved' :
+                habit.streak >= Math.floor(habit.goalValue * 0.7) ? 'almost' : '';
+
+            html += `
+                <div class="streak-item ${streakClass}">
+                    <div class="streak-badge">⚡ ${habit.streak}</div>
+                    <div class="streak-details">
+                        <span class="streak-name">${habit.name}</span>
+                        <div class="streak-category">${habit.category}</div>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+
+        return html;
+    }
+
+    // Helper: Calculate category performance
+    calculateCategoryPerformance() {
+        const categoryStats = {};
+
+        // Initialize stats for each category that has habits
+        this.habits.forEach(habit => {
+            const category = habit.category || 'General';
+            if (!categoryStats[category]) {
+                categoryStats[category] = {
+                    total: 0,
+                    completed: 0,
+                    rate: 0,
+                    habits: 0
+                };
+            }
+            // Count how many habits are in each category
+            categoryStats[category].habits++;
+        });
+
+        // Get the last 30 days
+        const last30Days = [];
+        for (let i = 0; i < 30; i++) {
+            const date = new Date();
+            date.setDate(date.getDate() - i);
+            last30Days.push(date.toISOString().split('T')[0]);
+        }
+
+        // Calculate completion stats for each habit by category
+        this.habits.forEach(habit => {
+            const category = habit.category || 'General';
+
+            // Skip if we somehow don't have this category (shouldn't happen)
+            if (!categoryStats[category]) return;
+
+            // Count completions for this habit in the last 30 days
+            let habitCompletions = 0;
+            let habitOpportunities = 0;
+
+            last30Days.forEach(date => {
+                // Only count days after habit was created
+                const firstCompletionDate = this.getFirstCompletionDate(habit);
+                if (!firstCompletionDate || new Date(date) >= new Date(firstCompletionDate)) {
+                    habitOpportunities++;
+                    if (habit.completionHistory && habit.completionHistory[date]) {
+                        habitCompletions++;
+                    }
+                }
+            });
+
+            // Add to category totals
+            categoryStats[category].completed += habitCompletions;
+            categoryStats[category].total += habitOpportunities;
+        });
+
+        // Calculate completion rates and filter out empty categories
+        Object.keys(categoryStats).forEach(category => {
+            const stats = categoryStats[category];
+            if (stats.total === 0) {
+                // No opportunities to complete (new habit with no history)
+                stats.rate = 0;
+            } else {
+                stats.rate = Math.round((stats.completed / stats.total) * 100);
+            }
+        });
+
+        // Filter out categories with no habits
+        return Object.fromEntries(
+            Object.entries(categoryStats).filter(([_, stats]) => stats.habits > 0)
+        );
+    }
+
+    // Helper: Generate category chart HTML
+    generateCategoryChart(categoryPerformance) {
+        // Sort categories by completion rate
+        const categories = Object.keys(categoryPerformance)
+            .filter(cat => categoryPerformance[cat].habits > 0)
+            .sort((a, b) => categoryPerformance[b].rate - categoryPerformance[a].rate);
+
+        if (categories.length === 0) {
+            return '<p>No category data available yet.</p>';
+        }
+
+        let html = '<div class="category-chart">';
+
+        categories.forEach(category => {
+            const stats = categoryPerformance[category];
+            const percentage = stats.rate;
+            const completionClass = percentage >= 70 ? 'good' :
+                percentage >= 40 ? 'average' : 'low';
+
+            // Generate chart bar with improved styling
+            html += `
+                <div class="chart-item">
+                    <div class="chart-label" title="${category}">${category}</div>
+                    <div class="chart-bar-container">
+                        <div class="chart-bar ${completionClass}" style="width: ${percentage}%"></div>
+                        <span class="chart-value">${percentage}%</span>
+                    </div>
+                    <div class="chart-details">
+                        <span class="completion-count" title="${stats.completed} out of ${stats.total} opportunities">${stats.completed}/${stats.total}</span>
+                        <span class="habit-count" title="${stats.habits} habit${stats.habits !== 1 ? 's' : ''}">
+                            (${stats.habits} habit${stats.habits !== 1 ? 's' : ''})
+                        </span>
+                    </div>
+                </div>
+            `;
+        });
+
+        html += '</div>';
+        return html;
+    }
+
+    // Helper: Calculate daily trends for the last 30 days
+    calculateDailyTrends() {
+        const trendData = [];
+
+        // Get the last 30 days in reverse order (oldest first)
+        for (let i = 29; i >= 0; i--) {
+            const date = new Date();
+            date.setDate(date.getDate() - i);
+            const dateString = date.toISOString().split('T')[0];
+
+            // Count completions for this date
+            const totalHabitsExisting = this.habits.length;
+            let completedCount = 0;
+
+            this.habits.forEach(habit => {
+                if (habit.completionHistory && habit.completionHistory[dateString]) {
+                    completedCount++;
+                }
+            });
+
+            trendData.push({
+                date: dateString,
+                completed: completedCount,
+                total: totalHabitsExisting,
+                formattedDate: date.toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric'
+                })
+            });
+        }
+
+        return trendData;
+    }
+
+    // Helper: Generate trends chart HTML
+    generateTrendsChart(trendsData) {
+        if (!trendsData || trendsData.length === 0) {
+            return '<p>No trend data available yet.</p>';
+        }
+
+        // Find maximum value for scaling
+        const maxValue = Math.max(...trendsData.map(day => day.completed), 1);
+
+        let html = '<div class="trends-chart">';
+
+        // Generate bars
+        trendsData.forEach((day, index) => {
+            const height = day.completed > 0 ? (day.completed / maxValue) * 100 : 0;
+            const tooltip = `${day.formattedDate}: ${day.completed} habit${day.completed !== 1 ? 's' : ''} completed`;
+
+            // Special class for today
+            const isToday = index === trendsData.length - 1;
+
+            html += `
+                <div class="trend-bar-container" title="${tooltip}">
+                    <div class="trend-bar ${isToday ? 'today' : ''}" style="height: ${height}%"></div>
+                    ${index % 5 === 0 ? `<div class="trend-date">${day.formattedDate.split(' ')[1]}</div>` : ''}
+                </div>
+            `;
+        });
+
+        html += '</div>';
+        return html;
+    }
+
+    // Helper: Generate statistics summary table
+    generateStatsSummaryTable() {
+        // Sort habits by streak (descending)
+        const sortedHabits = [...this.habits].sort((a, b) => b.streak - a.streak);
+
+        if (sortedHabits.length === 0) {
+            return '<p>No habits to summarize yet!</p>';
+        }
+
+        let html = `
+            <div class="stats-table-wrapper">
+                <table class="stats-table">
+                    <thead>
+                        <tr>
+                            <th>Habit</th>
+                            <th>Streak</th>
+                            <th>7 Day</th>
+                            <th>30 Day</th>
+                            <th>Goal Progress</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        sortedHabits.forEach(habit => {
+            const last7Days = this.calculateCompletionRateForPeriod(habit, 7);
+            const last30Days = this.calculateCompletionRateForPeriod(habit, 30);
+
+            const progressPercentage = habit.getProgressPercentage();
+            const progressClass = progressPercentage >= 100 ? 'achieved' :
+                progressPercentage >= 70 ? 'good' :
+                    progressPercentage >= 40 ? 'average' : 'low';
+
+            html += `
+                <tr>
+                    <td>
+                        <div class="table-habit-name" title="${habit.name}">${habit.name}</div>
+                        <div class="table-habit-category">${habit.category}</div>
+                    </td>
+                    <td><span class="badge streak-badge">${habit.streak}</span></td>
+                    <td><span class="completion-rate ${last7Days >= 70 ? 'good' : 'low'}">${last7Days}%</span></td>
+                    <td><span class="completion-rate ${last30Days >= 70 ? 'good' : 'low'}">${last30Days}%</span></td>
+                    <td>
+                        <div class="progress-minibar-container">
+                            <div class="progress-minibar ${progressClass}" style="width: ${progressPercentage}%"></div>
+                        </div>
+                        <div class="progress-text">${progressPercentage}%</div>
+                    </td>
+                </tr>
+            `;
+        });
+
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        return html;
+    }
+
+    // Helper: Calculate completion rate for a specific period
+    calculateCompletionRateForPeriod(habit, days) {
+        let completed = 0;
+        const period = [];
+
+        // Get the dates for the period
+        for (let i = 0; i < days; i++) {
+            const date = new Date();
+            date.setDate(date.getDate() - i);
+            period.push(date.toISOString().split('T')[0]);
+        }
+
+        // Count completions
+        period.forEach(date => {
+            if (habit.completionHistory && habit.completionHistory[date]) {
+                completed++;
+            }
+        });
+
+        return Math.round((completed / days) * 100);
+    }
+
+    // NEW: Handle goal achievement
+    handleGoalAchievement(habit) {
+        // Record the achievement if not already recorded
+        if (!habit.achievements) {
+            habit.achievements = [];
+        }
+
+        // Record this achievement with timestamp
+        const achievement = {
+            date: new Date().toISOString(),
+            goalType: habit.goalType,
+            goalValue: habit.goalValue,
+            streak: habit.streak,
+            weeklyCompletions: [...habit.weeklyCompletions]
+        };
+
+        habit.achievements.push(achievement);
+
+        // Visual celebration
+        this.showGoalAchievementCelebration(habit);
+
+        // Update habit status - we'll add a flag to track if user has acknowledged the achievement
+        if (!habit.goalAcknowledged) {
+            habit.goalAcknowledged = false;
+        }
+
+        this.saveHabits();
+    }
+
+    // NEW: Show celebration for goal achievement
+    showGoalAchievementCelebration(habit) {
+        // Fancy notification for goal achievement
+        const message = habit.goalType === 'streak'
+            ? `🏆 GOAL ACHIEVED! ${habit.streak}-day streak for "${habit.name}"!`
+            : `🏆 GOAL ACHIEVED! Completed "${habit.name}" ${habit.goalValue} times this week!`;
+
+        this.showNotification(message, 'success');
+
+        // Play achievement sound if enabled
+        if (!localStorage.getItem('habitsSoundDisabled')) {
+            try {
+                const audio = new Audio('data:audio/mp3;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaGR0YQAAAAxNYWRlIHdpdGggR1NNZAAR/+MYxAAAAANIAAAAAExBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV/+MYxDsAAANIAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV/+MYxMQAAANIAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV');
+                audio.volume = 0.5;
+                audio.play();
+            } catch (e) {
+                console.log("Sound couldn't play:", e);
+            }
+        }
+    }
+
+    // NEW: Handle goal action buttons
+    handleGoalAction(habitId, action) {
+        const habit = this.habits.find(h => h.id === habitId);
+        if (!habit) return;
+
+        switch (action) {
+            case 'increaseGoal':
+                // Increase the goal based on current goal type
+                if (habit.goalType === 'streak') {
+                    habit.goalValue = Math.ceil(habit.goalValue * 1.5); // Increase by 50%
+                } else {
+                    // For frequency goals, increase by 1 (max 7)
+                    habit.goalValue = Math.min(7, habit.goalValue + 1);
+                }
+                habit.goalAcknowledged = true;
+                this.showNotification(`Goal for "${habit.name}" increased to ${habit.goalValue}!`, 'info');
+                break;
+
+            case 'acknowledgeGoal':
+                // Simply acknowledge the goal was achieved
+                habit.goalAcknowledged = true;
+                this.showNotification(`Keep up the great work with "${habit.name}"!`, 'info');
+                break;
+        }
+
+        this.saveHabits();
+        this.renderHabits();
+    }
+
+    // New: Get achievements for statistics
+    getAchievements() {
+        let allAchievements = [];
+
+        this.habits.forEach(habit => {
+            if (habit.achievements && habit.achievements.length > 0) {
+                const habitAchievements = habit.achievements.map(achievement => ({
+                    ...achievement,
+                    habitName: habit.name,
+                    habitId: habit.id,
+                    category: habit.category
+                }));
+
+                allAchievements = [...allAchievements, ...habitAchievements];
+            }
+        });
+
+        // Sort by date (newest first)
+        return allAchievements.sort((a, b) => new Date(b.date) - new Date(a.date));
+    }
+
+    // Generate HTML for achievements list
+    generateAchievementsHTML(achievements) {
+        if (achievements.length === 0) {
+            return '<p>No achievements yet. Complete your goals to see them here!</p>';
+        }
+
+        let html = '<div class="achievements-list">';
+
+        // Show the 5 most recent achievements
+        achievements.slice(0, 5).forEach(achievement => {
+            const date = new Date(achievement.date).toLocaleDateString();
+            let achievementDesc = '';
+
+            if (achievement.goalType === 'streak') {
+                achievementDesc = `Reached a ${achievement.streak}-day streak`;
+            } else {
+                achievementDesc = `Completed ${achievement.weeklyCompletions.length} times in a week`;
+            }
+
+            html += `
+                <div class="achievement-item">
+                    <div class="achievement-icon">🏆</div>
+                    <div class="achievement-details">
+                        <div class="achievement-title">${achievement.habitName}</div>
+                        <div class="achievement-desc">${achievementDesc}</div>
+                        <div class="achievement-date">${date}</div>
+                    </div>
+                </div>
+            `;
+        });
+
+        if (achievements.length > 5) {
+            html += `<div class="more-achievements">+${achievements.length - 5} more achievements</div>`;
+        }
+
+        html += '</div>';
+        return html;
+    }
 }
 
-// Initialize the habit tracker when the page loads or when navigated to
+// Enhanced initialization to handle GitHub Pages routing
 document.addEventListener('DOMContentLoaded', () => {
-    // Create the tracker instance if it doesn't exist yet
-    if (!window.habitTrackerInstance) {
-        window.habitTrackerInstance = new HabitTracker();
-        console.log("Habit Tracker initialized on page load");
+    console.log("DOM Content Loaded, checking for habit tracker page");
+
+    // Only initialize if we're on the habit tracker page
+    if (window.location.hash === '#/habit-tracker') {
+        console.log("On habit tracker page, initializing");
+        const habitTrackerSection = document.getElementById('habit-tracker-section');
+        if (habitTrackerSection) {
+            habitTrackerSection.style.display = 'block';
+
+            if (!window.habitTrackerInstance) {
+                window.habitTrackerInstance = new HabitTracker();
+                console.log("Habit Tracker initialized on page load");
+            } else {
+                // If it already exists, refresh its view
+                window.habitTrackerInstance.renderHabits();
+                console.log("Habit Tracker refreshed on page load");
+            }
+        } else {
+            console.error("Habit tracker section not found in DOM");
+        }
+    } else {
+        console.log("Not on habit tracker page, hash is: " + window.location.hash);
     }
 
     // Set the current year in the footer if it exists
@@ -1154,20 +2038,73 @@ document.addEventListener('DOMContentLoaded', () => {
     if (yearElement) {
         yearElement.textContent = new Date().getFullYear();
     }
+
+    // Initialize navigation click event for the habit tracker link
+    const habitTrackerLink = document.getElementById('habit-tracker-link');
+    if (habitTrackerLink) {
+        habitTrackerLink.addEventListener('click', () => {
+            console.log("Habit tracker link clicked");
+            // Wait for the hash change to trigger the router
+            setTimeout(() => {
+                // Ensure the tracker initializes after routing
+                if (!window.habitTrackerInstance && window.location.hash === '#/habit-tracker') {
+                    window.habitTrackerInstance = new HabitTracker();
+                    console.log("Habit Tracker initialized via direct link click");
+                } else if (window.habitTrackerInstance && window.location.hash === '#/habit-tracker') {
+                    window.habitTrackerInstance.renderHabits();
+                    console.log("Habit Tracker refreshed via direct link click");
+                }
+            }, 100);
+        });
+    }
 });
 
-// Add event listener for hash changes to reinitialize tracker if needed
+// More robust check to handle direct URLs with hash
+if (window.location.hash === '#/habit-tracker') {
+    console.log("Direct access to habit tracker page detected");
+    // Use timeout to ensure DOM is ready
+    setTimeout(() => {
+        const habitTrackerSection = document.getElementById('habit-tracker-section');
+        if (habitTrackerSection) {
+            habitTrackerSection.style.display = 'block';
+
+            if (!window.habitTrackerInstance) {
+                window.habitTrackerInstance = new HabitTracker();
+                console.log("Habit Tracker initialized on direct page access");
+            }
+        } else {
+            console.error("Habit tracker section not found on direct access");
+        }
+    }, 200);
+}
+
+// Improved hash change handler with logging
 window.addEventListener('hashchange', () => {
+    console.log("Hash changed to: " + window.location.hash);
+
     // Check if navigating to habit tracker
     if (window.location.hash === '#/habit-tracker') {
-        // If tracker is not initialized, create it
-        if (!window.habitTrackerInstance) {
-            window.habitTrackerInstance = new HabitTracker();
-            console.log("Habit Tracker initialized on navigation");
+        const habitTrackerSection = document.getElementById('habit-tracker-section');
+        if (habitTrackerSection) {
+            habitTrackerSection.style.display = 'block';
+
+            // If tracker is not initialized, create it
+            if (!window.habitTrackerInstance) {
+                window.habitTrackerInstance = new HabitTracker();
+                console.log("Habit Tracker initialized on navigation");
+            } else {
+                // If already exists, refresh the habits display
+                window.habitTrackerInstance.renderHabits();
+                console.log("Habit Tracker refreshed on navigation");
+            }
         } else {
-            // If already exists, refresh the habits display
-            window.habitTrackerInstance.renderHabits();
-            console.log("Habit Tracker refreshed on navigation");
+            console.error("Habit tracker section not found on hash change");
+        }
+    } else {
+        // Hide the habit tracker section when navigating away
+        const habitTrackerSection = document.getElementById('habit-tracker-section');
+        if (habitTrackerSection) {
+            habitTrackerSection.style.display = 'none';
         }
     }
 });

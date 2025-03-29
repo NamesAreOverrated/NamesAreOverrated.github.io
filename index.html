@@ -157,20 +157,27 @@
     <section id="habit-tracker-section" style="display: none;">
         <!-- Removed "Back to home" button -->
 
-        <!-- Habits section as its own independent section -->
-        <section class="section habits-section featured-section">
-            <h2>> Daily_Habit_Tracker</h2>
-            <p class="description">Track your habits and build streaks. Data is stored in your browser's local storage.
-            </p>
-            <div id="habits-list" class="habits-list">
-                <!-- Habits will be inserted here -->
-            </div>
-        </section>
+        <!-- Add tab navigation for habits and statistics -->
+        <div class="habits-tab-navigation">
+            <button id="habits-tab-button" class="tab-button active">Habits</button>
+            <button id="stats-tab-button" class="tab-button">Statistics</button>
+        </div>
 
-        <!-- Add habit section as its own independent section -->
-        <section class="section add-habit-section">
-            <h2>> Add_New_Habit</h2>
-            <div class="add-habit-container">
+        <!-- Habits tab -->
+        <div id="habits-tab" class="tab-content active">
+            <!-- Habits section as its own independent section -->
+            <section class="section habits-section featured-section">
+                <h2>> Daily_Habit_Tracker</h2>
+                <p class="description">Track your habits and build streaks. Data is stored in your browser's local
+                    storage.</p>
+                <div id="habits-list" class="habits-list">
+                    <!-- Habits will be inserted here -->
+                </div>
+            </section>
+
+            <!-- Add habit section as its own independent section -->
+            <section class="section add-habit-section">
+                <h2>> Add_New_Habit</h2>
                 <form id="habit-form">
                     <div class="form-row">
                         <label for="habit-input">Habit Name:</label>
@@ -215,8 +222,19 @@
                         <button type="submit">Add Habit</button>
                     </div>
                 </form>
-            </div>
-        </section>
+            </section>
+        </div>
+
+        <!-- Statistics tab -->
+        <div id="stats-tab" class="tab-content">
+            <section class="section stats-section featured-section">
+                <h2>> Habit_Statistics</h2>
+                <p class="description">Visualize your progress and analyze your habit performance over time.</p>
+                <div id="stats-container" class="stats-container">
+                    <!-- Statistics will be inserted here -->
+                </div>
+            </section>
+        </div>
 
         <!-- Info section as its own independent section -->
         <section class="section info-section">
@@ -259,6 +277,19 @@
                         permanently
                         delete all habits.</p>
                 </div>
+
+                <!-- Add storage usage indicator -->
+                <div class="storage-usage">
+                    <h4>> Local_Storage_Usage</h4>
+                    <div id="storage-usage" class="usage-details">
+                        <!-- Storage usage will be populated by JavaScript -->
+                        <div class="usage-value">0.00 KB</div>
+                        <div class="usage-bar">
+                            <div class="usage-fill" style="width: 0%"></div>
+                        </div>
+                        <div class="usage-percent">0.00% used</div>
+                    </div>
+                </div>
             </div>
         </section>
     </section>
@@ -271,6 +302,7 @@
     <script src="js/nav-effects.js"></script>
     <script src="js/disco.js"></script>
     <script src="js/habit-tracker.js"></script>
+    <script src="js/habit-streak-alerts.js"></script>
 </body>
 
 </html>

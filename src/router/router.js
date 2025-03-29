@@ -244,6 +244,8 @@ async function displayTool(id) {
 
 // New function to display the habit tracker
 function displayHabitTracker() {
+    console.log("Router: Displaying habit tracker");
+
     // Hide all sections explicitly (about removed)
     document.getElementById('projects').style.display = 'none';
     document.getElementById('tools').style.display = 'none';
@@ -256,17 +258,31 @@ function displayHabitTracker() {
         habitSection.style.display = 'block';
         document.body.classList.add('viewing-habit-tracker');
 
-        // Initialize habit tracker if not already done
-        if (typeof HabitTracker === 'function' && !window.habitTrackerInstance) {
-            window.habitTrackerInstance = new HabitTracker();
-            console.log('Habit tracker initialized from router');
-        } else if (window.habitTrackerInstance) {
-            // If already initialized, refresh the UI
-            window.habitTrackerInstance.renderHabits();
-            console.log('Habit tracker refreshed');
-        }
+        // Wait a brief moment to ensure DOM elements are ready before initializing or refreshing
+        setTimeout(() => {
+            // Initialize habit tracker if not already done
+            if (typeof HabitTracker === 'function' && !window.habitTrackerInstance) {
+                window.habitTrackerInstance = new HabitTracker();
+                console.log('Habit tracker initialized from router');
+            } else if (window.habitTrackerInstance) {
+                // If already initialized, refresh the UI
+                window.habitTrackerInstance.renderHabits();
+                console.log('Habit tracker refreshed from router');
+            } else {
+                console.warn('Router: HabitTracker class not found. Waiting for script load.');
+                // Try again after a longer delay if script might still be loading
+                setTimeout(() => {
+                    if (typeof HabitTracker === 'function') {
+                        window.habitTrackerInstance = new HabitTracker();
+                        console.log('Habit tracker initialized after delay from router');
+                    } else {
+                        console.error('Router: HabitTracker class not available after waiting. Check script loading.');
+                    }
+                }, 1000);
+            }
+        }, 100);
     } else {
-        console.error('Habit tracker section not found in the DOM');
+        console.error('Router: Habit tracker section not found in the DOM');
     }
 }
 
