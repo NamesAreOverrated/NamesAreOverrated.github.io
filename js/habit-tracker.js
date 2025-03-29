@@ -2284,7 +2284,7 @@ class HabitTracker {
     }
     copyAsLogseqBlock() {
         try {
-            const LOGSEQ_SEPRATOR = '---';
+            const LOGSEQ_SEPARATOR = '---'; // More visually distinct separator
 
             // Get today's date in YYYY-MM-DD format for Logseq page reference
             const today = new Date();
@@ -2311,11 +2311,10 @@ class HabitTracker {
                 day: 'numeric'
             });
 
-            // Start building the Logseq formatted text with page reference
+            // Start building the Logseq formatted text with enhanced heading
             let logseqBlock = `- [[Habit Tracker]] [[${todayISO}]]\n`;
-            logseqBlock += `  - Week ${weekNumber}/${totalWeeks} of ${today.getFullYear()}\n`;
-            logseqBlock += `  - ${LOGSEQ_SEPRATOR}\n`;
-
+            logseqBlock += `  - 📅 Week ${weekNumber}/${totalWeeks} of ${today.getFullYear()}\n`;
+            logseqBlock += `  - ${LOGSEQ_SEPARATOR}\n`;
 
             // Group habits by completion status
             const completedHabits = this.habits.filter(habit => habit.isCompletedToday());
@@ -2344,19 +2343,23 @@ class HabitTracker {
             logseqBlock += `  - 📊 Stats\n`;
             const completionPercentage = Math.round((completedHabits.length / this.habits.length) * 100) || 0;
 
+            // Show completion success level with appropriate emoji
+            let completionEmoji = '';
+            if (completionPercentage >= 80) completionEmoji = ' 🌟'; // Excellent
+            else if (completionPercentage >= 50) completionEmoji = ' ⭐'; // Good
+            else if (completionPercentage > 0) completionEmoji = ' 💪'; // Starting
+
             // Add visual progress bar using characters
             const progressBar = this.generateTextProgressBar(completionPercentage);
-            logseqBlock += `    - ${completedHabits.length}/${this.habits.length} habits completed (${completionPercentage}%)\n`;
+            logseqBlock += `    - ${completedHabits.length}/${this.habits.length} habits completed (${completionPercentage}%${completionEmoji})\n`;
             logseqBlock += `    - ${progressBar}\n`;
-
-            // add separator for clarity
-            logseqBlock += `  - ${LOGSEQ_SEPRATOR}\n`;
 
             // Add today's achievements section with trophy emoji
             const todayAchievements = [];
             this.collectTodayAchievements(todayAchievements, todayISO);
 
             if (todayAchievements.length > 0) {
+                logseqBlock += `  - ${LOGSEQ_SEPARATOR}\n`;
                 logseqBlock += `  - 🏆 Today's Achievements #achievement\n`;
                 todayAchievements.forEach(achievement => {
                     if (achievement.goalType === 'streak') {
@@ -2367,9 +2370,6 @@ class HabitTracker {
                         logseqBlock += `    - 🎯 Completed "${achievement.habitName}" ${weeklyCompletionCount} times this week (goal: ${achievement.goalValue}) #[[${achievement.category}]]\n`;
                     }
                 });
-
-                // Add a separator for clarity
-                logseqBlock += `  - ${LOGSEQ_SEPRATOR}\n`;
             }
 
             // Add notable streaks section
@@ -2378,22 +2378,21 @@ class HabitTracker {
                 .sort((a, b) => b.getCurrentStreak() - a.getCurrentStreak())
                 .slice(0, 3);
 
+            logseqBlock += `  - ${LOGSEQ_SEPARATOR}\n`;
             if (topStreaks.length > 0) {
                 logseqBlock += `  - ⚡ Notable streaks\n`;
                 topStreaks.forEach(habit => {
                     logseqBlock += `    - ${habit.name}: ${habit.getCurrentStreak()} days ${this.getStreakEmoji(habit.getCurrentStreak())}\n`;
                 });
-            }
-            else {
+            } else {
                 logseqBlock += `  - ⚡ No streaks yet! Keep going!\n`;
             }
 
-            // Add a separator for clarity
-            logseqBlock += `  - ${LOGSEQ_SEPRATOR}\n`;
-
-            // Add metadata and timestamp
+            // Add metadata and timestamp in a clean footer
             const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            logseqBlock += `  - ${LOGSEQ_SEPARATOR}\n`;
             logseqBlock += `  - 🕒 Generated on ${displayDate} (${timezone})\n`;
+
 
             // Copy to clipboard
             navigator.clipboard.writeText(logseqBlock).then(() => {
