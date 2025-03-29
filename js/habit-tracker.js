@@ -5,20 +5,19 @@ class Habit {
     constructor(id, name, goalType = 'streak', goalValue = 7, category = 'General') {
         this.id = id;
         this.name = name;
-        this.streak = 0;
-        this.lastCompletedDate = null;
-        this.completedToday = false;
         this.goalType = goalType; // 'streak' or 'frequency'
         this.goalValue = parseInt(goalValue); // target streak or times per week
         this.weeklyCompletions = []; // Array of dates completed this week
-        this.weekStartDate = this.getWeekStartDate(); // Keep track of current week
-        this.completionHistory = {}; // Store historical completion data by date
+        this.completionHistory = []; // Store historical completion data by date
         this.category = category; // New: category field for the habit
         this.weekStreak = 0; // New: Track weeks streak for frequency habits
         this.completedWeeks = 0; // New: Track total number of completed weeks
+
+        // Remove weekStartDate from individual habit - this will now be managed by the tracker
     }
 
     // Calculate the start of the current week (Monday instead of Sunday)
+    // This method remains as a static utility but will no longer store per-habit state
     getWeekStartDate() {
         const now = new Date();
         const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
@@ -33,7 +32,7 @@ class Habit {
     // Check if goal is achieved 
     isGoalAchieved() {
         if (this.goalType === 'streak') {
-            return this.streak >= this.goalValue;
+            return this.getCurrentStreak() >= this.goalValue;
         } else { // frequency
             return this.weeklyCompletions.length >= this.goalValue;
         }
@@ -42,23 +41,75 @@ class Habit {
     // Get progress percentage
     getProgressPercentage() {
         if (this.goalType === 'streak') {
-            return Math.min(100, Math.round((this.streak / this.goalValue) * 100));
+            return Math.min(100, Math.round((this.getCurrentStreak() / this.goalValue) * 100));
         } else { // frequency
             return Math.min(100, Math.round((this.weeklyCompletions.length / this.goalValue) * 100));
         }
     }
 
-    // New: Record completion in history
+    // Record completion in history
     recordCompletion(date) {
-        this.completionHistory[date] = true;
+        if (!this.completionHistory.includes(date)) {
+            this.completionHistory.push(date);
+            // Sort to ensure chronological order
+            this.completionHistory.sort();
+        }
     }
 
-    // New: Remove completion from history
+    // Remove completion from history
     removeCompletion(date) {
-        delete this.completionHistory[date];
+        this.completionHistory = this.completionHistory.filter(d => d !== date);
     }
 
-    // New: Check if a week is completed (achieved the goal)
+    // Get the last completion date from history
+    getLastCompletion() {
+        if (this.completionHistory.length === 0) return null;
+        return this.completionHistory[this.completionHistory.length - 1];
+    }
+
+    // Calculate the current streak from completion history
+    getCurrentStreak() {
+        if (this.completionHistory.length === 0) return 0;
+
+        // Sort dates to ensure they're in order
+        const sortedDates = [...this.completionHistory].sort();
+
+        // Check if today is completed
+        const today = new Date().toISOString().split('T')[0];
+        const hasCompletedToday = sortedDates.includes(today);
+
+        // Start from today or yesterday based on if today is completed
+        let currentDate = new Date();
+        if (!hasCompletedToday) {
+            currentDate.setDate(currentDate.getDate() - 1);
+        }
+
+        let streak = 0;
+
+        // Count backwards from today/yesterday until we find a non-completed day
+        while (true) {
+            const dateString = currentDate.toISOString().split('T')[0];
+
+            if (sortedDates.includes(dateString)) {
+                streak++;
+                // Move to previous day
+                currentDate.setDate(currentDate.getDate() - 1);
+            } else {
+                // Chain is broken
+                break;
+            }
+        }
+
+        return streak;
+    }
+
+    // Check if habit was completed today
+    isCompletedToday() {
+        const today = new Date().toISOString().split('T')[0];
+        return this.completionHistory.includes(today);
+    }
+
+    // Check if a week is completed (achieved the goal)
     isWeekCompleted() {
         if (this.goalType !== 'frequency') return false;
         return this.weeklyCompletions.length >= this.goalValue;
@@ -70,6 +121,7 @@ class HabitTracker {
     constructor() {
         this.habits = [];
         this.categories = []; // Start with empty categories, will be populated dynamically
+        // Remove the universal weekStartDate property storage - we'll calculate it when needed
         this.loadHabits();
 
         // Helper method to safely add event listeners
@@ -129,6 +181,9 @@ class HabitTracker {
                 this.handleGoalAction(habitId, action);
             }
         });
+
+        // Set up periodic checks for date/time changes - refresh heatmap
+        this.setupTimeChangeChecks();
     }
 
     // Use this method only as fallback to get default categories
@@ -175,11 +230,24 @@ class HabitTracker {
         console.log('Habit tracker cleaned up');
     }
 
+    // Updated method: Calculate week start date (Monday) for the current or specified date
+    calculateWeekStartDate(date = new Date()) {
+        const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
+        // Calculate days to subtract to get to Monday (if today is Sunday, subtract -6 days)
+        const daysToSubtract = dayOfWeek === 0 ? -6 : dayOfWeek - 1;
+        const weekStart = new Date(date);
+        weekStart.setDate(date.getDate() - daysToSubtract);
+        weekStart.setHours(0, 0, 0, 0);
+        return weekStart.toISOString().split('T')[0]; // Return just the YYYY-MM-DD part
+    }
+
     // Load habits from localStorage
     loadHabits() {
         const storedHabits = localStorage.getItem('habits');
         // Try to load saved categories first
         const storedCategories = localStorage.getItem('habitCategories');
+
+        // Remove localStorage code for weekStartDate - we'll calculate it dynamically
 
         if (storedHabits) {
             // Parse stored habits and ensure instances are proper Habit objects
@@ -195,12 +263,8 @@ class HabitTracker {
 
                 // Copy over properties using Object.assign for cleaner code
                 Object.assign(newHabit, {
-                    streak: habit.streak || 0,
-                    lastCompletedDate: habit.lastCompletedDate,
-                    completedToday: habit.completedToday || false,
                     weeklyCompletions: habit.weeklyCompletions || [],
-                    weekStartDate: habit.weekStartDate || newHabit.getWeekStartDate(),
-                    completionHistory: habit.completionHistory || {},
+                    completionHistory: Array.isArray(habit.completionHistory) ? habit.completionHistory : [],
                     weekStreak: habit.weekStreak || 0,
                     completedWeeks: habit.completedWeeks || 0
                 });
@@ -412,8 +476,7 @@ class HabitTracker {
             habit.weekStreak = 0;
             habit.completedWeeks = 0;
 
-            // Initialize the weekStartDate for new habits
-            habit.weekStartDate = habit.getWeekStartDate();
+            // No longer set habit.weekStartDate as it's now managed by the tracker
 
             this.habits.push(habit);
             this.saveHabits();
@@ -459,36 +522,28 @@ class HabitTracker {
 
         if (habit) {
             const today = new Date();
-            const todayString = today.toDateString();
             const todayISO = today.toISOString().split('T')[0]; // YYYY-MM-DD
+            const isCompletedToday = habit.completionHistory.includes(todayISO);
 
-            if (!habit.completedToday) {
+            if (!isCompletedToday) {
                 // Mark as completed
-                habit.completedToday = true;
-                habit.lastCompletedDate = todayString;
+                habit.recordCompletion(todayISO);
 
-                // Handle streak logic
-                const yesterday = new Date();
-                yesterday.setDate(yesterday.getDate() - 1);
-                const yesterdayString = yesterday.toDateString();
+                // Get the streak after completing today
+                const currentStreak = habit.getCurrentStreak();
 
-                // Increase streak if this is first completion or if yesterday was completed
-                if (habit.streak === 0 || habit.lastCompletedDate === yesterdayString) {
-                    habit.streak++;
+                // Celebrate milestone streak achievements
+                if (currentStreak % 7 === 0) { // Weekly milestone
+                    this.showNotification(`🔥 ${currentStreak} day streak for "${habit.name}"!`, 'success');
+                } else if (currentStreak % 30 === 0) { // Monthly milestone
+                    this.showNotification(`🏆 Amazing! ${currentStreak} day streak for "${habit.name}"!`, 'success');
+                } else if (currentStreak % 100 === 0) { // Major milestone
+                    this.showNotification(`🌟 INCREDIBLE! ${currentStreak} day streak for "${habit.name}"!`, 'success');
+                }
 
-                    // Celebrate milestone streak achievements
-                    if (habit.streak % 7 === 0) { // Weekly milestone
-                        this.showNotification(`🔥 ${habit.streak} day streak for "${habit.name}"!`, 'success');
-                    } else if (habit.streak % 30 === 0) { // Monthly milestone
-                        this.showNotification(`🏆 Amazing! ${habit.streak} day streak for "${habit.name}"!`, 'success');
-                    } else if (habit.streak % 100 === 0) { // Major milestone
-                        this.showNotification(`🌟 INCREDIBLE! ${habit.streak} day streak for "${habit.name}"!`, 'success');
-                    }
-
-                    // Check if goal was just achieved with this completion
-                    if (habit.goalType === 'streak' && habit.streak === habit.goalValue) {
-                        this.handleGoalAchievement(habit);
-                    }
+                // Check if goal was just achieved with this completion
+                if (habit.goalType === 'streak' && currentStreak === habit.goalValue) {
+                    this.handleGoalAchievement(habit);
                 }
 
                 // Add to weekly completions if not already there
@@ -503,24 +558,12 @@ class HabitTracker {
                         this.handleGoalAchievement(habit);
                     }
                 }
-
-                // Record in completion history
-                habit.recordCompletion(todayISO);
             } else {
-                // Mark as not completed
-                habit.completedToday = false;
+                // Mark as not completed by removing from completion history
+                habit.removeCompletion(todayISO);
 
                 // Remove from weekly completions
                 habit.weeklyCompletions = habit.weeklyCompletions.filter(date => date !== todayISO);
-
-                // Remove from completion history
-                habit.removeCompletion(todayISO);
-
-                // If we're removing today's completion and it was adding to the streak, 
-                // decrement the streak
-                if (habit.streak > 0) {
-                    habit.streak--;
-                }
             }
 
             this.saveHabits();
@@ -528,70 +571,80 @@ class HabitTracker {
         }
     }
 
-    // Check if day has changed and reset completedToday status
+    // Check if day has changed and update as needed
     checkDayChange() {
         const today = new Date().toDateString();
+        const lastCheckDate = localStorage.getItem('lastHeatmapCheckDate');
 
-        this.habits.forEach(habit => {
-            // If habit was completed on a previous day (not today)
-            if (habit.lastCompletedDate && habit.lastCompletedDate !== today) {
-                habit.completedToday = false;
+        // Check if date has changed since last check
+        const dateChanged = !lastCheckDate || lastCheckDate !== today;
 
-                // If we have a streak, check if it should be broken
-                if (habit.streak > 0) {
-                    const lastCompletedDate = new Date(habit.lastCompletedDate);
-                    const yesterday = new Date();
-                    yesterday.setDate(yesterday.getDate() - 1);
+        // No need to manually reset anything - streaks are calculated on demand from completionHistory
 
-                    // Break streak only if last completion was before yesterday
-                    if (lastCompletedDate.toDateString() !== yesterday.toDateString()) {
-                        console.log(`${habit.name}: Streak broken. Was: ${habit.streak}`);
-                        habit.streak = 0;
-                    }
-                }
-            }
-        });
+        // Refresh heatmap if the date has changed
+        if (dateChanged) {
+            // Store the new date to avoid unnecessary refreshes
+            localStorage.setItem('lastHeatmapCheckDate', today);
 
-        this.saveHabits();
+            // Refresh the heatmap
+            setTimeout(() => this.refreshHeatmap(), 100);
+        }
     }
 
-    // Check if week has changed and reset weekly completions
+    // Updated method: Check if week has changed and reset weekly completions
     checkWeekChange() {
-        const currentWeekStart = new Date().toISOString().split('T')[0]; // Just get today for comparison
+        const currentWeekStart = this.calculateWeekStartDate();
 
-        this.habits.forEach(habit => {
-            if (!habit.weekStartDate || habit.weekStartDate !== currentWeekStart) {
-                // Fix: Create a new Habit instance only once for getting the week start date
-                if (!this._weekStartDate) {
-                    this._weekStartDate = new Habit(null, null).getWeekStartDate();
-                }
+        // Get the last saved week start from completion history or calculate based on completion data
+        const lastWeekStart = this.getLastProcessedWeekStart();
 
-                if (habit.weekStartDate !== this._weekStartDate) {
-                    // Before resetting, check if previous week's goal was achieved
-                    if (habit.goalType === 'frequency') {
-                        const previousGoalAchieved = habit.weeklyCompletions.length >= habit.goalValue;
+        // Only process if the week has changed
+        if (lastWeekStart !== currentWeekStart) {
+            console.log("Week changed from", lastWeekStart, "to", currentWeekStart);
 
-                        // Update week streak based on previous week's achievement
-                        if (previousGoalAchieved) {
-                            habit.weekStreak++;
-                            habit.completedWeeks++;
-                        } else if (habit.weeklyCompletions.length > 0) {
-                            // Only reset streak if there was at least one completion but goal wasn't met
-                            if (habit.weekStreak > 0) {
-                                habit.weekStreak = 0;
-                            }
+            // Process all habits for week change
+            this.habits.forEach(habit => {
+                // Check if previous week's goal was achieved
+                if (habit.goalType === 'frequency') {
+                    const previousGoalAchieved = habit.weeklyCompletions.length >= habit.goalValue;
+
+                    // Update week streak based on previous week's achievement
+                    if (previousGoalAchieved) {
+                        habit.weekStreak++;
+                        habit.completedWeeks++;
+                    } else if (habit.weeklyCompletions.length > 0) {
+                        // Only reset streak if there was at least one completion but goal wasn't met
+                        if (habit.weekStreak > 0) {
+                            habit.weekStreak = 0;
                         }
                     }
-
-                    // Week has changed, reset weekly tracking
-                    habit.weeklyCompletions = [];
-                    habit.weekStartDate = this._weekStartDate;
                 }
-            }
-        });
 
-        // Save changes after processing all habits
-        this.saveHabits();
+                // Reset weekly tracking for all habits
+                habit.weeklyCompletions = [];
+            });
+
+            // Save changes after processing all habits and store the new week start
+            this.storeCurrentWeekStartAsProcessed(currentWeekStart);
+            this.saveHabits();
+        }
+    }
+
+    // New method: Get the last processed week start date from localStorage
+    getLastProcessedWeekStart() {
+        const lastProcessed = localStorage.getItem('habitLastProcessedWeek');
+        if (lastProcessed) {
+            return lastProcessed;
+        }
+        // If not found, calculate and save current week
+        const currentWeek = this.calculateWeekStartDate();
+        this.storeCurrentWeekStartAsProcessed(currentWeek);
+        return currentWeek;
+    }
+
+    // New method: Store the current week start as processed
+    storeCurrentWeekStartAsProcessed(weekStart) {
+        localStorage.setItem('habitLastProcessedWeek', weekStart);
     }
 
     // Get the day names for current week (starting with Monday)
@@ -635,8 +688,8 @@ class HabitTracker {
         const weekDays = this.getWeekDayNames();
 
         // Separate habits into completed and uncompleted
-        const completedHabits = this.habits.filter(habit => habit.completedToday);
-        const uncompletedHabits = this.habits.filter(habit => !habit.completedToday);
+        const completedHabits = this.habits.filter(habit => habit.isCompletedToday());
+        const uncompletedHabits = this.habits.filter(habit => !habit.isCompletedToday());
 
         // NEW: Add achievements summary at the top if there are any achievements
         const achievements = this.getAchievements();
@@ -759,13 +812,14 @@ class HabitTracker {
     // Helper method to create a habit element (extracted from renderHabits)
     createHabitElement(habit, weekDays) {
         const habitElement = document.createElement('div');
-        habitElement.className = `habit-item ${habit.completedToday ? 'completed' : ''}`;
+        const isCompletedToday = habit.isCompletedToday();
+        habitElement.className = `habit-item ${isCompletedToday ? 'completed' : ''}`;
         habitElement.dataset.category = habit.category;  // Add category as a data attribute
         habitElement.dataset.goalType = habit.goalType;  // Add goal type as a data attribute
-        habitElement.dataset.habitId = habit.id; // NEW: Add habit ID as data attribute
+        habitElement.dataset.habitId = habit.id; // Add habit ID as data attribute
 
-        // Remove the code that tries to style the category directly here
-        // We'll handle styling with the refreshCategoryStyles function instead
+        // Calculate current streak from completion history
+        const currentStreak = habit.getCurrentStreak();
 
         // Create progress percentage
         const progressPercentage = habit.getProgressPercentage();
@@ -788,7 +842,7 @@ class HabitTracker {
 
         // Different progress text based on habit type
         const progressText = habit.goalType === 'streak'
-            ? `${habit.streak}/${habit.goalValue}`
+            ? `${currentStreak}/${habit.goalValue}`
             : `${habit.weeklyCompletions.length}/${habit.goalValue} this week`;
 
         // Weekly stats for frequency habits
@@ -799,12 +853,12 @@ class HabitTracker {
               </div>`
             : '';
 
-        // NEW: Add special class for achieved goals
+        // Add special class for achieved goals
         if (isGoalAchieved) {
             habitElement.classList.add('goal-achieved-item');
         }
 
-        // NEW: Add goal achievement actions if goal is achieved
+        // Add goal achievement actions if goal is achieved
         let goalActionsHtml = '';
         if (isGoalAchieved && !habit.goalAcknowledged) {
             goalActionsHtml = `
@@ -824,8 +878,8 @@ class HabitTracker {
                         <span class="habit-name">${habit.name}</span>
                         <span class="habit-category" data-category="${habit.category.toLowerCase()}">${habit.category}</span>
                     </div>
-                    <span class="streak-badge ${habit.streak > 0 ? 'has-streak' : ''}">
-                        ${habit.goalType === 'streak' ? '⚡ ' + habit.streak : '📅 ' + habit.weeklyCompletions.length}
+                    <span class="streak-badge ${currentStreak > 0 ? 'has-streak' : ''}">
+                        ${habit.goalType === 'streak' ? '⚡ ' + currentStreak : '📅 ' + habit.weeklyCompletions.length}
                     </span>
                 </div>
                 
@@ -849,7 +903,7 @@ class HabitTracker {
                 ${goalActionsHtml}
             </div>
             <div class="habit-actions">
-                <button class="btn-complete">${habit.completedToday ? '↩️ Undo' : '✅ Complete'}</button>
+                <button class="btn-complete">${isCompletedToday ? '↩️ Undo' : '✅ Complete'}</button>
                 <button class="btn-delete">🗑️ Delete</button>
             </div>
         `;
@@ -976,7 +1030,15 @@ class HabitTracker {
 
 
     // New: Render GitHub-style heatmap visualization (improved alignment and fixed layout)
-    renderHeatmap(container) {
+    renderHeatmap(container, replace = false) {
+        // If replace is true, find and remove any existing heatmap section
+        if (replace) {
+            const existingHeatmap = container.querySelector('.habit-heatmap-section');
+            if (existingHeatmap) {
+                existingHeatmap.remove();
+            }
+        }
+
         const heatmapSection = document.createElement('div');
         heatmapSection.className = 'habit-heatmap-section';
         heatmapSection.innerHTML = '<h4 class="section-header">> Activity_Heatmap</h4>';
@@ -1331,12 +1393,8 @@ class HabitTracker {
                         );
 
                         // Copy over properties
-                        newHabit.streak = habit.streak || 0;
-                        newHabit.lastCompletedDate = habit.lastCompletedDate;
-                        newHabit.completedToday = habit.completedToday || false;
                         newHabit.weeklyCompletions = habit.weeklyCompletions || [];
-                        newHabit.weekStartDate = habit.weekStartDate || newHabit.getWeekStartDate();
-                        newHabit.completionHistory = habit.completionHistory || {};
+                        newHabit.completionHistory = Array.isArray(habit.completionHistory) ? habit.completionHistory : [];
                         newHabit.weekStreak = habit.weekStreak || 0;
                         newHabit.completedWeeks = habit.completedWeeks || 0;
 
@@ -1601,7 +1659,7 @@ class HabitTracker {
         // Sum up all completions from each habit's history
         this.habits.forEach(habit => {
             if (habit.completionHistory) {
-                totalCount += Object.keys(habit.completionHistory).length;
+                totalCount += habit.completionHistory.length;
             }
         });
         return totalCount;
@@ -1660,7 +1718,7 @@ class HabitTracker {
         let totalOpportunities = 0;
         this.habits.forEach(habit => {
             // Only count habits that existed during this period
-            if (!habit.completionHistory || Object.keys(habit.completionHistory).length === 0) {
+            if (!habit.completionHistory || habit.completionHistory.length === 0) {
                 return;
             }
 
@@ -1671,7 +1729,7 @@ class HabitTracker {
                 // Only count days since the habit was created
                 if (!firstCompletionDate || new Date(date) >= new Date(firstCompletionDate)) {
                     totalOpportunities++;
-                    if (habit.completionHistory[date]) {
+                    if (habit.completionHistory.includes(date)) {
                         totalCompletions++;
                     }
                 }
@@ -1683,19 +1741,19 @@ class HabitTracker {
 
     // Helper: Get first completion date for a habit
     getFirstCompletionDate(habit) {
-        if (!habit.completionHistory || Object.keys(habit.completionHistory).length === 0) {
+        if (!habit.completionHistory || habit.completionHistory.length === 0) {
             return null;
         }
 
-        const dates = Object.keys(habit.completionHistory).sort();
+        const dates = [...habit.completionHistory].sort();
         return dates[0];
     }
 
     // Helper: Generate streaks summary HTML
     generateStreaksSummary() {
         // Find habits with longest streaks
-        const withStreaks = this.habits.filter(h => h.streak > 0)
-            .sort((a, b) => b.streak - a.streak)
+        const withStreaks = this.habits.filter(h => h.getCurrentStreak() > 0)
+            .sort((a, b) => b.getCurrentStreak() - a.getCurrentStreak())
             .slice(0, 5);
 
         if (withStreaks.length === 0) {
@@ -1704,12 +1762,13 @@ class HabitTracker {
 
         let html = '<div class="streaks-list">';
         withStreaks.forEach(habit => {
-            const streakClass = habit.streak >= habit.goalValue ? 'achieved' :
-                habit.streak >= Math.floor(habit.goalValue * 0.7) ? 'almost' : '';
+            const currentStreak = habit.getCurrentStreak();
+            const streakClass = currentStreak >= habit.goalValue ? 'achieved' :
+                currentStreak >= Math.floor(habit.goalValue * 0.7) ? 'almost' : '';
 
             html += `
                 <div class="streak-item ${streakClass}">
-                    <div class="streak-badge">⚡ ${habit.streak}</div>
+                    <div class="streak-badge">⚡ ${currentStreak}</div>
                     <div class="streak-details">
                         <span class="streak-name">${habit.name}</span>
                         <div class="streak-category">${habit.category}</div>
@@ -1763,7 +1822,7 @@ class HabitTracker {
             last30Days.forEach(date => {
                 if (!firstCompletionDate || new Date(date) >= new Date(firstCompletionDate)) {
                     habitOpportunities++;
-                    if (habit.completionHistory && habit.completionHistory[date]) {
+                    if (habit.completionHistory && habit.completionHistory.includes(date)) {
                         habitCompletions++;
                     }
                 }
@@ -1796,7 +1855,7 @@ class HabitTracker {
         // Sort categories by completion rate
         const categories = Object.keys(categoryPerformance)
             .filter(cat => categoryPerformance[cat].habits > 0)
-            .sort((a, b) => categoryPerformance[b].rate - categoryPerformance[a].rate);
+            .sort((a, b) => categoryPerformance[b.rate] - categoryPerformance[a.rate]);
 
         if (categories.length === 0) {
             return '<p>No category data available yet.</p>';
@@ -1845,7 +1904,7 @@ class HabitTracker {
             const totalHabitsExisting = this.habits.length;
             let completedCount = 0;
             this.habits.forEach(habit => {
-                if (habit.completionHistory && habit.completionHistory[dateString]) {
+                if (habit.completionHistory && habit.completionHistory.includes(dateString)) {
                     completedCount++;
                 }
             });
@@ -1898,7 +1957,7 @@ class HabitTracker {
     // Helper: Generate statistics summary table
     generateStatsSummaryTable() {
         // Sort habits by streak (descending)
-        const sortedHabits = [...this.habits].sort((a, b) => b.streak - a.streak);
+        const sortedHabits = [...this.habits].sort((a, b) => b.getCurrentStreak() - a.getCurrentStreak());
 
         if (sortedHabits.length === 0) {
             return '<p>No habits to summarize yet!</p>';
@@ -1920,6 +1979,7 @@ class HabitTracker {
         `;
 
         sortedHabits.forEach(habit => {
+            const currentStreak = habit.getCurrentStreak();
             const last7Days = this.calculateCompletionRateForPeriod(habit, 7);
             const last30Days = this.calculateCompletionRateForPeriod(habit, 30);
             const progressPercentage = habit.getProgressPercentage();
@@ -1933,7 +1993,7 @@ class HabitTracker {
                         <div class="table-habit-name" title="${habit.name}">${habit.name}</div>
                         <div class="table-habit-category">${habit.category}</div>
                     </td>
-                    <td><span class="badge streak-badge">${habit.streak}</span></td>
+                    <td><span class="badge streak-badge">${currentStreak}</span></td>
                     <td><span class="completion-rate ${last7Days >= 70 ? 'good' : 'low'}">${last7Days}%</span></td>
                     <td><span class="completion-rate ${last30Days >= 70 ? 'good' : 'low'}">${last30Days}%</span></td>
                     <td>
@@ -1968,7 +2028,7 @@ class HabitTracker {
 
         // Count completions
         period.forEach(date => {
-            if (habit.completionHistory && habit.completionHistory[date]) {
+            if (habit.completionHistory && habit.completionHistory.includes(date)) {
                 completed++;
             }
         });
@@ -1988,7 +2048,7 @@ class HabitTracker {
             date: new Date().toISOString(),
             goalType: habit.goalType,
             goalValue: habit.goalValue,
-            streak: habit.streak,
+            streak: habit.getCurrentStreak(),
             weeklyCompletions: [...habit.weeklyCompletions]
         };
 
@@ -2009,7 +2069,7 @@ class HabitTracker {
     showGoalAchievementCelebration(habit) {
         // Fancy notification for goal achievement
         const message = habit.goalType === 'streak'
-            ? `🏆 GOAL ACHIEVED! ${habit.streak}-day streak for "${habit.name}"!`
+            ? `🏆 GOAL ACHIEVED! ${habit.getCurrentStreak()}-day streak for "${habit.name}"!`
             : `🏆 GOAL ACHIEVED! Completed "${habit.name}" ${habit.goalValue} times this week!`;
 
         this.showNotification(message, 'success');
@@ -2130,8 +2190,8 @@ class HabitTracker {
             let logseqBlock = `- [[Habit Tracker]]\n`;
 
             // Group habits by completion status
-            const completedHabits = this.habits.filter(habit => habit.completedToday);
-            const pendingHabits = this.habits.filter(habit => !habit.completedToday);
+            const completedHabits = this.habits.filter(habit => habit.isCompletedToday());
+            const pendingHabits = this.habits.filter(habit => !habit.isCompletedToday());
 
             // Add completed habits
             if (completedHabits.length > 0) {
@@ -2195,14 +2255,14 @@ class HabitTracker {
 
             // Add notable streaks (top 3)
             const topStreaks = [...this.habits]
-                .filter(habit => habit.streak >= 3)  // Only include streaks of 3 or more
-                .sort((a, b) => b.streak - a.streak)
+                .filter(habit => habit.getCurrentStreak() >= 3)  // Only include streaks of 3 or more
+                .sort((a, b) => b.getCurrentStreak() - a.getCurrentStreak())
                 .slice(0, 3);
 
             if (topStreaks.length > 0) {
                 logseqBlock += `  - Notable streaks\n`;
                 topStreaks.forEach(habit => {
-                    logseqBlock += `    - ${habit.name}: ${habit.streak} days ⚡\n`;
+                    logseqBlock += `    - ${habit.name}: ${habit.getCurrentStreak()} days ⚡\n`;
                 });
             }
 
@@ -2694,6 +2754,30 @@ class HabitTracker {
         this.renderHabits();
         this.showNotification(`Category "${category}" deleted`, 'success');
         return true;
+    }
+
+    // New method to set up periodic checks for time changes
+    setupTimeChangeChecks() {
+        // Check every minute for date changes
+        setInterval(() => {
+            this.checkDayChange(); // This now includes heatmap refresh when date changes
+        }, 60000); // Check every minute
+
+        // Initial check
+        this.checkDayChange();
+    }
+
+    // New method: Refresh just the heatmap without re-rendering all habits
+    refreshHeatmap() {
+        const habitsList = document.getElementById('habits-list');
+        if (habitsList) {
+            // Find the existing heatmap section
+            const existingHeatmap = habitsList.querySelector('.habit-heatmap-section');
+            if (existingHeatmap) {
+                // Render the updated heatmap with replace=true to replace the existing one
+                this.renderHeatmap(habitsList, true);
+            }
+        }
     }
 }
 

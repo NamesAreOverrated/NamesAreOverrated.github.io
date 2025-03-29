@@ -52,6 +52,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // Populate the dropdown with categories
         populateCategoryDropdown();
 
+        // Force refresh heatmap when initialized
+        if (window.habitTrackerInstance.refreshHeatmap) {
+            window.habitTrackerInstance.refreshHeatmap();
+        }
+
         // Add event listener for goal type changes
         const goalTypeSelect = document.getElementById('goal-type');
         if (goalTypeSelect) {
@@ -117,19 +122,37 @@ document.addEventListener('DOMContentLoaded', () => {
     const habitTrackerLink = document.getElementById('habit-tracker-link');
     if (habitTrackerLink) {
         habitTrackerLink.addEventListener('click', () => {
-            setTimeout(initCategoryHandling, 100);
+            setTimeout(() => {
+                initCategoryHandling();
+                // Also refresh the heatmap when opening the tab
+                if (window.habitTrackerInstance && window.habitTrackerInstance.refreshHeatmap) {
+                    window.habitTrackerInstance.refreshHeatmap();
+                }
+            }, 100);
         });
     }
 
     // Initialize when page loads directly with habit tracker hash
     if (window.location.hash === '#/habit-tracker' || window.location.hash === '#/NamesAreOverrated.github.io/habit-tracker') {
-        setTimeout(initCategoryHandling, 300);
+        setTimeout(() => {
+            initCategoryHandling();
+            // Also refresh the heatmap when opening via hashchange
+            if (window.habitTrackerInstance && window.habitTrackerInstance.refreshHeatmap) {
+                window.habitTrackerInstance.refreshHeatmap();
+            }
+        }, 300);
     }
 
     // Listen for hashchange events
     window.addEventListener('hashchange', () => {
         if (window.location.hash === '#/habit-tracker' || window.location.hash === '#/NamesAreOverrated.github.io/habit-tracker') {
-            setTimeout(initCategoryHandling, 300);
+            setTimeout(() => {
+                initCategoryHandling();
+                // Also refresh the heatmap when opening via hashchange
+                if (window.habitTrackerInstance && window.habitTrackerInstance.refreshHeatmap) {
+                    window.habitTrackerInstance.refreshHeatmap();
+                }
+            }, 300);
         }
     });
 
