@@ -2653,3 +2653,16 @@ body.disco-mode .habit-item:nth-child(3n+1)::after {
     background-color: rgba(244, 67, 54, 0.3) !important;
     box-shadow: 0 0 10px rgba(244, 67, 54, 0.3);
 }
+
+
+/* Add this to your CSS */
+.reached-goals-section {
+    margin-top: 20px;
+    opacity: 0.8;
+    /* Slightly faded to show it's less active */
+}
+
+.reached-goal {
+    background-color: var(--bg-color-secondary);
+    border-left: 4px solid gold;
+}

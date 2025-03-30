@@ -86,6 +86,7 @@ class Habit {
         this.completedWeeks = 0; // New: Track total number of completed weeks
         this.achievements = []; // Add this line to store achievement records
         this.lifetimeCompletions = 0; // New: Track lifetime completions
+        this.goalAcknowledged = false; // New: Track if the habit is goalAcknowledged
     }
 
     // Check if goal is achieved 
@@ -347,7 +348,8 @@ class HabitTracker {
                     completedWeeks: habit.completedWeeks || 0,
                     // Fix: Properly initialize the achievements array and lifetimeCompletions
                     achievements: Array.isArray(habit.achievements) ? habit.achievements : [],
-                    lifetimeCompletions: habit.lifetimeCompletions || 0
+                    lifetimeCompletions: habit.lifetimeCompletions || 0,
+                    goalAcknowledged: habit.goalAcknowledged || false // New: Track if the habit is goalAcknowledged
                 });
 
                 return newHabit;
@@ -644,10 +646,14 @@ class HabitTracker {
                 // Mark as not completed by removing from completion history
                 habit.removeCompletion(todayISO);
 
+                habit.goalAcknowledged = false; // Reset goal acknowledgment
+
                 //remove from achievements if exists
                 if (habit.lifetimeCompletions == habit.achievements.length) {
                     habit.achievements.pop();
+                    habit.lifetimeCompletions--;
                 }
+
             }
 
             this.saveHabits();
@@ -817,11 +823,7 @@ class HabitTracker {
     // Render habits to the DOM
     renderHabits() {
         const habitsList = document.getElementById('habits-list');
-
-        // Only clear innerHTML if needed
-        if (habitsList.innerHTML !== '' || this.habits.length === 0) {
-            habitsList.innerHTML = '';
-        }
+        habitsList.innerHTML = '';
 
         if (this.habits.length === 0) {
             habitsList.innerHTML = '<p style="color: #888; text-align: center; padding: 20px;">No habits added yet. Add your first habit below!</p>';
@@ -835,12 +837,16 @@ class HabitTracker {
 
         const weekDays = this._weekDays;
 
-        // Separate habits into completed and uncompleted
-        const completedHabits = this.habits.filter(habit => habit.isCompletedToday());
-        const uncompletedHabits = this.habits.filter(habit => !habit.isCompletedToday());
+        // Group habits into categories
+        const activeHabits = this.habits.filter(habit =>
+            !habit.isGoalAchieved() || !habit.goalAcknowledged);
+        const completedHabits = activeHabits.filter(habit => habit.isCompletedToday());
+        const uncompletedHabits = activeHabits.filter(habit => !habit.isCompletedToday());
+        const reachedGoalsHabits = this.habits.filter(habit =>
+            habit.isGoalAchieved() && habit.goalAcknowledged);
 
+        // Create sections with fragments for better performance
         const fragment = document.createDocumentFragment();
-
 
         const achievements = this.getAchievements();
         if (achievements.length > 0 || this.calculateTotalCompletions() > 0) {
@@ -894,19 +900,13 @@ class HabitTracker {
         if (uncompletedHabits.length > 0) {
             const uncompletedSection = document.createElement('div');
             uncompletedSection.className = 'habits-section uncompleted-section';
+            uncompletedSection.innerHTML = '<h4 class="section-header">> Pending_Today</h4>';
 
-            const uncompletedHeader = document.createElement('h4');
-            uncompletedHeader.innerHTML = '> Pending_Today';
-            uncompletedHeader.className = 'section-header';
-            uncompletedSection.appendChild(uncompletedHeader);
-
-            // Add habits to the uncompleted section
             uncompletedHabits.forEach(habit => {
                 const habitElement = this.createHabitElement(habit, weekDays);
                 uncompletedSection.appendChild(habitElement);
             });
 
-            //habitsList.appendChild(uncompletedSection);
             fragment.appendChild(uncompletedSection);
         }
 
@@ -928,6 +928,21 @@ class HabitTracker {
 
             //habitsList.appendChild(completedSection);
             fragment.appendChild(completedSection);
+        }
+
+        // Add new "Reached Goals" section if we have any
+        if (reachedGoalsHabits.length > 0) {
+            const reachedSection = document.createElement('div');
+            reachedSection.className = 'habits-section reached-goals-section';
+            reachedSection.innerHTML = '<h4 class="section-header">> Reached_Goals</h4>';
+
+            reachedGoalsHabits.forEach(habit => {
+                const habitElement = this.createHabitElement(habit, weekDays);
+                habitElement.classList.add('reached-goal');
+                reachedSection.appendChild(habitElement);
+            });
+
+            fragment.appendChild(reachedSection);
         }
         // Show stats if we have habits
         if (this.habits.length > 0) {
@@ -1037,6 +1052,7 @@ class HabitTracker {
                     <div class="goal-achieved-message">🎉 Goal achieved! What's next?</div>
                     <button class="goal-action-btn" data-action="increaseGoal">Increase Goal</button>
                     <button class="goal-action-btn" data-action="acknowledgeGoal">Keep Going</button>
+                    <button class="goal-action-btn" data-action="archive">Archive</button>
                 </div>
             `;
         }
@@ -1592,6 +1608,7 @@ class HabitTracker {
                         newHabit.completedWeeks = habit.completedWeeks || 0;
                         newHabit.achievements = Array.isArray(habit.achievements) ? habit.achievements : [];
                         newHabit.lifetimeCompletions = habit.lifetimeCompletions || 0;
+                        newHabit.goalAcknowledged = habit.goalAcknowledged || false;
 
 
                         return newHabit;
@@ -2297,15 +2314,18 @@ class HabitTracker {
                     // For frequency goals, increase by 1 (max 7)
                     habit.goalValue = Math.min(7, habit.goalValue + 1);
                 }
-                habit.goalAcknowledged = true;
                 this.showNotification(`Goal for "${habit.name}" increased to ${habit.goalValue}!`, 'info');
                 break;
             case 'acknowledgeGoal':
                 // Simply acknowledge the goal was achieved
-                habit.goalAcknowledged = true;
                 this.showNotification(`Keep up the great work with "${habit.name}"!`, 'info');
                 break;
+            case 'archive':
+                // Archive the habit (or mark it as inactive)
+                this.showNotification(`"${habit.name}" has been archived!`, 'info');
+                break;
         }
+        habit.goalAcknowledged = true;
 
         this.saveHabits();
         this.renderHabits();
