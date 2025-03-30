@@ -1657,10 +1657,18 @@ class HabitTracker {
         allButton.dataset.category = 'all';
         filterContainer.appendChild(allButton);
 
-        // Add filters for each category
+
+        // Add filters for each category - include both active AND archived habits
         this.categories.forEach(category => {
-            // Only add filters for categories that actually have habits
-            if (this.habits.some(habit => habit.category.toLowerCase() === category.toLowerCase())) {
+            // Only add filters for categories that have either active or archived habits
+            const hasActiveHabits = this.habits.some(habit =>
+                habit.category.toLowerCase() === category.toLowerCase());
+            const hasArchivedHabits = this.archivedHabits.some(habit =>
+                habit.category.toLowerCase() === category.toLowerCase());
+
+            console.log(`Category: ${category}, Active: ${hasActiveHabits}, Archived: ${hasArchivedHabits}`);
+
+            if (hasActiveHabits || hasArchivedHabits) {
                 const button = document.createElement('button');
                 button.textContent = category;
                 button.className = 'category-filter';
@@ -1668,6 +1676,8 @@ class HabitTracker {
                 filterContainer.appendChild(button);
             }
         });
+        console.log('Categories:', this.categories);
+
 
         // Add event listeners to filters
         const filters = document.querySelectorAll('.category-filter');
@@ -1689,7 +1699,10 @@ class HabitTracker {
         const habitItems = document.querySelectorAll('.habit-item');
 
         habitItems.forEach(item => {
-            if (category === 'all' || item.dataset.category === category) {
+            const itemCategory = item.dataset.category ? item.dataset.category.toLowerCase() : '';
+            const filterCategory = category.toLowerCase();
+
+            if (category.toLowerCase() === 'all' || itemCategory === filterCategory) {
                 item.style.display = 'flex';
             } else {
                 item.style.display = 'none';
@@ -1697,18 +1710,6 @@ class HabitTracker {
         });
     }
 
-    // Add a new method to display week streak information in the console for debugging
-    displayWeekStreakInfo() {
-        console.group('Week Streak Information');
-        this.habits.forEach(habit => {
-            if (habit.goalType === 'frequency') {
-                const progress = `${habit.getWeeklyCompletions().length}/${habit.goalValue}`;
-                const weekRemaining = this.getDaysRemainingInWeek();
-                console.log(`${habit.name}: ${progress} | Streak: ${habit.weekStreak} | Days left in week: ${weekRemaining}`);
-            }
-        });
-        console.groupEnd();
-    }
 
     // Helper method to get days remaining in current week
     getDaysRemainingInWeek() {
