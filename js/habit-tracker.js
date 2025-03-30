@@ -553,6 +553,9 @@ class HabitTracker {
             // Create and add the new habit with selected category
             const habit = new Habit(id, habitName, goalType, goalValue, category);
             habit.weekStreak = 0;
+            habit.lifetimeCompletions = 0; // Initialize lifetime completions
+            habit.achievements = []; // Initialize achievements array
+            habit.completionHistory = []; // Initialize completion history
 
             // No longer set habit.weekStartDate as it's now managed by the tracker
 
@@ -643,16 +646,23 @@ class HabitTracker {
 
                 habit.goalAcknowledged = false; // Reset goal acknowledgment
 
-                //remove from achievements if exists
-                if (habit.lifetimeCompletions > 0 && habit.lifetimeCompletions == habit.achievements.length) {
-                    habit.achievements.pop();
-                    habit.lifetimeCompletions--;
+                if (habit.goalType === 'frequency') {
+
+                    const weeklyCompletions = habit.getWeeklyCompletions();
+                    if (weeklyCompletions.length == habit.goalValue - 1) {
+                        habit.achievements.pop();
+                        habit.lifetimeCompletions--;
+                        habit.weekStreak--;
+                    }
+                }
+                else {
+                    //remove from achievements if exists
+                    if (habit.lifetimeCompletions == habit.achievements.length) {
+                        habit.achievements.pop();
+                        habit.lifetimeCompletions--;
+                    }
                 }
 
-                //if weekly streak is greater than 0, decrement it
-                if (habit.weekStreak > 0) {
-                    habit.weekStreak--;
-                }
 
             }
 
@@ -1055,6 +1065,7 @@ class HabitTracker {
                 </div>
             `;
         }
+        //TODO need to fix
 
         // Simplified habit display - removed goal type indicator
         habitElement.innerHTML = `
