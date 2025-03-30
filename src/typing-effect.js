@@ -3,9 +3,7 @@ const messages = [
     "Hello, World!",
     "Welcome!",
     "I Installed Arch all by myself btw.",
-    "Are you impressed?",
-    "Please love me.",
-    "Mwah Mwah.",
+    "Hehe."
 ];
 
 let typedTextElement;
