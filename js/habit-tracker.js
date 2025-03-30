@@ -85,7 +85,6 @@ class Habit {
         this.weekStreak = 0; // New: Track weeks streak for frequency habits
         this.completedWeeks = 0; // New: Track total number of completed weeks
         this.achievements = []; // Add this line to store achievement records
-        this.lifetimeCompletions = 0; // New: Track lifetime completions
         this.goalAcknowledged = false; // New: Track if the habit is goalAcknowledged
     }
 
@@ -346,11 +345,11 @@ class HabitTracker {
                     completionHistory: Array.isArray(habit.completionHistory) ? habit.completionHistory : [],
                     weekStreak: habit.weekStreak || 0,
                     completedWeeks: habit.completedWeeks || 0,
-                    // Fix: Properly initialize the achievements array and lifetimeCompletions
                     achievements: Array.isArray(habit.achievements) ? habit.achievements : [],
-                    lifetimeCompletions: habit.lifetimeCompletions || 0,
+                    lifetimeCompletions: habit.achievements.length || 0,
                     goalAcknowledged: habit.goalAcknowledged || false // New: Track if the habit is goalAcknowledged
                 });
+
 
                 return newHabit;
             });
@@ -1549,13 +1548,21 @@ class HabitTracker {
 
     // Export habits data to a JSON file
     exportData() {
+        // Create a cleaned version of habits without lifetimeCompletions
+        const cleanedHabits = this.habits.map(habit => {
+            // Create a copy without the lifetimeCompletions property
+            const { lifetimeCompletions, ...cleanHabit } = habit;
+            return cleanHabit;
+        });
+
         const dataStr = JSON.stringify({
-            habits: this.habits,
+            habits: cleanedHabits,
             categories: this.categories,
             exportDate: formatLocalDateTime(new Date()),
             version: '1.0'
         });
 
+        // Rest of your function remains the same
         const dataBlob = new Blob([dataStr], { type: 'application/json' });
         const url = URL.createObjectURL(dataBlob);
 
@@ -1607,7 +1614,7 @@ class HabitTracker {
                         newHabit.weekStreak = habit.weekStreak || 0;
                         newHabit.completedWeeks = habit.completedWeeks || 0;
                         newHabit.achievements = Array.isArray(habit.achievements) ? habit.achievements : [];
-                        newHabit.lifetimeCompletions = habit.lifetimeCompletions || 0;
+                        newHabit.lifetimeCompletions = habit.achievements.length || 0;
                         newHabit.goalAcknowledged = habit.goalAcknowledged || false;
 
 
