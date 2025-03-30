@@ -1,0 +1,748 @@
+/* Timer section styles */
+.timer-section {
+    margin-bottom: 3rem;
+    padding: 2rem;
+}
+
+/* Pattern System */
+.pattern-selector {
+    margin: 2rem 0;
+    text-align: center;
+}
+
+.pattern-tabs {
+    margin-bottom: 2rem;
+    display: inline-flex;
+    background-color: rgba(48, 48, 48, 0.7);
+    padding: 0.3rem;
+    border-radius: 20px;
+    border: 1px solid var(--accent-color);
+}
+
+.pattern-btn {
+    background-color: transparent;
+    color: var(--text-color);
+    border: none;
+    padding: 0.5rem 2rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Courier New', monospace;
+    border-radius: 15px;
+    position: relative;
+}
+
+.pattern-btn.active {
+    background-color: var(--accent-color);
+    color: var(--bg-color);
+}
+
+.pattern-btn:not(.active):hover {
+    color: var(--accent-color);
+}
+
+.pattern-content {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 1rem;
+}
+
+.pattern-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin: 1rem 0;
+}
+
+.pattern-card {
+    background-color: rgba(48, 48, 48, 0.7);
+    border: 1px solid var(--accent-color);
+    border-radius: 8px;
+    padding: 1.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.pattern-card h3 {
+    margin: 0 0 1rem 0;
+    color: var(--accent-color);
+    font-size: 1.2rem;
+    font-family: 'Courier New', monospace;
+}
+
+.pattern-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(100, 255, 218, 0.1);
+}
+
+.pattern-card.active {
+    background-color: rgba(100, 255, 218, 0.1);
+}
+
+.pattern-preview {
+    margin-top: 1rem;
+}
+
+.phase-dots {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    position: relative;
+}
+
+.phase-dots::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background-color: var(--secondary-color);
+    z-index: 0;
+}
+
+.dot {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid var(--accent-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    background-color: var(--bg-color);
+    position: relative;
+    z-index: 1;
+}
+
+.dot.focus {
+    border-color: #ff6b6b;
+}
+
+.dot.break {
+    border-color: #4ecdc4;
+}
+
+.dot.inhale {
+    border-color: #45b7d1;
+}
+
+.dot.hold {
+    border-color: #96ceb4;
+}
+
+.dot.exhale {
+    border-color: #d4a373;
+}
+
+.patterns-controls {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 1rem;
+}
+
+/* Saved Patterns */
+.saved-patterns-section {
+    background-color: rgba(48, 48, 48, 0.7);
+    border-radius: 5px;
+    padding: 1.5rem;
+    margin: 2rem 0;
+}
+
+.saved-patterns-controls {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+#saved-pattern-select {
+    flex: 1;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    border: 1px solid var(--accent-color);
+    padding: 0.5rem;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+}
+
+.delete-pattern {
+    color: #ff6464;
+    border-color: #ff6464;
+}
+
+.delete-pattern:hover {
+    background-color: #ff6464;
+    color: var(--bg-color);
+}
+
+/* Timer Display */
+.timer-display {
+    text-align: center;
+    margin: 2rem 0;
+    position: relative;
+}
+
+.timer-display .time {
+    font-family: 'Courier New', monospace;
+    font-size: 4rem;
+    color: var(--accent-color);
+    text-shadow: 0 0 10px rgba(100, 255, 218, 0.3);
+    transition: transform 0.3s ease;
+}
+
+.phase-info {
+    font-size: 1.2rem;
+    margin: 1rem 0;
+    color: var(--text-color);
+    opacity: 0.8;
+}
+
+/* Breathing Guide */
+.breathing-guide {
+    position: relative;
+    width: 200px;
+    height: 200px;
+    margin: 2rem auto;
+}
+
+.breathing-guide .circle {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100px;
+    height: 100px;
+    border: 2px solid var(--accent-color);
+    border-radius: 50%;
+    transition: all 1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.breathing-guide .instruction {
+    position: absolute;
+    width: 100%;
+    text-align: center;
+    bottom: -2rem;
+    color: var(--text-color);
+    opacity: 0.8;
+    transition: opacity 0.3s ease;
+}
+
+/* Breathing Animations */
+@keyframes breathe-in {
+    from {
+        transform: translate(-50%, -50%) scale(1);
+        border-color: var(--accent-color);
+    }
+
+    to {
+        transform: translate(-50%, -50%) scale(1.5);
+        border-color: var(--text-color);
+    }
+}
+
+@keyframes breathe-out {
+    from {
+        transform: translate(-50%, -50%) scale(1.5);
+        border-color: var(--text-color);
+    }
+
+    to {
+        transform: translate(-50%, -50%) scale(1);
+        border-color: var(--accent-color);
+    }
+}
+
+@keyframes hold-breath {
+
+    0%,
+    100% {
+        border-color: var(--text-color);
+    }
+
+    50% {
+        border-color: var(--accent-color);
+    }
+}
+
+/* Controls */
+.timer-controls {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin: 1rem 0;
+}
+
+.timer-btn {
+    background-color: var(--secondary-color);
+    color: var(--text-color);
+    border: 1px solid var(--accent-color);
+    padding: 0.5rem 1.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Courier New', monospace;
+    border-radius: 3px;
+}
+
+.timer-btn:hover:not(:disabled) {
+    background-color: var(--accent-color);
+    color: var(--bg-color);
+}
+
+.timer-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Timer Container */
+.timer-container {
+    position: relative;
+    margin: 2rem auto;
+    max-width: 800px;
+    background-color: rgba(48, 48, 48, 0.7);
+    border-radius: 10px;
+    padding: 2rem;
+}
+
+/* Phase Timeline */
+.phase-timeline {
+    margin: 2rem 0;
+    padding: 1rem;
+    position: relative;
+    min-height: 120px;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent-color) var(--bg-color);
+}
+
+.phase-timeline::-webkit-scrollbar {
+    height: 6px;
+}
+
+.phase-timeline::-webkit-scrollbar-track {
+    background: var(--bg-color);
+}
+
+.phase-timeline::-webkit-scrollbar-thumb {
+    background-color: var(--accent-color);
+    border-radius: 3px;
+}
+
+.timeline-track {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-color: var(--secondary-color);
+    transform: translateY(-50%);
+}
+
+.phase-connector {
+    flex: 1;
+    height: 2px;
+    background: var(--secondary-color);
+    transform: translateY(20px);
+    position: relative;
+}
+
+.phase-connector::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 50%;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--secondary-color);
+    transform: translate(50%, -50%);
+}
+
+.phase-indicators {
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 100%;
+    padding: 0 2rem;
+}
+
+.phase-indicator {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: var(--bg-color);
+    border: 2px solid var(--accent-color);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.phase-indicator::before {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border: 2px solid var(--accent-color);
+    opacity: 0;
+    transform: scale(1.2);
+    transition: all 0.3s ease;
+}
+
+.phase-indicator.active::before {
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        opacity: 0.8;
+    }
+
+    50% {
+        transform: scale(1.4);
+        opacity: 0;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 0.8;
+    }
+}
+
+.phase-indicator::after {
+    content: attr(data-duration);
+    position: absolute;
+    bottom: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.8rem;
+    white-space: nowrap;
+    color: var(--text-color);
+    opacity: 0.8;
+}
+
+.phase-indicator.focus {
+    border-color: #ff6b6b;
+}
+
+.phase-indicator.break {
+    border-color: #4ecdc4;
+}
+
+.phase-indicator.inhale {
+    border-color: #45b7d1;
+}
+
+.phase-indicator.hold {
+    border-color: #96ceb4;
+}
+
+.phase-indicator.exhale {
+    border-color: #d4a373;
+}
+
+.phase-indicator.custom {
+    border-color: var(--accent-color);
+}
+
+.phase-indicator.active {
+    transform: scale(1.2);
+    box-shadow: 0 0 10px rgba(100, 255, 218, 0.5);
+    z-index: 2;
+}
+
+.phase-indicator:hover:not(.active) {
+    transform: scale(1.1);
+}
+
+.phase-indicator.editable {
+    cursor: pointer;
+    border-style: dashed;
+}
+
+.phase-indicator.editable:hover {
+    background-color: rgba(100, 255, 218, 0.1);
+}
+
+.phase-indicator .phase-number {
+    font-size: 0.9rem;
+    color: var(--text-color);
+    opacity: 0.8;
+}
+
+.edit-phase-btn {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--bg-color);
+    border: 1px solid var(--accent-color);
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    font-size: 12px;
+    transition: all 0.3s ease;
+    z-index: 2;
+}
+
+.edit-phase-btn:hover {
+    background: var(--accent-color);
+    color: var(--bg-color);
+    transform: scale(1.1);
+}
+
+.phase-indicator.dragging {
+    opacity: 0.5;
+}
+
+/* Phase type colors in timeline */
+.phase-indicator::before {
+    border-color: inherit;
+}
+
+.phase-indicator.active::before {
+    animation: glow 2s ease-in-out infinite;
+}
+
+@keyframes glow {
+
+    0%,
+    100% {
+        box-shadow: 0 0 5px var(--accent-color),
+            0 0 10px var(--accent-color),
+            0 0 15px var(--accent-color);
+    }
+
+    50% {
+        box-shadow: 0 0 10px var(--accent-color),
+            0 0 20px var(--accent-color),
+            0 0 30px var(--accent-color);
+    }
+}
+
+/* Edit Mode */
+.edit-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+}
+
+.edit-controls {
+    display: flex;
+    gap: 1rem;
+}
+
+.settings-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 1rem 0;
+    padding: 0.5rem;
+    border-bottom: 1px solid var(--secondary-color);
+}
+
+.notification-controls,
+.sound-controls {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.control {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.notification-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.3rem 0.8rem;
+    border-radius: 15px;
+    font-size: 0.9rem;
+}
+
+.notification-status.enabled {
+    background-color: rgba(100, 255, 218, 0.1);
+    border: 1px solid var(--accent-color);
+}
+
+.notification-status.disabled {
+    background-color: rgba(255, 100, 100, 0.1);
+    border: 1px solid #ff6464;
+}
+
+/* Pattern Editor */
+.pattern-editor.section {
+    margin-top: 3rem;
+    padding: 2rem;
+    background-color: rgba(48, 48, 48, 0.7);
+    border-radius: 5px;
+}
+
+.editor-container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.pattern-details {
+    margin-bottom: 2rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid var(--secondary-color);
+}
+
+.pattern-details input[type="text"] {
+    width: 100%;
+    font-size: 1.1rem;
+}
+
+.pattern-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.option label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+
+.option input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+}
+
+.phases-section {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 5px;
+    padding: 1.5rem;
+}
+
+.phase {
+    margin: 1.5rem 0;
+    padding: 1.5rem;
+    border: 1px solid var(--secondary-color);
+    border-radius: 5px;
+    background-color: rgba(48, 48, 48, 0.7);
+}
+
+.phase-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--secondary-color);
+}
+
+.phase-number {
+    font-weight: bold;
+    color: var(--accent-color);
+    font-size: 1.1rem;
+}
+
+.remove-phase {
+    background: none;
+    border: none;
+    color: #ff6464;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0.2rem 0.5rem;
+    border-radius: 3px;
+    transition: all 0.3s ease;
+}
+
+.remove-phase:hover {
+    background-color: rgba(255, 100, 100, 0.1);
+}
+
+.form-group {
+    display: grid;
+    gap: 1rem;
+}
+
+.duration-row,
+.message-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.duration-inputs {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.duration-input {
+    width: 80px !important;
+}
+
+.duration-unit {
+    width: 100px;
+}
+
+input[type="text"],
+input[type="number"],
+select {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    border: 1px solid var(--accent-color);
+    padding: 0.5rem;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+}
+
+.phases-controls {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--secondary-color);
+}
+
+/* Notification Animations */
+@keyframes notification-flash {
+    0% {
+        color: var(--accent-color);
+        text-shadow: 0 0 10px rgba(100, 255, 218, 0.3);
+        transform: scale(1);
+    }
+
+    50% {
+        color: #ff6464;
+        text-shadow: 0 0 20px rgba(255, 100, 100, 0.5);
+        transform: scale(1.1);
+    }
+
+    100% {
+        color: var(--accent-color);
+        text-shadow: 0 0 10px rgba(100, 255, 218, 0.3);
+        transform: scale(1);
+    }
+}
+
+.timer-display .time.flash {
+    animation: notification-flash 1s ease-in-out;
+}

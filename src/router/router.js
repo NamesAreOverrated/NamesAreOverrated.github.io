@@ -45,6 +45,12 @@ const router = {
             handler: () => {
                 displayHabitTracker();
             }
+        },
+        timer: {
+            path: 'timer',
+            handler: () => {
+                displayTimer();
+            }
         }
     },
 
@@ -283,6 +289,33 @@ function displayHabitTracker() {
         }, 100);
     } else {
         console.error('Router: Habit tracker section not found in the DOM');
+    }
+}
+
+// Function to display the timer section
+function displayTimer() {
+    console.log("Router: Displaying timer");
+
+    // Hide all main sections
+    document.getElementById('projects').style.display = 'none';
+    document.getElementById('tools').style.display = 'none';
+    document.getElementById('blogs').style.display = 'none';
+    document.getElementById('page-content').style.display = 'none';
+    document.getElementById('habit-tracker-section').style.display = 'none';
+
+    // Show timer section
+    const timerSection = document.getElementById('timer-section');
+    if (timerSection) {
+        timerSection.style.display = 'block';
+        document.body.classList.add('viewing-timer');
+
+        // Initialize timer if not already done
+        if (typeof Timer === 'function' && !window.timerInstance) {
+            window.timerInstance = new Timer();
+            console.log('Timer initialized from router');
+        }
+    } else {
+        console.error('Router: Timer section not found in the DOM');
     }
 }
 
