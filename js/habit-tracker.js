@@ -70,6 +70,16 @@ function calculateWeekStartDate(date = new Date()) {
     return formatLocalDate(d);
 }
 
+class ArchivedHabit {
+    constructor(id, name, goalType, goalValue, category) {
+        this.id = id;
+        this.name = name;
+        this.category = category;
+        this.achievements = []; // Store historical completion data by date
+        this.streak = 0; // Store the streak value
+    }
+}
+
 
 // Habit tracker functionality
 
@@ -201,6 +211,8 @@ class HabitTracker {
     constructor() {
         this.habits = [];
         this.categories = []; // Start with empty categories, will be populated dynamically
+        this.archivedHabits = []; // New: Store archived habits
+
         this.loadHabits();
 
         //Recalculate week streaks on load
@@ -324,8 +336,10 @@ class HabitTracker {
     // Load habits from localStorage
     loadHabits() {
         const storedHabits = localStorage.getItem('habits');
+        const storedArchivedHabits = localStorage.getItem('archivedHabits');
         // Try to load saved categories first
         const storedCategories = localStorage.getItem('habitCategories');
+
 
         if (storedHabits) {
             // Parse stored habits and ensure instances are proper Habit objects
@@ -366,11 +380,41 @@ class HabitTracker {
 
 
             this.checkDayChange();
-        } else {
+        }
+        else {
             // Initialize with default categories if no habits exist
             this.categories = this.getDefaultCategories();
         }
+        if (storedArchivedHabits) {
+            try {
+                // Parse stored archived habits and ensure instances are proper Habit objects
+                const parsedArchivedHabits = JSON.parse(storedArchivedHabits);
+                this.archivedHabits = parsedArchivedHabits.map(habit => {
+                    const newHabit = new ArchivedHabit(
+                        habit.id,
+                        habit.name,
+                        habit.category || 'General',
+                        habit.achievements || [],
+                        habit.streak || 0 // Initialize streak value
 
+                    );
+                    Object.assign(newHabit, {
+                        id: habit.id,
+                        name: habit.name,
+                        category: habit.category || 'General',
+                        achievements: Array.isArray(habit.achievements) ? habit.achievements : [],
+                        streak: habit.streak || 0 // Initialize streak value
+                    });
+                    return newHabit;
+                });
+
+            }
+            catch (e) {
+                console.error("Error parsing stored archived habits, regenerating...", e);
+                this.archivedHabits = [];
+            }
+
+        }
         // Save categories after initialization
         this.saveCategories();
 
@@ -476,6 +520,7 @@ class HabitTracker {
     // Save habits to localStorage
     saveHabits() {
         localStorage.setItem('habits', JSON.stringify(this.habits));
+        localStorage.setItem('archivedHabits', JSON.stringify(this.archivedHabits));
         // Also save categories to ensure they persist
         this.saveCategories();
         this.updateStorageUsage();
@@ -633,11 +678,11 @@ class HabitTracker {
 
                     if (weeklyCompletions.length === habit.goalValue) {
                         this.showNotification(`Weekly goal achieved for "${habit.name}"! 🎯`, 'success');
-                        // Handle frequency goal achievement
-                        this.handleGoalAchievement(habit);
-
                         //add weeklyStreak
                         habit.weekStreak++;
+
+                        // Handle frequency goal achievement
+                        this.handleGoalAchievement(habit);
                     }
                 }
             } else {
@@ -847,24 +892,22 @@ class HabitTracker {
         const weekDays = this._weekDays;
 
         // Group habits into categories
-        const activeHabits = this.habits.filter(habit =>
-            !habit.isGoalAchieved() || !habit.goalAcknowledged);
+        const activeHabits = this.habits;
         const completedHabits = activeHabits.filter(habit => habit.isCompletedToday());
         const uncompletedHabits = activeHabits.filter(habit => !habit.isCompletedToday());
-        const reachedGoalsHabits = this.habits.filter(habit =>
-            habit.isGoalAchieved() && habit.goalAcknowledged);
+        const reachedGoalsHabits = this.archivedHabits;
 
         // Create sections with fragments for better performance
         const fragment = document.createDocumentFragment();
 
-        const achievements = this.getAchievements();
-        if (achievements.length > 0 || this.calculateTotalCompletions() > 0) {
+        const achievementCount = this.calculateTotalAchievements();
+        if (achievementCount > 0 || this.calculateTotalCompletions() > 0) {
             const achievementsSummary = document.createElement('div');
             achievementsSummary.className = 'achievements-summary-section';
 
             // Validate and ensure we have correct counts
             const totalCompletions = this.calculateTotalCompletions();
-            const achievementCount = achievements.length;
+
 
             // Add total completions counter
             const totalCompletionsHTML = `
@@ -946,7 +989,7 @@ class HabitTracker {
             reachedSection.innerHTML = '<h4 class="section-header">> Reached_Goals</h4>';
 
             reachedGoalsHabits.forEach(habit => {
-                const habitElement = this.createHabitElement(habit, weekDays);
+                const habitElement = this.createArchivedHabitElement(habit);
                 habitElement.classList.add('reached-goal');
                 reachedSection.appendChild(habitElement);
             });
@@ -1056,7 +1099,8 @@ class HabitTracker {
         // Add goal achievement actions if goal is achieved
         let goalActionsHtml = '';
         if (isGoalAchieved && !habit.goalAcknowledged) {
-            goalActionsHtml = `
+            if (habit.goalType === 'frequency') {
+                goalActionsHtml = `
                 <div class="goal-achievement-actions">
                     <div class="goal-achieved-message">🎉 Goal achieved! What's next?</div>
                     <button class="goal-action-btn" data-action="increaseGoal">Increase Goal</button>
@@ -1064,8 +1108,16 @@ class HabitTracker {
                     <button class="goal-action-btn" data-action="archive">Archive</button>
                 </div>
             `;
+            } else {
+                goalActionsHtml = `
+                <div class="goal-achievement-actions">
+                    <div class="goal-achieved-message">🎉 Goal achieved! What's next?</div>
+                    <button class="goal-action-btn" data-action="increaseGoal">Increase Goal</button>
+                    <button class="goal-action-btn" data-action="archive">Archive</button>
+                </div>
+            `;
+            }
         }
-        //TODO need to fix
 
         // Simplified habit display - removed goal type indicator
         habitElement.innerHTML = `
@@ -1114,6 +1166,115 @@ class HabitTracker {
 
         return habitElement;
     }
+
+    createArchivedHabitElement(archivedHabit) {
+        const habitElement = document.createElement('div');
+        habitElement.className = 'habit-item archived-habit';
+        habitElement.dataset.category = archivedHabit.category;
+        habitElement.dataset.habitId = archivedHabit.id;
+
+        // Calculate achievement statistics
+        const achievementCount = archivedHabit.achievements ? archivedHabit.achievements.length : 0;
+
+        // Get the most recent achievement for streak/completion details
+        const lastAchievement = achievementCount > 0 ? archivedHabit.achievements[achievementCount - 1] : null;
+
+        // Format achievement date if available
+        const achievementDate = lastAchievement.date;
+
+
+        // Calculate completions count - safely check the structure based on your data format
+        let completionsCount = 0;
+        if (lastAchievement && lastAchievement.completions && Array.isArray(lastAchievement.completions)) {
+            completionsCount = lastAchievement.completions.length;
+        }
+
+        // Determine achievement description based on goal type
+        let achievementDesc = '';
+        let streakValue = 0;
+
+        // Handle streak correctly based on available data
+        if (archivedHabit.streak) {
+            streakValue = archivedHabit.streak;
+        }
+
+        if (lastAchievement && lastAchievement.goalType === 'streak') {
+            achievementDesc = `Reached a ${streakValue}-day streak`;
+        } else {
+            achievementDesc = `Reached a ${streakValue}-week streak`;
+        }
+
+        // Create the archived habit HTML with muted colors and special indicator
+        habitElement.innerHTML = `
+        <div class="habit-info">
+            <div class="habit-header">
+                <div class="habit-title">
+                    <span class="habit-name">${archivedHabit.name}</span>
+                    <span class="habit-category" data-category="${archivedHabit.category}">${archivedHabit.category}</span>
+                    <span class="archived-indicator">Archived</span>
+                </div>
+            </div>
+            
+            <div class="achievement-summary">
+                <div class="achievement-icon">🏆</div>
+                <div class="achievement-details">
+                    <div class="achievement-title">Goal Achieved</div>
+                    <div class="achievement-desc">${achievementDesc}</div>
+                    <div class="achievement-date">Achieved on ${achievementDate}</div>
+                </div>
+            </div>
+            
+            <div class="archived-stats">
+                <div class="stats-row">
+                    <span class="stats-label">Type:</span>
+                    <span class="stats-value">${lastAchievement?.goalType === 'streak' ? 'Streak' : 'Weekly Frequency'}</span>
+                </div>
+                <div class="stats-row">
+                    <span class="stats-label">Goal:</span>
+                    <span class="stats-value">${completionsCount || '?'} ${lastAchievement?.goalType === 'streak' ? 'days' : 'times/week'}</span>
+                </div>
+                <div class="stats-row">
+                    <span class="stats-label">Achievements:</span>
+                    <span class="stats-value">${achievementCount}</span>
+                </div>
+            </div>
+        </div>
+        <div class="habit-actions">
+            
+            <button class="btn-delete">🗑️ Delete</button>
+        </div>
+    `;
+
+        // Add event listeners
+        const deleteBtn = habitElement.querySelector('.btn-delete');
+
+
+        // Delete button: Permanently remove the archived habit
+        deleteBtn.addEventListener('click', () => this.deleteArchivedHabit(archivedHabit.id));
+
+        return habitElement;
+    }
+
+
+
+    // Method to delete an archived habit
+    deleteArchivedHabit(id) {
+        if (confirm('Are you sure you want to permanently delete this archived habit?')) {
+            const index = this.archivedHabits.findIndex(h => h.id === id);
+
+            if (index !== -1) {
+                const habitName = this.archivedHabits[index].name;
+                this.archivedHabits.splice(index, 1);
+
+                // Save and update UI
+                this.saveHabits();
+                this.renderHabits();
+                this.showNotification(`Archived habit "${habitName}" permanently deleted`, 'info');
+            }
+        }
+    }
+
+
 
     // New helper method to generate a color for a custom category
     getColorForCategory(category) {
@@ -1887,6 +2048,24 @@ class HabitTracker {
             dashboard.appendChild(achievementsCard);
         }
     }
+    calculateTotalAchievements() {
+        let totalCount = 0;
+        // Sum up all achievements from each habit's history
+        this.habits.forEach(habit => {
+            if (habit.achievements) {
+                totalCount += habit.achievements.length;
+            }
+        });
+
+        this.archivedHabits.forEach(habit => {
+
+            if (habit.achievements) {
+                totalCount += habit.achievements.length;
+            }
+
+        });
+        return totalCount;
+    }
 
     // New helper: Calculate total completions across all habits
     calculateTotalCompletions() {
@@ -1896,6 +2075,17 @@ class HabitTracker {
             if (habit.completionHistory) {
                 totalCount += habit.completionHistory.length;
             }
+
+        });
+
+        this.archivedHabits.forEach(habit => {
+
+            if (habit.achievements) {
+                habit.achievements.forEach(achievement => {
+                    totalCount += achievement.completions.length || 0;
+                });
+            }
+
         });
         return totalCount;
     }
@@ -1945,12 +2135,15 @@ class HabitTracker {
         for (let i = 0; i < 30; i++) {
             const date = new Date();
             date.setDate(date.getDate() - i);
-            last30Days.push(date.toISOString().split('T')[0]);
+            const dateStr = formatLocalDate(date); // Use consistent date formatting
+            last30Days.push(dateStr);
         }
 
         // Count completions and total opportunities
         let totalCompletions = 0;
         let totalOpportunities = 0;
+
+        // Process active habits
         this.habits.forEach(habit => {
             // Only count habits that existed during this period
             if (!habit.completionHistory || habit.completionHistory.length === 0) {
@@ -1971,8 +2164,32 @@ class HabitTracker {
             });
         });
 
+        // Include archived habits' completions in the last 30 days
+        this.archivedHabits.forEach(habit => {
+            if (!habit.achievements || !Array.isArray(habit.achievements)) {
+                return;
+            }
+
+            // Extract all completion dates from achievements
+            const archivedCompletions = new Set();
+            habit.achievements.forEach(achievement => {
+                if (achievement.completions && Array.isArray(achievement.completions)) {
+                    achievement.completions.forEach(date => archivedCompletions.add(date));
+                }
+            });
+
+            // Count completions that fall within our 30 day window
+            last30Days.forEach(date => {
+                if (archivedCompletions.has(date)) {
+                    totalCompletions++;
+                    totalOpportunities++;
+                }
+            });
+        });
+
         return totalOpportunities > 0 ? Math.round((totalCompletions / totalOpportunities) * 100) : 0;
     }
+
 
     // Helper: Get first completion date for a habit
     getFirstCompletionDate(habit) {
@@ -2015,10 +2232,11 @@ class HabitTracker {
         return html;
     }
 
-    // Helper: Calculate category performance
+    // Helper: Calculate category performance - updated to include archived habits
     calculateCategoryPerformance() {
         const categoryStats = {};
-        // Initialize stats for each category that has habits
+
+        // Initialize stats for active habits by category
         this.habits.forEach(habit => {
             const category = habit.category || 'General';
             if (!categoryStats[category]) {
@@ -2033,18 +2251,33 @@ class HabitTracker {
             categoryStats[category].habits++;
         });
 
+        // Also initialize categories from archived habits
+        this.archivedHabits.forEach(habit => {
+            const category = habit.category || 'General';
+            if (!categoryStats[category]) {
+                categoryStats[category] = {
+                    total: 0,
+                    completed: 0,
+                    rate: 0,
+                    habits: 0,
+                    archivedHabits: 0
+                };
+            }
+            categoryStats[category].archivedHabits = (categoryStats[category].archivedHabits || 0) + 1;
+        });
+
         const last30Days = [];
         // Get the last 30 days
         for (let i = 0; i < 30; i++) {
             const date = new Date();
             date.setDate(date.getDate() - i);
-            last30Days.push(date.toISOString().split('T')[0]);
+            const dateStr = formatLocalDate(date);
+            last30Days.push(dateStr);
         }
 
-        // Calculate completion stats for each habit by category
+        // Calculate completion stats for active habits by category
         this.habits.forEach(habit => {
             const category = habit.category || 'General';
-            // Skip if we somehow don't have this category (shouldn't happen)
             if (!categoryStats[category]) return;
 
             // Count completions for this habit in the last 30 days
@@ -2068,6 +2301,34 @@ class HabitTracker {
             categoryStats[category].total += habitOpportunities;
         });
 
+        // Add archived habit completions to the category stats
+        this.archivedHabits.forEach(habit => {
+            const category = habit.category || 'General';
+            if (!categoryStats[category]) return;
+
+            // Extract completion dates from archived achievements
+            const archivedCompletions = new Set();
+            if (habit.achievements && Array.isArray(habit.achievements)) {
+                habit.achievements.forEach(achievement => {
+                    if (achievement.completions && Array.isArray(achievement.completions)) {
+                        achievement.completions.forEach(date => archivedCompletions.add(date));
+                    }
+                });
+            }
+
+            // Count completions in the last 30 days
+            let archivedHabitCompletions = 0;
+            last30Days.forEach(date => {
+                if (archivedCompletions.has(date)) {
+                    archivedHabitCompletions++;
+                }
+            });
+
+            // Add to category totals (1 completion = 1 opportunity for archived habits)
+            categoryStats[category].completed += archivedHabitCompletions;
+            categoryStats[category].total += archivedHabitCompletions;
+        });
+
         // Calculate completion rates and filter out empty categories
         Object.keys(categoryStats).forEach(category => {
             const stats = categoryStats[category];
@@ -2079,11 +2340,13 @@ class HabitTracker {
             }
         });
 
-        // Filter out categories with no habits
         return Object.fromEntries(
-            Object.entries(categoryStats).filter(([_, stats]) => stats.habits > 0)
+            Object.entries(categoryStats).filter(([_, stats]) =>
+                stats.habits > 0 || (stats.archivedHabits && stats.archivedHabits > 0)
+            )
         );
     }
+
 
     // Helper: Generate category chart HTML
     generateCategoryChart(categoryPerformance) {
@@ -2125,7 +2388,7 @@ class HabitTracker {
         return html;
     }
 
-    // Helper: Calculate daily trends for the last 30 days
+    // Helper: Calculate daily trends for the last 30 days - updated to include archived habits
     calculateDailyTrends() {
         const trendData = [];
 
@@ -2135,8 +2398,7 @@ class HabitTracker {
             date.setDate(date.getDate() - i);
             const dateString = formatLocalDate(date);
 
-            // Count completions for this date
-            const totalHabitsExisting = this.habits.length;
+            // Count completions for this date from active habits
             let completedCount = 0;
             this.habits.forEach(habit => {
                 if (habit.completionHistory && habit.completionHistory.includes(dateString)) {
@@ -2144,10 +2406,30 @@ class HabitTracker {
                 }
             });
 
+            // Add completions from archived habits
+            this.archivedHabits.forEach(habit => {
+                if (habit.achievements && Array.isArray(habit.achievements)) {
+                    let hasCompletion = false;
+                    // Check each achievement's completions
+                    for (const achievement of habit.achievements) {
+                        if (achievement.completions &&
+                            Array.isArray(achievement.completions) &&
+                            achievement.completions.includes(dateString)) {
+                            hasCompletion = true;
+                            break;
+                        }
+                    }
+                    if (hasCompletion) {
+                        completedCount++;
+                    }
+                }
+            });
+
             trendData.push({
                 date: dateString,
                 completed: completedCount,
-                total: totalHabitsExisting,
+                // For total, we count both active habits and archived habits
+                total: this.habits.length + this.archivedHabits.length,
                 formattedDate: date.toLocaleDateString('en-US', {
                     month: 'short',
                     day: 'numeric'
@@ -2156,6 +2438,31 @@ class HabitTracker {
         }
 
         return trendData;
+    }
+    // New helper method to extract completions from archived habits
+    getArchivedHabitCompletions(archivedHabit, period = null) {
+        if (!archivedHabit.achievements || !Array.isArray(archivedHabit.achievements)) {
+            return [];
+        }
+
+        // Extract all completion dates
+        const completionDates = [];
+        archivedHabit.achievements.forEach(achievement => {
+            if (achievement.completions && Array.isArray(achievement.completions)) {
+                completionDates.push(...achievement.completions);
+            }
+        });
+
+        // If no period filter, return all dates
+        if (!period) {
+            return completionDates;
+        }
+
+        // Filter completions to only include those within the specified period
+        return completionDates.filter(dateStr => {
+            const completionDate = new Date(dateStr);
+            return completionDate >= period.start && completionDate <= period.end;
+        });
     }
 
     // Helper: Generate trends chart HTML
@@ -2189,48 +2496,79 @@ class HabitTracker {
         return html;
     }
 
-    // Helper: Generate statistics summary table
+    // Generate statistics summary table - updated to include archived habits with special status
     generateStatsSummaryTable() {
-        // Sort habits by streak (descending)
-        const sortedHabits = [...this.habits].sort((a, b) => b.getCurrentStreak() - a.getCurrentStreak());
+        // Get active habits sorted by streak
+        const activeHabits = [...this.habits].sort((a, b) => b.getCurrentStreak() - a.getCurrentStreak());
 
-        if (sortedHabits.length === 0) {
+        // Also include archived habits with appropriate indicators
+        const archivedHabitStats = this.archivedHabits.map(habit => {
+            return {
+                id: habit.id,
+                name: habit.name,
+                category: habit.category,
+                streak: habit.streak || 0,
+                isArchived: true,
+                achievements: habit.achievements?.length || 0
+            };
+        }).sort((a, b) => b.streak - a.streak);
+
+        // Combine all habits for the table
+        const combinedHabits = [...activeHabits, ...archivedHabitStats];
+
+        if (combinedHabits.length === 0) {
             return '<p>No habits to summarize yet!</p>';
         }
 
         let html = `
-            <div class="stats-table-wrapper">
-                <table class="stats-table">
-                    <thead>
-                        <tr>
-                            <th>Habit</th>
-                            <th>Streak</th>
-                            <th>7 Day</th>
-                            <th>30 Day</th>
-                            <th>Goal Progress</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-        `;
+        <div class="stats-table-wrapper">
+            <table class="stats-table">
+                <thead>
+                    <tr>
+                        <th>Habit</th>
+                        <th>Streak</th>
+                        <th>Status</th>
+                        <th>Category</th>
+                        <th>Progress</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
 
-        sortedHabits.forEach(habit => {
-            const currentStreak = habit.getCurrentStreak();
-            const last7Days = this.calculateCompletionRateForPeriod(habit, 7);
-            const last30Days = this.calculateCompletionRateForPeriod(habit, 30);
-            const progressPercentage = habit.getProgressPercentage();
-            const progressClass = progressPercentage >= 100 ? 'achieved' :
-                progressPercentage >= 70 ? 'good' :
-                    progressPercentage >= 40 ? 'average' : 'low';
+        combinedHabits.forEach(habit => {
+            if (habit.isArchived) {
+                // Archived habit row
+                html += `
+                <tr class="archived-habit-row">
+                    <td>
+                        <div class="table-habit-name" title="${habit.name}">${habit.name}</div>
+                    </td>
+                    <td><span class="badge streak-badge">${habit.streak}</span></td>
+                    <td><span class="archived-badge">Archived</span></td>
+                    <td>${habit.category}</td>
+                    <td>
+                        <div class="achievement-count">${habit.achievements} achievement${habit.achievements !== 1 ? 's' : ''}</div>
+                    </td>
+                </tr>
+            `;
+            } else {
+                // Active habit row
+                const currentStreak = habit.getCurrentStreak();
+                const last7Days = this.calculateCompletionRateForPeriod(habit, 7);
+                const last30Days = this.calculateCompletionRateForPeriod(habit, 30);
+                const progressPercentage = habit.getProgressPercentage();
+                const progressClass = progressPercentage >= 100 ? 'achieved' :
+                    progressPercentage >= 70 ? 'good' :
+                        progressPercentage >= 40 ? 'average' : 'low';
 
-            html += `
+                html += `
                 <tr>
                     <td>
                         <div class="table-habit-name" title="${habit.name}">${habit.name}</div>
-                        <div class="table-habit-category">${habit.category}</div>
                     </td>
                     <td><span class="badge streak-badge">${currentStreak}</span></td>
-                    <td><span class="completion-rate ${last7Days >= 70 ? 'good' : 'low'}">${last7Days}%</span></td>
-                    <td><span class="completion-rate ${last30Days >= 70 ? 'good' : 'low'}">${last30Days}%</span></td>
+                    <td><span class="active-badge">Active</span></td>
+                    <td>${habit.category}</td>
                     <td>
                         <div class="progress-minibar-container">
                             <div class="progress-minibar ${progressClass}" style="width: ${progressPercentage}%"></div>
@@ -2239,13 +2577,14 @@ class HabitTracker {
                     </td>
                 </tr>
             `;
+            }
         });
 
         html += `
-                    </tbody>
-                </table>
-            </div>
-        `;
+                </tbody>
+            </table>
+        </div>
+    `;
 
         return html;
     }
@@ -2283,12 +2622,13 @@ class HabitTracker {
             date: formatLocalDate(new Date()),
             goalType: habit.goalType,
             goalValue: habit.goalValue,
-            streak: habit.getCurrentStreak(),
-            weeklyCompletions: habit.getWeeklyCompletions() // Get weekly completions from history
+            completionIndex: habit.completionHistory.length - 1,
         };
+
 
         habit.achievements.push(achievement);
         habit.lifetimeCompletions++;
+
 
         // Visual celebration
         this.showGoalAchievementCelebration(habit);
@@ -2310,16 +2650,6 @@ class HabitTracker {
 
         this.showNotification(message, 'success');
 
-        // Play achievement sound if enabled
-        if (!localStorage.getItem('habitsSoundDisabled')) {
-            try {
-                const audio = new Audio('data:audio/mp3;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaGR0YQAAAAxNYWRlIHdpdGggR1NNZAAR/+MYxAAAAANIAAAAAExBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV/+MYxDsAAANIAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV/+MYxMQAAANIAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV');
-                audio.volume = 0.5;
-                audio.play();
-            } catch (e) {
-                console.log("Sound couldn't play:", e);
-            }
-        }
     }
 
     // NEW: Handle goal action buttons
@@ -2337,17 +2667,61 @@ class HabitTracker {
                     habit.goalValue = Math.min(7, habit.goalValue + 1);
                 }
                 this.showNotification(`Goal for "${habit.name}" increased to ${habit.goalValue}!`, 'info');
+                habit.goalAcknowledged = true;
                 break;
             case 'acknowledgeGoal':
                 // Simply acknowledge the goal was achieved
                 this.showNotification(`Keep up the great work with "${habit.name}"!`, 'info');
+                habit.goalAcknowledged = true;
                 break;
             case 'archive':
                 // Archive the habit (or mark it as inactive)
                 this.showNotification(`"${habit.name}" has been archived!`, 'info');
+                //build achievements
+                const archivedHabit = new ArchivedHabit();
+                archivedHabit.id = habit.id;
+                archivedHabit.name = habit.name;
+                archivedHabit.category = habit.category;
+                archivedHabit.achievements = [];
+                archivedHabit.streak = habit.getCurrentStreak();
+
+                // Safely copy achievements
+                if (habit.achievements && Array.isArray(habit.achievements)) {
+                    habit.achievements.forEach(achievement => {
+                        const archivedAchievement = {
+                            date: achievement.date,
+                            goalType: achievement.goalType,
+                            completions: []
+                        }
+
+                        // Check if completionIndex exists and is valid
+                        if (achievement.completionIndex !== undefined &&
+                            habit.completionHistory &&
+                            Array.isArray(habit.completionHistory)) {
+
+                            // More safely build the range of completions
+                            const startIndex = Math.max(0, achievement.completionIndex - achievement.goalValue);
+                            const endIndex = achievement.completionIndex;
+
+                            for (let i = startIndex; i <= endIndex; i++) {
+                                if (i >= 0 && i < habit.completionHistory.length) {
+                                    const completion = habit.completionHistory[i];
+                                    if (completion) {  // Only add valid completions
+                                        archivedAchievement.completions.push(completion);
+                                    }
+                                }
+                            }
+                        }
+
+                        archivedHabit.achievements.push(archivedAchievement);
+                    });
+                }
+
+
+                this.archivedHabits.push(archivedHabit);
+                this.habits = this.habits.filter(h => h.id !== habit.id); // Remove from active habits
                 break;
         }
-        habit.goalAcknowledged = true;
 
         this.saveHabits();
         this.renderHabits();
@@ -2501,11 +2875,9 @@ class HabitTracker {
                 logseqBlock += `  - 🏆 Today's Achievements #achievement\n`;
                 todayAchievements.forEach(achievement => {
                     if (achievement.goalType === 'streak') {
-                        logseqBlock += `    - 🔥 Reached ${achievement.streak} day streak for "${achievement.habitName}" #[[${achievement.category}]]\n`;
+                        logseqBlock += `    - 🔥 Reached ${achievement.goalValue} day streak for "${achievement.habitName}" #[[${achievement.category}]]\n`;
                     } else {
-                        const weeklyCompletionCount = Array.isArray(achievement.weeklyCompletions) ?
-                            achievement.weeklyCompletions.length : achievement.weeklyCompletions;
-                        logseqBlock += `    - 🎯 Completed "${achievement.habitName}" ${weeklyCompletionCount} times this week (goal: ${achievement.goalValue}) #[[${achievement.category}]]\n`;
+                        logseqBlock += `    - 🎯 Completed "${achievement.habitName}" ${achievement.goalValue} times this week #[[${achievement.category}]]\n`;
                     }
                 });
             }
@@ -2567,8 +2939,26 @@ class HabitTracker {
                             category: habit.category,
                             goalType: achievement.goalType,
                             goalValue: achievement.goalValue,
-                            streak: achievement.streak,
-                            weeklyCompletions: achievement.weeklyCompletions
+                        });
+                    });
+                }
+            }
+        });
+        //check if archived habits have achievements
+        this.archivedHabits.forEach(archivedHabit => {
+            if (archivedHabit.achievements && Array.isArray(archivedHabit.achievements)) {
+                const achievedToday = archivedHabit.achievements.filter(achievement => {
+                    const achievementDate = formatLocalDate(new Date(achievement.date));
+                    return achievementDate === todayISO;
+                });
+
+                if (achievedToday.length > 0) {
+                    achievedToday.forEach(achievement => {
+                        todayAchievements.push({
+                            habitName: archivedHabit.name,
+                            category: archivedHabit.category,
+                            goalType: achievement.goalType,
+                            goalValue: achievement.completions.length,
                         });
                     });
                 }
