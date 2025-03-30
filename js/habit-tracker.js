@@ -644,7 +644,7 @@ class HabitTracker {
                 habit.goalAcknowledged = false; // Reset goal acknowledgment
 
                 //remove from achievements if exists
-                if (habit.lifetimeCompletions == habit.achievements.length) {
+                if (habit.lifetimeCompletions > 0 && habit.lifetimeCompletions == habit.achievements.length) {
                     habit.achievements.pop();
                     habit.lifetimeCompletions--;
                 }
