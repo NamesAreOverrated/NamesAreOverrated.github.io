@@ -8,11 +8,44 @@ class Timer {
         this.notifications = new TimerNotification();
         this.currentPattern = null;
         this.patternPhase = 0;
+        this.isCountUp = false;
+        this.startTime = 0;
+        this.elapsedTime = 0;
+        this.isEditing = false;
+        this.activeSegment = null;
+        this.timeSegments = {
+            hours: 0,
+            minutes: 0,
+            seconds: 0
+        };
 
         // Initialize patterns
         this.initializePatterns();
-        this.loadPatterns();
         this.initializeEventListeners();
+
+        // Initialize UI default state
+        this.initializeDefaultUIState();
+    }
+
+    // Add this new method to initialize default UI state
+    initializeDefaultUIState() {
+        // Set default phase info message
+        const phaseInfo = document.querySelector('.phase-info');
+        if (phaseInfo) {
+            phaseInfo.textContent = 'Select a pattern to begin';
+        }
+
+        // Make sure phase timeline is visible
+        const phaseTimeline = document.querySelector('.phase-timeline');
+        if (phaseTimeline) {
+            phaseTimeline.style.display = 'block';
+        }
+
+        // Hide the breathing guide until a pattern is selected
+        const breathingGuide = document.querySelector('.breathing-guide');
+        if (breathingGuide) {
+            breathingGuide.style.display = 'none';
+        }
     }
 
     initializePatterns() {
@@ -52,95 +85,7 @@ class Timer {
         };
     }
 
-    loadPatterns() {
-        try {
-            // Load saved custom patterns from localStorage
-            const savedPatterns = JSON.parse(localStorage.getItem('customPatterns')) || {};
-            this.patterns = { ...this.patterns, ...savedPatterns };
-            this.renderCustomPatterns();
-        } catch (error) {
-            console.error('Error loading saved patterns:', error);
-        }
-    }
-
-    renderCustomPatterns() {
-        const customGrid = document.querySelector('.custom-grid');
-        customGrid.innerHTML = '';
-
-        // Get custom patterns and sort by latest first
-        const customPatterns = Object.values(this.patterns)
-            .filter(p => p.custom)
-            .sort((a, b) => b.id.localeCompare(a.id));
-
-        customPatterns.forEach(pattern => {
-            const card = this.createPatternCard(pattern);
-            customGrid.appendChild(card);
-        });
-    }
-
-    savePattern(pattern) {
-        try {
-            const savedPatterns = JSON.parse(localStorage.getItem('customPatterns')) || {};
-            savedPatterns[pattern.id] = pattern;
-            localStorage.setItem('customPatterns', JSON.stringify(savedPatterns));
-            this.patterns[pattern.id] = pattern;
-            this.renderCustomPatterns();
-
-            // Switch to custom patterns view and select the new pattern
-            const customBtn = document.querySelector('.pattern-btn[data-pattern="custom"]');
-            if (!customBtn.classList.contains('active')) {
-                customBtn.click();
-            }
-            this.setPattern(pattern.id);
-            this.hideEditor();
-        } catch (error) {
-            console.error('Error saving pattern:', error);
-        }
-    }
-
-    deletePattern(patternId) {
-        try {
-            if (confirm('Are you sure you want to delete this pattern?')) {
-                const savedPatterns = JSON.parse(localStorage.getItem('customPatterns')) || {};
-                delete savedPatterns[patternId];
-                localStorage.setItem('customPatterns', JSON.stringify(savedPatterns));
-                delete this.patterns[patternId];
-
-                // Reset if current pattern was deleted
-                if (this.currentPattern === patternId) {
-                    this.reset();
-                    this.currentPattern = null;
-                }
-
-                this.renderCustomPatterns();
-            }
-        } catch (error) {
-            console.error('Error deleting pattern:', error);
-        }
-    }
-
     initializeEventListeners() {
-        // Pattern type selection
-        document.querySelectorAll('.pattern-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.pattern-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-
-                // Reset current pattern
-                this.reset();
-                this.currentPattern = null;
-
-                // Show/hide relevant sections
-                const isCustom = btn.dataset.pattern === 'custom';
-                document.querySelector('.pattern-presets').parentElement.style.display = isCustom ? 'none' : 'block';
-                document.getElementById('custom-patterns').style.display = isCustom ? 'block' : 'none';
-
-                if (isCustom) {
-                    this.clearEditor();
-                }
-            });
-        });
-
         // Pattern selection
         document.querySelector('.pattern-grid').addEventListener('click', (e) => {
             const card = e.target.closest('.pattern-card');
@@ -153,29 +98,116 @@ class Timer {
             this.setPattern(card.dataset.pattern);
         });
 
+        // Tab navigation
+        document.querySelectorAll('.pattern-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Toggle active class for tabs
+                document.querySelectorAll('.pattern-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                // Show/hide relevant content
+                if (btn.dataset.pattern === 'countdown') {
+                    document.querySelector('.pattern-grid').style.display = 'none';
+                    this.setupCustomTimer();
+                    // Show the toggle when in custom timer mode
+                    document.querySelector('.timer-mode-toggle').style.display = 'flex';
+                } else {
+                    document.querySelector('.pattern-grid').style.display = 'grid';
+                    this.disableTimeEditing();
+
+                    // Hide the toggle when not in custom timer mode
+                    document.querySelector('.timer-mode-toggle').style.display = 'none';
+
+                    // Reset phase info when switching to presets tab
+                    this.resetPhaseInfo();
+                }
+            });
+        });
+
         // Timer controls
         document.getElementById('start-timer').addEventListener('click', () => this.start());
         document.getElementById('pause-timer').addEventListener('click', () => this.pause());
         document.getElementById('reset-timer').addEventListener('click', () => this.reset());
 
-        // Pattern editor controls
-        document.getElementById('new-pattern').addEventListener('click', () => {
-            this.showEditor();
-            this.clearEditor();
+        // Count direction toggle
+        const countDirectionToggle = document.getElementById('count-direction-toggle');
+        if (countDirectionToggle) {
+            countDirectionToggle.addEventListener('change', (e) => {
+                this.isCountUp = e.target.checked;
+                document.querySelector('.toggle-label').textContent = this.isCountUp ? 'Count Up' : 'Count Down';
+
+                // Reset the timer display to 00:00:00 when switching to Count Up
+                if (this.isCountUp) {
+                    this.timeLeft = 0;
+                    this.elapsedTime = 0;
+                    this.updateDisplay();
+                    this.timeSegments = { hours: 0, minutes: 0, seconds: 0 };
+
+                    // Update phase info
+                    document.querySelector('.phase-info').textContent = 'Custom Count Up Timer';
+                } else {
+                    // Update phase info
+                    document.querySelector('.phase-info').textContent = 'Custom Countdown Timer';
+                }
+            });
+        }
+
+        // Timer display click for editing
+        const timerDisplay = document.getElementById('timer-display');
+        if (timerDisplay) {
+            timerDisplay.addEventListener('click', (e) => {
+                if (this.currentPattern === 'custom' && !this.isRunning) {
+                    this.enableTimeEditing();
+
+                    // Determine which segment was clicked
+                    const rect = timerDisplay.getBoundingClientRect();
+                    const clickPosition = e.clientX - rect.left;
+                    const segmentWidth = rect.width / 3;
+
+                    if (clickPosition < segmentWidth) {
+                        this.setActiveSegment('hours');
+                    } else if (clickPosition < segmentWidth * 2) {
+                        this.setActiveSegment('minutes');
+                    } else {
+                        this.setActiveSegment('seconds');
+                    }
+
+                    e.stopPropagation();
+                }
+            });
+
+            // Handle key events for editing time
+            timerDisplay.addEventListener('keydown', (e) => {
+                if (!this.isEditing) return;
+
+                e.preventDefault();
+
+                const key = e.key;
+
+                if (key >= '0' && key <= '9') {
+                    this.updateSegmentValue(this.activeSegment, key);
+                } else if (key === 'ArrowLeft') {
+                    this.navigateSegment('prev');
+                } else if (key === 'ArrowRight') {
+                    this.navigateSegment('next');
+                } else if (key === 'Tab') {
+                    this.navigateSegment(e.shiftKey ? 'prev' : 'next');
+                } else if (key === 'Enter') {
+                    this.disableTimeEditing();
+                } else if (key === 'Escape') {
+                    this.disableTimeEditing();
+                } else if (key === 'Backspace' || key === 'Delete') {
+                    this.resetSegmentValue(this.activeSegment);
+                }
+            });
+        }
+
+        // Click outside to exit editing mode
+        document.addEventListener('click', (e) => {
+            if (this.isEditing && !e.target.closest('#timer-display')) {
+                this.disableTimeEditing();
+            }
         });
-
-        // Add edit button to pattern cards
-        document.querySelector('.pattern-grid').addEventListener('contextmenu', (e) => {
-            e.preventDefault();
-            const card = e.target.closest('.pattern-card');
-            if (!card || !this.patterns[card.dataset.pattern]?.custom) return;
-
-            this.showEditor();
-            this.loadPattern(card.dataset.pattern);
-        });
-
-        document.getElementById('add-phase').addEventListener('click', () => this.addPhase());
-        document.getElementById('save-pattern').addEventListener('click', () => this.saveCurrentPattern());
 
         // Phase timeline interaction
         document.querySelector('.phase-indicators').addEventListener('click', (e) => {
@@ -188,141 +220,208 @@ class Timer {
             }
         });
 
-        // New pattern button
-        document.getElementById('new-pattern').addEventListener('click', () => {
-            this.showEditor();
-        });
-
         // Edit controls
-        document.getElementById('save-changes').addEventListener('click', () => {
-            this.saveEdits();
-        });
-
         document.getElementById('cancel-edit').addEventListener('click', () => {
             this.hideEditor();
         });
     }
 
-    clearEditor() {
-        document.getElementById('pattern-name').value = '';
-        document.getElementById('pattern-repeat').checked = true;
-        document.getElementById('auto-start').checked = true;
+    enableTimeEditing() {
+        const timerDisplay = document.getElementById('timer-display');
+        if (!timerDisplay) return;
 
-        const phasesList = document.getElementById('phases-list');
-        phasesList.innerHTML = '';
+        this.isEditing = true;
+        timerDisplay.classList.add('editable', 'editing');
+        timerDisplay.setAttribute('tabindex', '0');
+        timerDisplay.focus();
 
-        // Add one empty phase by default
-        this.addPhase();
-    }
+        // Parse current time
+        const timeText = timerDisplay.textContent;
+        const [hours, minutes, seconds] = timeText.split(':').map(val => parseInt(val, 10));
 
-    addPhase() {
-        const phasesList = document.getElementById('phases-list');
-        const template = document.getElementById('phase-template');
-        const phase = template.content.cloneNode(true);
-
-        // Set phase number
-        const phaseCount = phasesList.children.length + 1;
-        phase.querySelector('.phase-number').textContent = `Phase ${phaseCount}`;
-
-        // Add remove button handler
-        phase.querySelector('.remove-phase').addEventListener('click', (e) => {
-            e.target.closest('.phase').remove();
-            this.updatePhaseNumbers();
-        });
-
-        phasesList.appendChild(phase);
-    }
-
-    updatePhaseNumbers() {
-        const phasesList = document.getElementById('phases-list');
-        Array.from(phasesList.children).forEach((phase, index) => {
-            phase.querySelector('.phase-number').textContent = `Phase ${index + 1}`;
-        });
-    }
-
-    saveCurrentPattern() {
-        const name = document.getElementById('pattern-name').value;
-        if (!name) {
-            alert('Please enter a pattern name');
-            return;
-        }
-
-        const phases = [];
-        const phaseElements = document.getElementById('phases-list').children;
-        Array.from(phaseElements).forEach(phaseElement => {
-            const duration = parseInt(phaseElement.querySelector('.duration-input').value) || 0;
-            const unit = parseInt(phaseElement.querySelector('.duration-unit').value) || 1;
-            const message = phaseElement.querySelector('.phase-message').value;
-
-            phases.push({
-                duration: duration * unit,
-                message: message || `Phase ${phases.length + 1}`,
-                type: 'custom'
-            });
-        });
-
-        if (phases.length === 0) {
-            alert('Please add at least one phase');
-            return;
-        }
-
-        const pattern = {
-            id: `custom-${Date.now()}`,
-            name,
-            phases,
-            repeat: document.getElementById('pattern-repeat').checked,
-            autoStart: document.getElementById('auto-start').checked,
-            custom: true
+        this.timeSegments = {
+            hours: hours || 0,
+            minutes: minutes || 0,
+            seconds: seconds || 0
         };
 
-        this.savePattern(pattern);
-        this.setPattern(pattern.id);
+        this.renderEditableTime();
     }
 
-    loadPattern(patternId) {
-        const pattern = this.patterns[patternId];
-        if (!pattern) return;
+    disableTimeEditing() {
+        const timerDisplay = document.getElementById('timer-display');
+        if (!timerDisplay) return;
 
-        if (pattern.custom) {
-            // Switch to custom pattern view if not already there
-            const customButton = document.querySelector('.pattern-btn[data-pattern="custom"]');
-            if (!customButton.classList.contains('active')) {
-                customButton.click();
-            }
+        this.isEditing = false;
+        timerDisplay.classList.remove('editing');
+        timerDisplay.removeAttribute('contenteditable');
 
-            // Clear existing phases
-            const phasesList = document.getElementById('phases-list');
-            phasesList.innerHTML = '';
+        // Update the timer with the new time values
+        if (this.currentPattern === 'custom') {
+            const { hours, minutes, seconds } = this.timeSegments;
+            this.timeLeft = hours * 3600 + minutes * 60 + seconds;
+            this.startTime = this.timeLeft;
+            this.updateDisplay();
+        }
+    }
 
-            // Load pattern data into editor
-            document.getElementById('pattern-name').value = pattern.name;
-            document.getElementById('pattern-repeat').checked = pattern.repeat;
-            document.getElementById('auto-start').checked = pattern.autoStart !== false;
+    setActiveSegment(segment) {
+        this.activeSegment = segment;
+        this.renderEditableTime();
+    }
 
-            // Add phases
-            pattern.phases.forEach(phase => {
-                this.addPhase();
-                const phaseElement = phasesList.lastElementChild;
+    navigateSegment(direction) {
+        const segments = ['hours', 'minutes', 'seconds'];
+        const currentIndex = segments.indexOf(this.activeSegment);
+        let newIndex;
 
-                // Handle unit selection and duration value
-                const durationInput = phaseElement.querySelector('.duration-input');
-                const durationUnit = phaseElement.querySelector('.duration-unit');
-                if (phase.duration >= 60 && phase.duration % 60 === 0) {
-                    durationUnit.value = '60';
-                    durationInput.value = phase.duration / 60;
-                } else {
-                    durationUnit.value = '1';
-                    durationInput.value = phase.duration;
-                }
-
-                phaseElement.querySelector('.phase-message').value = phase.message;
-            });
+        if (direction === 'next') {
+            newIndex = (currentIndex + 1) % segments.length;
+        } else {
+            newIndex = (currentIndex - 1 + segments.length) % segments.length;
         }
 
-        this.setPattern(patternId);
+        this.setActiveSegment(segments[newIndex]);
+    }
+
+    updateSegmentValue(segment, digit) {
+        const value = parseInt(digit, 10);
+        const currentValue = this.timeSegments[segment];
+
+        let newValue;
+        const maxValue = segment === 'hours' ? 99 : 59;
+
+        // Shift and add the new digit
+        newValue = (currentValue * 10 + value) % (maxValue + 1);
+        this.timeSegments[segment] = newValue;
+
+        this.renderEditableTime();
+    }
+
+    resetSegmentValue(segment) {
+        this.timeSegments[segment] = 0;
+        this.renderEditableTime();
+    }
+
+    renderEditableTime() {
+        const timerDisplay = document.getElementById('timer-display');
+        if (!timerDisplay) return;
+
+        const { hours, minutes, seconds } = this.timeSegments;
+
+        const hoursHtml = `<span class="time-segment ${this.activeSegment === 'hours' ? 'active' : ''}">${hours.toString().padStart(2, '0')}</span>`;
+        const minutesHtml = `<span class="time-segment ${this.activeSegment === 'minutes' ? 'active' : ''}">${minutes.toString().padStart(2, '0')}</span>`;
+        const secondsHtml = `<span class="time-segment ${this.activeSegment === 'seconds' ? 'active' : ''}">${seconds.toString().padStart(2, '0')}</span>`;
+
+        timerDisplay.innerHTML = `${hoursHtml}<span class="time-segment-separator">:</span>${minutesHtml}<span class="time-segment-separator">:</span>${secondsHtml}`;
+    }
+
+    setupCustomTimer() {
+        // Set up the timer display for custom countdown/up
+        this.currentPattern = 'custom';
+
+        // Initialize timeSegments before reset to avoid null reference issues
+        this.timeSegments = {
+            hours: 0,
+            minutes: 0,
+            seconds: 0
+        };
+
+        this.reset();
+
+        // Get timer display and make it editable
+        const timerDisplay = document.getElementById('timer-display');
+        if (timerDisplay) {
+            timerDisplay.classList.add('editable');
+        }
+
+        // Keep phase timeline visible but empty it
+        const phaseTimeline = document.querySelector('.phase-timeline');
+        if (phaseTimeline) {
+            phaseTimeline.style.display = 'block';
+            const phaseIndicators = document.querySelector('.phase-indicators');
+            if (phaseIndicators) {
+                // Simply clear the indicators without adding the empty-timeline message
+                phaseIndicators.innerHTML = '';
+            }
+        }
+
+        // Hide only the breathing guide for custom timer
+        document.querySelector('.breathing-guide').style.display = 'none';
+
+        // Update phase info based on toggle state and make it clickable
+        const phaseInfo = document.querySelector('.phase-info');
+        if (phaseInfo) {
+            this.updateDirectionIndicator();
+            phaseInfo.classList.add('clickable');
+
+            // Add click handler if not already added
+            if (!phaseInfo.hasClickHandler) {
+                // Store the handler function so we can remove it later
+                phaseInfo._clickHandler = () => {
+                    if (this.currentPattern === 'custom' && !this.isRunning) {
+                        // Toggle count direction
+                        this.isCountUp = !this.isCountUp;
+
+                        // Update the hidden checkbox (to maintain synchronization)
+                        const toggle = document.getElementById('count-direction-toggle');
+                        if (toggle) toggle.checked = this.isCountUp;
+
+                        this.updateDirectionIndicator();
+
+                        // Reset timer values for the new mode
+                        if (this.isCountUp) {
+                            this.timeLeft = 0;
+                            this.elapsedTime = 0;
+                        } else {
+                            this.updateCustomTime();
+                        }
+                        this.updateDisplay();
+                    }
+                };
+
+                phaseInfo.addEventListener('click', phaseInfo._clickHandler);
+                phaseInfo.hasClickHandler = true;
+            }
+        }
+
+        if (this.isCountUp) {
+            this.timeLeft = 0;
+            this.elapsedTime = 0;
+        } else {
+            this.timeLeft = 0; // Default to 0, user will set it by clicking on timer
+        }
+        this.updateDisplay();
+    }
+
+    updateCustomTime() {
+        if (this.currentPattern !== 'custom') return;
+
+        // Instead of trying to get values from non-existent input elements,
+        // use the timeSegments object which is already maintained throughout the app
+        const { hours, minutes, seconds } = this.timeSegments;
+
+        // Set time left for countdown
+        this.timeLeft = hours * 3600 + minutes * 60 + seconds;
+        this.startTime = this.timeLeft; // Store for reset
+
+        // Update display
+        this.updateDisplay();
     }
 
     setPattern(patternId) {
+        // Show timeline and hide custom timer elements
+        document.querySelector('.phase-timeline').style.display = 'block';
+
+        // Hide the toggle when using a preset pattern
+        document.querySelector('.timer-mode-toggle').style.display = 'none';
+
+        // Reset any custom timer state in phase info
+        const phaseInfo = document.querySelector('.phase-info');
+        if (phaseInfo) {
+            phaseInfo.classList.remove('clickable');
+        }
+
         this.reset();
         this.currentPattern = patternId;
         this.patternPhase = 0;
@@ -334,6 +433,12 @@ class Timer {
             this.updatePhaseInfo(pattern.phases[0]);
             this.updateVisualization(pattern);
             this.renderPhaseTimeline(pattern);
+
+            // Show the breathing guide if this pattern has visualization
+            const breathingGuide = document.querySelector('.breathing-guide');
+            if (breathingGuide) {
+                breathingGuide.style.display = pattern.visualization ? 'block' : 'none';
+            }
         }
     }
 
@@ -353,28 +458,13 @@ class Timer {
             phaseNumber.textContent = index + 1;
             indicator.appendChild(phaseNumber);
 
+            // Add progress fill element to each phase indicator
+            const progressFill = document.createElement('div');
+            progressFill.className = 'progress-fill';
+            indicator.appendChild(progressFill);
+
             if (index === this.patternPhase) {
                 indicator.classList.add('active');
-            }
-
-            // Show edit button on hover for custom patterns
-            if (pattern.custom) {
-                const editBtn = document.createElement('button');
-                editBtn.className = 'edit-phase-btn';
-                editBtn.innerHTML = '✏️';
-                editBtn.style.display = 'none';
-                editBtn.onclick = (e) => {
-                    e.stopPropagation();
-                    this.editPhase(index);
-                };
-                indicator.appendChild(editBtn);
-
-                indicator.addEventListener('mouseenter', () => {
-                    editBtn.style.display = 'block';
-                });
-                indicator.addEventListener('mouseleave', () => {
-                    editBtn.style.display = 'none';
-                });
             }
 
             container.appendChild(indicator);
@@ -382,32 +472,28 @@ class Timer {
             // Add connecting line if not last phase
             if (index < pattern.phases.length - 1) {
                 const line = document.createElement('div');
-                line.className = 'phase-connector';
+                line.className = `phase-connector ${pattern.phases[index + 1].type}`;
+
+                // Add progress fill element for connector
+                const connectorFill = document.createElement('div');
+                connectorFill.className = 'progress-fill';
+                line.appendChild(connectorFill);
+
                 container.appendChild(line);
             }
         });
-    }
 
-    editPhase(index) {
-        const pattern = this.patterns[this.currentPattern];
-        if (!pattern?.custom) return;
-
-        const phase = pattern.phases[index];
-        const indicator = document.querySelector(`.phase-indicator[data-index="${index}"]`);
-
-        // Show edit interface
-        indicator.classList.add('editable');
-        this.showEditor();
-
-        // Pre-fill phase data
-        document.getElementById('phase-duration').value = phase.duration;
-        document.getElementById('phase-message').value = phase.message;
-        document.getElementById('phase-type').value = phase.type;
+        // Initialize progress for active phase
+        this.updateProgress();
     }
 
     formatDuration(seconds) {
-        if (seconds >= 60 && seconds % 60 === 0) {
-            return `${seconds / 60}m`;
+        if (seconds >= 60) {
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            return remainingSeconds > 0 ?
+                `${minutes}m ${remainingSeconds}s` :
+                `${minutes}m`;
         }
         return `${seconds}s`;
     }
@@ -426,55 +512,67 @@ class Timer {
         document.querySelectorAll('.phase-indicator').forEach((indicator, i) => {
             indicator.classList.toggle('active', i === index);
         });
-    }
 
-    createPatternCard(pattern) {
-        const card = document.createElement('div');
-        card.className = 'pattern-card';
-        card.dataset.pattern = pattern.id;
-
-        card.innerHTML = `
-            <h3>${pattern.name}</h3>
-            <div class="pattern-preview">
-                <div class="phase-dots">
-                    ${pattern.phases.map(phase => `
-                        <span class="dot ${phase.type}">${this.formatDuration(phase.duration)}</span>
-                    `).join('')}
-                </div>
-            </div>
-        `;
-
-        return card;
-    }
-
-    showEditor() {
-        document.querySelector('.edit-overlay').style.display = 'flex';
+        // Reset progress and update for the new phase
+        this.updateProgress();
     }
 
     hideEditor() {
         document.querySelector('.edit-overlay').style.display = 'none';
     }
 
-    saveEdits() {
-        // Save edits will be implemented when we add the editing functionality
-        this.hideEditor();
-    }
-
     start() {
-        if (!this.isRunning && this.timeLeft > 0) {
-            this.isRunning = true;
-            document.getElementById('start-timer').disabled = true;
-            document.getElementById('pause-timer').disabled = false;
+        if (this.isRunning) return;
 
-            this.intervalId = setInterval(() => {
+        // If in editing mode, exit it
+        if (this.isEditing) {
+            this.disableTimeEditing();
+        }
+
+        if (this.currentPattern === 'custom' && this.timeLeft === 0 && !this.isCountUp) {
+            // Don't start if countdown timer is at 0
+            return;
+        }
+
+        this.isRunning = true;
+        document.getElementById('start-timer').disabled = true;
+        document.getElementById('pause-timer').disabled = false;
+
+        // For count up timer, record start time if starting from 0
+        if (this.currentPattern === 'custom' && this.elapsedTime === 0) {
+            this.elapsedTime = 0;
+        }
+
+        this.intervalId = setInterval(() => {
+            if (this.currentPattern === 'custom' && this.isCountUp) {
+                // Count up logic
+                this.elapsedTime++;
+                this.timeLeft = this.elapsedTime;
+                this.updateDisplay();
+            } else {
+                // Countdown logic (works for custom and phases)
                 this.timeLeft--;
                 this.updateDisplay();
 
-                if (this.timeLeft <= 0) {
-                    this.handlePhaseComplete();
+                if (this.currentPattern !== 'custom') {
+                    this.updateProgress();
                 }
-            }, 1000);
-        }
+
+                if (this.timeLeft <= 0) {
+                    if (this.currentPattern === 'custom') {
+                        // Custom countdown finished
+                        this.pause();
+                        this.notifications.notify({
+                            title: 'Custom Timer',
+                            body: 'Your timer has finished!'
+                        });
+                    } else {
+                        // Phase timer finished
+                        this.handlePhaseComplete();
+                    }
+                }
+            }
+        }, 1000);
     }
 
     pause() {
@@ -488,17 +586,39 @@ class Timer {
 
     reset() {
         this.pause();
-        this.patternPhase = 0;
 
-        const pattern = this.patterns[this.currentPattern];
-        if (pattern) {
-            this.timeLeft = pattern.phases[0].duration;
+        if (this.currentPattern === 'custom') {
+            // Reset custom timer
+            if (this.isCountUp) {
+                this.timeLeft = 0;
+                this.elapsedTime = 0;
+            } else {
+                // Reset to existing time segments for countdown
+                this.updateCustomTime();
+            }
             this.updateDisplay();
-            this.updatePhaseInfo(pattern.phases[0]);
-            this.updateVisualization(pattern);
+            this.updateDirectionIndicator();
         } else {
-            this.timeLeft = 0;
-            this.updateDisplay();
+            // Reset pattern timer
+            this.patternPhase = 0;
+            const pattern = this.patterns[this.currentPattern];
+            if (pattern) {
+                this.timeLeft = pattern.phases[0].duration;
+                this.updateDisplay();
+                this.updatePhaseInfo(pattern.phases[0]);
+                this.updateVisualization(pattern);
+            } else {
+                this.timeLeft = 0;
+                this.updateDisplay();
+            }
+
+            // Reset progress fills
+            document.querySelectorAll('.progress-fill').forEach(fill => {
+                fill.style.width = '0%';
+            });
+            document.querySelectorAll('.phase-indicator .progress-fill').forEach(fill => {
+                fill.style.height = '0%';
+            });
         }
 
         document.getElementById('start-timer').disabled = false;
@@ -549,11 +669,11 @@ class Timer {
                 inline: 'center'
             });
 
-            // Auto-start next phase if enabled
-            const shouldAutoStart = pattern.custom ? pattern.autoStart !== false : true;
-            if (shouldAutoStart) {
-                this.start();
-            }
+            // Reset and start the progress for the new phase
+            this.updateProgress();
+
+            // Auto-start next phase
+            this.start();
         }
     }
 
@@ -563,7 +683,16 @@ class Timer {
         const seconds = this.timeLeft % 60;
 
         const display = document.querySelector('.timer-display .time');
-        display.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        if (!this.isEditing) {
+            display.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        // When in custom mode, also update the timeSegments object
+        if (this.currentPattern === 'custom') {
+            this.timeSegments.hours = hours;
+            this.timeSegments.minutes = minutes;
+            this.timeSegments.seconds = seconds;
+        }
     }
 
     updatePhaseInfo(phase) {
@@ -596,11 +725,114 @@ class Timer {
             circle.style.animation = 'none';
         }
 
-        instruction.textContent = phase.message;
+        // Remove this line that duplicates the phase info
+        // instruction.textContent = phase.message;
+    }
+
+    // Updated method to update progress display
+    updateProgress() {
+        const pattern = this.patterns[this.currentPattern];
+        if (!pattern) return;
+
+        const phases = pattern.phases;
+        const currentPhase = phases[this.patternPhase];
+        const totalDuration = currentPhase.duration;
+        const elapsedTime = totalDuration - this.timeLeft;
+        const progressPercentage = Math.min((elapsedTime / totalDuration) * 100, 100);
+
+        // Reset all progress fills in connectors (horizontal fill)
+        document.querySelectorAll('.phase-connector .progress-fill').forEach(fill => {
+            fill.style.width = '0%';
+        });
+
+        // Reset all progress fills in indicators (vertical fill)
+        document.querySelectorAll('.phase-indicator .progress-fill').forEach(fill => {
+            fill.style.height = '0%';
+        });
+
+        // Update the current phase's progress fill - vertical water-like fill
+        const indicators = document.querySelectorAll('.phase-indicator');
+        const currentIndicator = indicators[this.patternPhase];
+        if (currentIndicator) {
+            const progressFill = currentIndicator.querySelector('.progress-fill');
+            if (progressFill) {
+                progressFill.style.height = `${progressPercentage}%`;
+            }
+        }
+
+        // Update progress for connector if not the last phase - horizontal fill
+        if (this.patternPhase < phases.length - 1) {
+            const connectors = document.querySelectorAll('.phase-connector');
+            const currentConnector = connectors[this.patternPhase];
+            if (currentConnector) {
+                const progressFill = currentConnector.querySelector('.progress-fill');
+                if (progressFill) {
+                    progressFill.style.width = `${progressPercentage}%`;
+                }
+            }
+        }
+    }
+
+    // New method to update the direction indicator in the phase info text
+    updateDirectionIndicator() {
+        const phaseInfo = document.querySelector('.phase-info');
+        if (phaseInfo && this.currentPattern === 'custom') {
+            if (this.isCountUp) {
+                phaseInfo.innerHTML = '<span class="timer-direction up">⬆</span> Custom Count Up Timer';
+            } else {
+                phaseInfo.innerHTML = '<span class="timer-direction down">⬇</span> Custom Countdown Timer';
+            }
+        }
+    }
+
+    // Add a new method to reset phase info
+    resetPhaseInfo() {
+        const phaseInfo = document.querySelector('.phase-info');
+        if (phaseInfo) {
+            // Remove clickable class and event listener
+            phaseInfo.classList.remove('clickable');
+            phaseInfo.innerHTML = 'Select a pattern to begin';
+
+            // Remove the click handler
+            if (phaseInfo.hasClickHandler) {
+                phaseInfo.removeEventListener('click', phaseInfo._clickHandler);
+                phaseInfo.hasClickHandler = false;
+                delete phaseInfo._clickHandler;
+            }
+        }
     }
 }
 
 // Initialize timer when script is loaded
 document.addEventListener('DOMContentLoaded', () => {
     window.Timer = Timer; // Make Timer class globally available
+
+    // Hide the toggle by default on page load
+    const toggleElement = document.querySelector('.timer-mode-toggle');
+    if (toggleElement) {
+        toggleElement.style.display = 'none';
+    }
+
+    // Add a forced initialization for routing cases
+    if (window.location.hash === '#/timer') {
+        setTimeout(() => {
+            const timerInstance = new Timer();
+            window.timerInstance = timerInstance;
+
+            // Just initialize without adding empty-timeline message
+            if (!document.querySelector('.pattern-card.active')) {
+                const phaseIndicators = document.querySelector('.phase-indicators');
+                if (phaseIndicators) {
+                    // Simply clear the indicators
+                    phaseIndicators.innerHTML = '';
+                }
+            }
+
+            // Check if we need to show the countdown tab
+            const countdownButton = document.querySelector('.pattern-btn[data-pattern="countdown"]');
+            if (countdownButton && countdownButton.classList.contains('active')) {
+                timerInstance.setupCustomTimer();
+            }
+        }, 100); // Short delay to ensure DOM is ready
+    }
 });

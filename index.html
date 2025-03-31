@@ -299,7 +299,7 @@
         <div class="pattern-selector">
             <div class="pattern-tabs">
                 <button class="pattern-btn active" data-pattern="presets">Presets</button>
-                <button class="pattern-btn" data-pattern="custom">Custom</button>
+                <button class="pattern-btn" data-pattern="countdown">Custom Timer</button>
             </div>
 
             <div class="pattern-content">
@@ -309,8 +309,8 @@
                         <h3>Pomodoro</h3>
                         <div class="pattern-preview">
                             <div class="phase-dots">
-                                <span class="dot focus">25m</span>
-                                <span class="dot break">5m</span>
+                                <span class="dot focus"></span>
+                                <span class="dot break"></span>
                             </div>
                         </div>
                     </div>
@@ -318,9 +318,9 @@
                         <h3>4-7-8 Breathing</h3>
                         <div class="pattern-preview">
                             <div class="phase-dots">
-                                <span class="dot inhale">4s</span>
-                                <span class="dot hold">7s</span>
-                                <span class="dot exhale">8s</span>
+                                <span class="dot inhale"></span>
+                                <span class="dot hold"></span>
+                                <span class="dot exhale"></span>
                             </div>
                         </div>
                     </div>
@@ -328,30 +328,31 @@
                         <h3>Box Breathing</h3>
                         <div class="pattern-preview">
                             <div class="phase-dots">
-                                <span class="dot inhale">4s</span>
-                                <span class="dot hold">4s</span>
-                                <span class="dot exhale">4s</span>
-                                <span class="dot hold">4s</span>
+                                <span class="dot inhale"></span>
+                                <span class="dot hold"></span>
+                                <span class="dot exhale"></span>
+                                <span class="dot hold"></span>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Custom patterns will be added here -->
-                <div id="custom-patterns" style="display: none;">
-                    <div class="patterns-controls">
-                        <button class="timer-btn" id="new-pattern">New Pattern</button>
-                    </div>
-                    <div class="pattern-grid custom-grid">
-                        <!-- Custom patterns will be added dynamically -->
-                    </div>
-                </div>
+                <!-- Countdown-timer-container removed -->
             </div>
         </div>
 
         <div class="timer-container">
             <div class="timer-display">
-                <div class="time">00:00:00</div>
+                <div class="time-container">
+                    <div class="time" id="timer-display">00:00:00</div>
+                    <!-- Moved toggle here next to the timer display -->
+                    <div class="timer-mode-toggle">
+                        <label>
+                            <input type="checkbox" id="count-direction-toggle">
+                            <span class="toggle-label">Count Up</span>
+                        </label>
+                    </div>
+                </div>
                 <div class="phase-info"></div>
                 <div class="breathing-guide">
                     <div class="circle"></div>
@@ -367,7 +368,6 @@
 
             <div class="edit-overlay" style="display: none;">
                 <div class="edit-controls">
-                    <button class="timer-btn" id="save-changes">Save</button>
                     <button class="timer-btn" id="cancel-edit">Cancel</button>
                 </div>
             </div>
@@ -377,6 +377,7 @@
             <button class="timer-btn" id="start-timer">Start</button>
             <button class="timer-btn" id="pause-timer">Pause</button>
             <button class="timer-btn" id="reset-timer">Reset</button>
+            <!-- Removed toggle from here -->
         </div>
 
         <div class="timer-settings">
@@ -396,71 +397,6 @@
                 <label>Sound Effects</label>
                 <div class="sound-controls">
                     <input type="checkbox" id="sound-toggle" checked>
-                </div>
-            </div>
-        </div>
-
-        <div class="pattern-editor section" style="display: none;">
-            <h3>> Pattern_Editor</h3>
-
-            <div class="editor-container">
-                <div class="pattern-details">
-                    <div class="form-row">
-                        <label for="pattern-name">Pattern Name:</label>
-                        <input type="text" id="pattern-name" placeholder="Enter pattern name">
-                    </div>
-
-                    <div class="pattern-options">
-                        <div class="option">
-                            <label>
-                                <input type="checkbox" id="pattern-repeat" checked>
-                                Repeat Pattern
-                            </label>
-                        </div>
-                        <div class="option">
-                            <label>
-                                <input type="checkbox" id="auto-start" checked>
-                                Auto-start Next Phase
-                            </label>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="phases-section">
-                    <h4>> Phases</h4>
-                    <div id="phases-list">
-                        <!-- Phases will be added here -->
-                    </div>
-                    <!-- Phase template -->
-                    <template id="phase-template">
-                        <div class="phase">
-                            <div class="phase-header">
-                                <span class="phase-number"></span>
-                                <button type="button" class="remove-phase">&times;</button>
-                            </div>
-                            <div class="form-group">
-                                <div class="duration-row">
-                                    <label>Duration:</label>
-                                    <div class="duration-inputs">
-                                        <input type="number" class="duration-input" min="1" value="5">
-                                        <select class="duration-unit">
-                                            <option value="1">Seconds</option>
-                                            <option value="60">Minutes</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="message-row">
-                                    <label>Message:</label>
-                                    <input type="text" class="phase-message" placeholder="Phase instruction">
-                                </div>
-                            </div>
-                        </div>
-                    </template>
-
-                    <div class="phases-controls">
-                        <button class="timer-btn" id="add-phase">Add Phase</button>
-                        <button class="timer-btn" id="save-pattern">Save Pattern</button>
-                    </div>
                 </div>
             </div>
         </div>

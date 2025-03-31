@@ -291,3 +291,217 @@ body.disco-mode a:hover {
         border-color: rgba(255, 190, 11, 0.2);
     }
 }
+
+/* Timer phase timeline disco effects - SMOOTHER AND LESS DISTRACTING */
+body.disco-mode .phase-timeline {
+    animation: disco-timeline-bg 5.8s ease-in-out infinite;
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
+}
+
+@keyframes disco-timeline-bg {
+
+    0%,
+    100% {
+        background-color: rgba(30, 30, 40, 0.5);
+        box-shadow: 0 0 8px rgba(255, 0, 110, 0.05);
+    }
+
+    25% {
+        background-color: rgba(30, 35, 45, 0.5);
+        box-shadow: 0 0 8px rgba(58, 134, 255, 0.05);
+    }
+
+    50% {
+        background-color: rgba(30, 30, 45, 0.5);
+        box-shadow: 0 0 8px rgba(131, 56, 236, 0.05);
+    }
+
+    75% {
+        background-color: rgba(35, 30, 40, 0.5);
+        box-shadow: 0 0 8px rgba(255, 190, 11, 0.05);
+    }
+}
+
+/* Animate phase indicators - more subtle */
+body.disco-mode .phase-indicator {
+    animation: disco-indicator-border 5.8s ease-in-out infinite;
+}
+
+@keyframes disco-indicator-border {
+
+    0%,
+    100% {
+        border-color: rgba(255, 0, 110, 0.4);
+    }
+
+    25% {
+        border-color: rgba(58, 134, 255, 0.4);
+    }
+
+    50% {
+        border-color: rgba(131, 56, 236, 0.4);
+    }
+
+    75% {
+        border-color: rgba(255, 190, 11, 0.4);
+    }
+}
+
+/* Override type-specific colors only for base border, not for backgrounds */
+body.disco-mode .phase-indicator.focus,
+body.disco-mode .phase-indicator.break,
+body.disco-mode .phase-indicator.inhale,
+body.disco-mode .phase-indicator.hold,
+body.disco-mode .phase-indicator.exhale {
+    animation: disco-indicator-border 5.8s ease-in-out infinite;
+}
+
+/* Animate phase connectors - more subtle */
+body.disco-mode .phase-connector {
+    animation: disco-connector 5.8s ease-in-out infinite;
+}
+
+@keyframes disco-connector {
+
+    0%,
+    100% {
+        background: linear-gradient(90deg, rgba(48, 48, 48, 0.5), rgba(255, 0, 110, 0.3));
+    }
+
+    25% {
+        background: linear-gradient(90deg, rgba(48, 48, 48, 0.5), rgba(58, 134, 255, 0.3));
+    }
+
+    50% {
+        background: linear-gradient(90deg, rgba(48, 48, 48, 0.5), rgba(131, 56, 236, 0.3));
+    }
+
+    75% {
+        background: linear-gradient(90deg, rgba(48, 48, 48, 0.5), rgba(255, 190, 11, 0.3));
+    }
+}
+
+/* Animate timeline track - more subtle */
+body.disco-mode .timeline-track {
+    animation: disco-track 5.8s ease-in-out infinite;
+}
+
+@keyframes disco-track {
+
+    0%,
+    100% {
+        background-color: rgba(255, 0, 110, 0.2);
+    }
+
+    25% {
+        background-color: rgba(58, 134, 255, 0.2);
+    }
+
+    50% {
+        background-color: rgba(131, 56, 236, 0.2);
+    }
+
+    75% {
+        background-color: rgba(255, 190, 11, 0.2);
+    }
+}
+
+/* Animate progress fills - more subtle */
+body.disco-mode .phase-connector .progress-fill {
+    animation: disco-progress 5.8s ease-in-out infinite;
+}
+
+@keyframes disco-progress {
+
+    0%,
+    100% {
+        background: linear-gradient(90deg, rgba(255, 0, 110, 0.2), rgba(255, 0, 110, 0.4));
+    }
+
+    25% {
+        background: linear-gradient(90deg, rgba(58, 134, 255, 0.2), rgba(58, 134, 255, 0.4));
+    }
+
+    50% {
+        background: linear-gradient(90deg, rgba(131, 56, 236, 0.2), rgba(131, 56, 236, 0.4));
+    }
+
+    75% {
+        background: linear-gradient(90deg, rgba(255, 190, 11, 0.2), rgba(255, 190, 11, 0.4));
+    }
+}
+
+/* Animate water fills in phase indicators - more subtle */
+body.disco-mode .phase-indicator .progress-fill {
+    animation: disco-water-fill 5.8s ease-in-out infinite;
+}
+
+@keyframes disco-water-fill {
+
+    0%,
+    100% {
+        background: linear-gradient(to top, rgba(255, 0, 110, 0.4), rgba(255, 0, 110, 0.1));
+    }
+
+    25% {
+        background: linear-gradient(to top, rgba(58, 134, 255, 0.4), rgba(58, 134, 255, 0.1));
+    }
+
+    50% {
+        background: linear-gradient(to top, rgba(131, 56, 236, 0.4), rgba(131, 56, 236, 0.1));
+    }
+
+    75% {
+        background: linear-gradient(to top, rgba(255, 190, 11, 0.4), rgba(255, 190, 11, 0.1));
+    }
+}
+
+/* Animate water ripples - more subtle */
+body.disco-mode .phase-indicator .progress-fill::after {
+    animation: water-ripple 2s ease-out infinite, disco-ripple 5.8s ease-in-out infinite;
+}
+
+@keyframes disco-ripple {
+
+    0%,
+    100% {
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    25% {
+        background: rgba(200, 230, 255, 0.1);
+    }
+
+    50% {
+        background: rgba(220, 200, 255, 0.1);
+    }
+
+    75% {
+        background: rgba(255, 230, 200, 0.1);
+    }
+}
+
+/* Animate active phase indicator glow - more subtle */
+body.disco-mode .phase-indicator.active {
+    animation: disco-active-indicator 5.8s ease-in-out infinite;
+}
+
+@keyframes disco-active-indicator {
+
+    0%,
+    100% {
+        box-shadow: 0 0 10px rgba(255, 0, 110, 0.2);
+    }
+
+    25% {
+        box-shadow: 0 0 10px rgba(58, 134, 255, 0.2);
+    }
+
+    50% {
+        box-shadow: 0 0 10px rgba(131, 56, 236, 0.2);
+    }
+
+    75% {
+        box-shadow: 0 0 10px rgba(255, 190, 11, 0.2);
+    }
+}
