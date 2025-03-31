@@ -99,6 +99,9 @@ class AudioVisualizer {
         this.canvas.style.pointerEvents = 'none'; // Allow clicks to pass through
         this.canvas.style.opacity = '0';
         this.canvas.style.transition = 'opacity 0.5s ease';
+        this.canvas.style.border = 'none'; // Explicitly remove border
+        this.canvas.style.outline = 'none'; // Remove outline
+        this.canvas.style.backgroundColor = 'transparent'; // Ensure transparent background
 
         // Get drawing context
         this.canvasContext = this.canvas.getContext('2d');

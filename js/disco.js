@@ -141,8 +141,11 @@ function initDiscoMode() {
         visualizerContainer.style.opacity = '1';
         micButton.style.opacity = '1';
         micButton.style.pointerEvents = 'auto';
-        visualizerTypeButton.style.opacity = '1';
-        visualizerTypeButton.style.pointerEvents = 'auto';
+
+        // Only show visualizer type button if visualizer is actually active
+        const isVisualizerActive = window.AudioVisualizer && window.AudioVisualizer.active;
+        visualizerTypeButton.style.opacity = isVisualizerActive ? '1' : '0';
+        visualizerTypeButton.style.pointerEvents = isVisualizerActive ? 'auto' : 'none';
     }
 
     // Track user interaction to enable audio
@@ -171,8 +174,11 @@ function initDiscoMode() {
         const isDiscoMode = document.body.classList.contains('disco-mode');
         micButton.style.opacity = isDiscoMode ? '1' : '0';
         micButton.style.pointerEvents = isDiscoMode ? 'auto' : 'none';
-        visualizerTypeButton.style.opacity = isDiscoMode && window.AudioVisualizer && window.AudioVisualizer.active ? '1' : '0';
-        visualizerTypeButton.style.pointerEvents = isDiscoMode && window.AudioVisualizer && window.AudioVisualizer.active ? 'auto' : 'none';
+
+        // Only show visualizer type button if disco mode is on AND visualizer is active
+        const isVisualizerActive = window.AudioVisualizer && window.AudioVisualizer.active;
+        visualizerTypeButton.style.opacity = isDiscoMode && isVisualizerActive ? '1' : '0';
+        visualizerTypeButton.style.pointerEvents = isDiscoMode && isVisualizerActive ? 'auto' : 'none';
 
         // Stop audio visualizer if disco mode is turned off
         if (!isDiscoMode && window.AudioVisualizer) {
@@ -237,13 +243,8 @@ function initDiscoMode() {
             }
 
             // Show visualizer type button when visualizer is active
-            if (window.AudioVisualizer && window.AudioVisualizer.active) {
-                visualizerTypeButton.style.opacity = '1';
-                visualizerTypeButton.style.pointerEvents = 'auto';
-            } else {
-                visualizerTypeButton.style.opacity = '0';
-                visualizerTypeButton.style.pointerEvents = 'none';
-            }
+            visualizerTypeButton.style.opacity = window.AudioVisualizer.active ? '1' : '0';
+            visualizerTypeButton.style.pointerEvents = window.AudioVisualizer.active ? 'auto' : 'none';
         } else {
             console.error('AudioVisualizer not found. Make sure audio-visualizer.js is loaded.');
             alert('Audio visualization is not available. Please check console for errors.');
@@ -331,7 +332,7 @@ document.addEventListener('hashchange', () => {
             }
         }
 
-        // Update visualizer type button
+        // Only show visualizer type button if visualizer is actually active
         const visualizerTypeButton = document.querySelector('.viz-toggle');
         if (visualizerTypeButton) {
             const isVisualizerActive = window.AudioVisualizer && window.AudioVisualizer.active;

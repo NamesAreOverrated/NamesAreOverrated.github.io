@@ -1,9 +1,7 @@
 /* Disco Mode Styles */
 body.disco-mode {
     animation: disco-background 6s steps(1, end) infinite;
-    /* Increased from 3s to 6s */
     transition: background-color 0.5s ease;
-    /* Increased from 0.3s to 0.5s */
     position: relative;
 }
 
@@ -15,106 +13,108 @@ body.disco-mode::before {
     right: 0;
     bottom: 0;
     opacity: 0.25;
+    /* Reduced from 0.35 for a more subtle effect */
     pointer-events: none;
     z-index: -1;
     animation: disco-overlay 5s steps(1, end) infinite;
-    /* Increased from 2.5s to 5s */
 }
 
 @keyframes disco-background {
 
     0%,
     100% {
-        background-color: #1d1d21;
+        background-color: #0e0e16;
+        /* Slightly lighter than before */
     }
 
     25% {
-        background-color: #232330;
-        /* Slightly more colorful */
+        background-color: #14121e;
+        /* Toned down purple-ish */
     }
 
     50% {
-        background-color: #1e222c;
-        /* Slightly more colorful */
+        background-color: #111a22;
+        /* Toned down blue-ish */
     }
 
     75% {
-        background-color: #221e2c;
-        /* Slightly more colorful */
+        background-color: #191220;
+        /* Toned down purple-ish */
     }
 }
 
 @keyframes disco-overlay {
     0% {
-        background: linear-gradient(45deg, #ff006e35 0%, transparent 70%);
-        /* More opacity */
-        box-shadow: inset 0 0 200px rgba(255, 0, 110, 0.4);
-        /* Increased intensity */
+        background: linear-gradient(45deg, #ff006e40 0%, transparent 70%);
+        /* Reduced opacity from 50 to 40 */
+        box-shadow: inset 0 0 220px rgba(255, 0, 110, 0.5);
+        /* Reduced intensity */
     }
 
     20% {
-        background: linear-gradient(120deg, #3a86ff35 0%, transparent 70%);
-        /* More opacity */
-        box-shadow: inset 0 0 200px rgba(58, 134, 255, 0.4);
-        /* Increased intensity */
+        background: linear-gradient(120deg, #00e5ff40 0%, transparent 70%);
+        /* Reduced opacity */
+        box-shadow: inset 0 0 220px rgba(0, 229, 255, 0.5);
+        /* Reduced intensity */
     }
 
     40% {
-        background: linear-gradient(190deg, #8338ec35 0%, transparent 70%);
-        /* More opacity */
-        box-shadow: inset 0 0 200px rgba(131, 56, 236, 0.4);
-        /* Increased intensity */
+        background: linear-gradient(190deg, #ae00ff40 0%, transparent 70%);
+        /* Reduced opacity */
+        box-shadow: inset 0 0 220px rgba(174, 0, 255, 0.5);
+        /* Reduced intensity */
     }
 
     60% {
-        background: linear-gradient(260deg, #ffbe0b35 0%, transparent 70%);
-        /* More opacity */
-        box-shadow: inset 0 0 200px rgba(255, 190, 11, 0.4);
-        /* Increased intensity */
+        background: linear-gradient(260deg, #ffdd0040 0%, transparent 70%);
+        /* Reduced opacity */
+        box-shadow: inset 0 0 220px rgba(255, 221, 0, 0.5);
+        /* Reduced intensity */
     }
 
     80% {
-        background: linear-gradient(320deg, #fb558435 0%, transparent 70%);
-        /* More opacity */
-        box-shadow: inset 0 0 200px rgba(251, 85, 132, 0.4);
-        /* Increased intensity */
+        background: linear-gradient(320deg, #00ff8840 0%, transparent 70%);
+        /* Reduced opacity */
+        box-shadow: inset 0 0 220px rgba(0, 255, 136, 0.5);
+        /* Reduced intensity */
     }
 
     100% {
-        background: linear-gradient(45deg, #ff006e35 0%, transparent 70%);
-        /* More opacity */
-        box-shadow: inset 0 0 200px rgba(255, 0, 110, 0.4);
-        /* Increased intensity */
+        background: linear-gradient(45deg, #ff006e40 0%, transparent 70%);
+        /* Reduced opacity */
+        box-shadow: inset 0 0 220px rgba(255, 0, 110, 0.5);
+        /* Reduced intensity */
     }
 }
 
 body.disco-mode section,
 body.disco-mode header {
     animation: section-pulse 5.8s ease-in-out infinite;
-    /* Increased from 2.9s to 5.8s */
+    border-color: rgba(255, 255, 255, 0.15) !important;
+    /* Reduced from 0.2 */
 }
 
 @keyframes section-pulse {
 
     0%,
     100% {
-        box-shadow: 0 0 15px rgba(255, 0, 110, 0.15);
-        /* Slightly increased intensity */
+        box-shadow: 0 0 15px rgba(255, 0, 110, 0.2);
+        /* Reduced from 0.3 */
     }
 
     25% {
-        box-shadow: 0 0 15px rgba(58, 134, 255, 0.15);
-        /* Slightly increased intensity */
+        box-shadow: 0 0 15px rgba(0, 229, 255, 0.2);
+        /* Reduced from 0.3 */
     }
 
     50% {
-        box-shadow: 0 0 15px rgba(131, 56, 236, 0.15);
-        /* Slightly increased intensity */
+        box-shadow: 0 0 15px rgba(174, 0, 255, 0.2);
+        /* Reduced from 0.3 */
     }
 
     75% {
-        box-shadow: 0 0 15px rgba(255, 190, 11, 0.15);
-        /* Slightly increased intensity */
+        box-shadow: 0 0 15px rgba(255, 221, 0, 0.2);
+        /* Reduced from 0.3 */
     }
 }
 
@@ -122,7 +122,7 @@ body.disco-mode header {
     position: fixed;
     bottom: 20px;
     right: 20px;
-    background-color: #222;
+    background-color: #111;
     color: white;
     border: none;
     border-radius: 50%;
@@ -140,41 +140,43 @@ body.disco-mode header {
 
 .disco-toggle:hover {
     transform: scale(1.1);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 4px 15px rgba(255, 255, 255, 0.4);
+    /* Added white glow on hover */
 }
 
 .disco-toggle.active {
-    background-color: #333;
+    background-color: #222;
     animation: disco-button 5.8s steps(1, end) infinite;
-    /* Increased from 2.9s to 5.8s */
+    border: 2px solid white;
+    /* Added white border for neon effect */
 }
 
 @keyframes disco-button {
 
     0%,
     100% {
-        box-shadow: 0 0 20px rgba(255, 0, 110, 0.7);
+        box-shadow: 0 0 25px rgba(255, 0, 110, 0.9);
         /* Increased glow */
     }
 
     20% {
-        box-shadow: 0 0 20px rgba(58, 134, 255, 0.7);
-        /* Increased glow */
+        box-shadow: 0 0 25px rgba(0, 229, 255, 0.9);
+        /* Changed to cyan */
     }
 
     40% {
-        box-shadow: 0 0 20px rgba(131, 56, 236, 0.7);
+        box-shadow: 0 0 25px rgba(174, 0, 255, 0.9);
         /* Increased glow */
     }
 
     60% {
-        box-shadow: 0 0 20px rgba(255, 190, 11, 0.7);
+        box-shadow: 0 0 25px rgba(255, 221, 0, 0.9);
         /* Increased glow */
     }
 
     80% {
-        box-shadow: 0 0 20px rgba(251, 85, 132, 0.7);
-        /* Increased glow */
+        box-shadow: 0 0 25px rgba(0, 255, 136, 0.9);
+        /* Added neon green */
     }
 }
 
@@ -184,9 +186,11 @@ body.disco-mode .tool-card,
 body.disco-mode .blog-card {
     position: relative;
     overflow: hidden;
-    border: 1px solid transparent;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    /* Reduced from 0.15 for more subtlety */
     animation: card-border-pulse 5.8s steps(1, end) infinite;
-    /* Increased from 2.9s to 5.8s */
+    box-shadow: 0 0 12px rgba(0, 0, 0, 0.3) !important;
+    /* Reduced from 0.4 */
 }
 
 body.disco-mode .project-card::after,
@@ -198,12 +202,68 @@ body.disco-mode .blog-card::after {
     left: 0;
     right: 0;
     bottom: 0;
-    background: linear-gradient(45deg, transparent 95%, rgba(255, 255, 255, 0.35) 100%);
+    background: linear-gradient(45deg, transparent 95%, rgba(255, 255, 255, 0.8) 100%);
+    /* Brighter flash */
     animation: card-flash 9s cubic-bezier(0.42, 0, 0.58, 1) infinite;
-    /* Increased from 4.5s to 9s */
     opacity: 0;
     z-index: 1;
     pointer-events: none;
+}
+
+/* New neon edge glow effect */
+body.disco-mode .project-card::before,
+body.disco-mode .tool-card::before,
+body.disco-mode .blog-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border: 2px solid transparent;
+    border-radius: 5px;
+    pointer-events: none;
+    z-index: 2;
+    animation: neon-edge-glow 5.8s steps(1, end) infinite;
+}
+
+@keyframes neon-edge-glow {
+
+    0%,
+    100% {
+        border-color: rgba(255, 0, 110, 0.3);
+        /* Reduced from 0.5 */
+        box-shadow: 0 0 6px rgba(255, 0, 110, 0.3), inset 0 0 3px rgba(255, 0, 110, 0.2);
+        /* Reduced intensity */
+    }
+
+    20% {
+        border-color: rgba(0, 229, 255, 0.3);
+        /* Reduced from 0.5 */
+        box-shadow: 0 0 6px rgba(0, 229, 255, 0.3), inset 0 0 3px rgba(0, 229, 255, 0.2);
+        /* Reduced intensity */
+    }
+
+    40% {
+        border-color: rgba(174, 0, 255, 0.3);
+        /* Reduced from 0.5 */
+        box-shadow: 0 0 6px rgba(174, 0, 255, 0.3), inset 0 0 3px rgba(174, 0, 255, 0.2);
+        /* Reduced intensity */
+    }
+
+    60% {
+        border-color: rgba(255, 221, 0, 0.3);
+        /* Reduced from 0.5 */
+        box-shadow: 0 0 6px rgba(255, 221, 0, 0.3), inset 0 0 3px rgba(255, 221, 0, 0.2);
+        /* Reduced intensity */
+    }
+
+    80% {
+        border-color: rgba(0, 255, 136, 0.3);
+        /* Reduced from 0.5 */
+        box-shadow: 0 0 6px rgba(0, 255, 136, 0.3), inset 0 0 3px rgba(0, 255, 136, 0.2);
+        /* Reduced intensity */
+    }
 }
 
 @keyframes card-flash {
@@ -238,37 +298,44 @@ body.disco-mode .blog-card:nth-child(3n+1)::after {
 /* Text visibility enhancement for disco mode - more subtle but visible */
 body.disco-mode .content-header h1,
 body.disco-mode .content-body {
-    background-color: rgba(25, 25, 28, 0.75);
-    /* Adjusted background for better contrast */
+    background-color: rgba(15, 15, 20, 0.8);
+    /* Darker background for better contrast */
     border-radius: 8px;
     padding: 15px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-    /* Slightly stronger shadow */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
 }
 
-/* Interactive elements pulse */
+/* Interactive elements pulse with neon effect */
 body.disco-mode button:not(.disco-toggle),
 body.disco-mode a {
     transition: all 0.3s ease;
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
+    /* Default glow */
 }
 
 body.disco-mode button:not(.disco-toggle):hover,
 body.disco-mode a:hover {
-    animation: button-pulse 2s ease infinite;
-    /* Increased from 1s to 2s */
+    animation: neon-text-pulse 2s ease infinite;
 }
 
-@keyframes button-pulse {
+/* New keyframe for neon text effect */
+@keyframes neon-text-pulse {
 
     0%,
     100% {
-        text-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
-        /* Increased glow */
+        text-shadow:
+            0 0 5px rgba(255, 255, 255, 0.8),
+            0 0 10px rgba(255, 255, 255, 0.5),
+            0 0 15px rgba(255, 0, 110, 0.5),
+            0 0 20px rgba(255, 0, 110, 0.3);
     }
 
     50% {
-        text-shadow: 0 0 18px rgba(255, 255, 255, 0.9);
-        /* Increased glow */
+        text-shadow:
+            0 0 10px rgba(255, 255, 255, 0.9),
+            0 0 20px rgba(255, 255, 255, 0.6),
+            0 0 30px rgba(0, 229, 255, 0.6),
+            0 0 40px rgba(0, 229, 255, 0.4);
     }
 }
 
@@ -276,233 +343,383 @@ body.disco-mode a:hover {
 
     0%,
     100% {
-        border-color: rgba(255, 0, 110, 0.2);
+        border-color: rgba(255, 0, 110, 0.25) !important;
+        /* Reduced from 0.4 */
     }
 
     25% {
-        border-color: rgba(58, 134, 255, 0.2);
+        border-color: rgba(0, 229, 255, 0.25) !important;
+        /* Reduced from 0.4 */
     }
 
     50% {
-        border-color: rgba(131, 56, 236, 0.2);
+        border-color: rgba(174, 0, 255, 0.25) !important;
+        /* Reduced from 0.4 */
     }
 
     75% {
-        border-color: rgba(255, 190, 11, 0.2);
+        border-color: rgba(255, 221, 0, 0.25) !important;
+        /* Reduced from 0.4 */
     }
 }
 
-/* Timer phase timeline disco effects - SMOOTHER AND LESS DISTRACTING */
+/* Timer phase timeline disco effects */
 body.disco-mode .phase-timeline {
     animation: disco-timeline-bg 5.8s ease-in-out infinite;
-    box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.25);
+    /* Reduced from 0.3 */
 }
 
 @keyframes disco-timeline-bg {
 
     0%,
     100% {
-        background-color: rgba(30, 30, 40, 0.5);
-        box-shadow: 0 0 8px rgba(255, 0, 110, 0.05);
+        background-color: rgba(20, 20, 30, 0.5);
+        /* Reduced opacity from 0.6 */
+        box-shadow: 0 0 12px rgba(255, 0, 110, 0.15);
+        /* Reduced from 0.2 */
     }
 
     25% {
-        background-color: rgba(30, 35, 45, 0.5);
-        box-shadow: 0 0 8px rgba(58, 134, 255, 0.05);
+        background-color: rgba(20, 25, 35, 0.5);
+        /* Reduced opacity from 0.6 */
+        box-shadow: 0 0 12px rgba(0, 229, 255, 0.15);
+        /* Reduced from 0.2 */
     }
 
     50% {
-        background-color: rgba(30, 30, 45, 0.5);
-        box-shadow: 0 0 8px rgba(131, 56, 236, 0.05);
+        background-color: rgba(20, 20, 35, 0.5);
+        /* Reduced opacity from 0.6 */
+        box-shadow: 0 0 12px rgba(174, 0, 255, 0.15);
+        /* Reduced from 0.2 */
     }
 
     75% {
-        background-color: rgba(35, 30, 40, 0.5);
-        box-shadow: 0 0 8px rgba(255, 190, 11, 0.05);
+        background-color: rgba(25, 20, 30, 0.5);
+        /* Reduced opacity from 0.6 */
+        box-shadow: 0 0 12px rgba(255, 221, 0, 0.15);
+        /* Reduced from 0.2 */
     }
 }
 
-/* Animate phase indicators - more subtle */
+/* Animate phase indicators with neon effect */
 body.disco-mode .phase-indicator {
-    animation: disco-indicator-border 5.8s ease-in-out infinite;
+    animation: neon-indicator-glow 5.8s ease-in-out infinite;
+    background-color: rgba(15, 15, 20, 0.6) !important;
+    /* Reduced from 0.7 */
 }
 
-@keyframes disco-indicator-border {
+@keyframes neon-indicator-glow {
 
     0%,
     100% {
-        border-color: rgba(255, 0, 110, 0.4);
+        border-color: rgba(255, 0, 110, 0.7) !important;
+        /* Reduced from 0.9 */
+        box-shadow: 0 0 8px rgba(255, 0, 110, 0.4), inset 0 0 4px rgba(255, 0, 110, 0.2) !important;
+        /* Reduced intensity */
     }
 
     25% {
-        border-color: rgba(58, 134, 255, 0.4);
+        border-color: rgba(0, 229, 255, 0.7) !important;
+        /* Reduced from 0.9 */
+        box-shadow: 0 0 8px rgba(0, 229, 255, 0.4), inset 0 0 4px rgba(0, 229, 255, 0.2) !important;
+        /* Reduced intensity */
     }
 
     50% {
-        border-color: rgba(131, 56, 236, 0.4);
+        border-color: rgba(174, 0, 255, 0.7) !important;
+        /* Reduced from 0.9 */
+        box-shadow: 0 0 8px rgba(174, 0, 255, 0.4), inset 0 0 4px rgba(174, 0, 255, 0.2) !important;
+        /* Reduced intensity */
     }
 
     75% {
-        border-color: rgba(255, 190, 11, 0.4);
+        border-color: rgba(255, 221, 0, 0.7) !important;
+        /* Reduced from 0.9 */
+        box-shadow: 0 0 8px rgba(255, 221, 0, 0.4), inset 0 0 4px rgba(255, 221, 0, 0.2) !important;
+        /* Reduced intensity */
     }
 }
 
-/* Override type-specific colors only for base border, not for backgrounds */
+/* Override type-specific colors for neon glow */
 body.disco-mode .phase-indicator.focus,
 body.disco-mode .phase-indicator.break,
 body.disco-mode .phase-indicator.inhale,
 body.disco-mode .phase-indicator.hold,
 body.disco-mode .phase-indicator.exhale {
-    animation: disco-indicator-border 5.8s ease-in-out infinite;
+    animation: neon-indicator-glow 5.8s ease-in-out infinite;
 }
 
-/* Animate phase connectors - more subtle */
-body.disco-mode .phase-connector {
-    animation: disco-connector 5.8s ease-in-out infinite;
-}
-
-@keyframes disco-connector {
-
-    0%,
-    100% {
-        background: linear-gradient(90deg, rgba(48, 48, 48, 0.5), rgba(255, 0, 110, 0.3));
-    }
-
-    25% {
-        background: linear-gradient(90deg, rgba(48, 48, 48, 0.5), rgba(58, 134, 255, 0.3));
-    }
-
-    50% {
-        background: linear-gradient(90deg, rgba(48, 48, 48, 0.5), rgba(131, 56, 236, 0.3));
-    }
-
-    75% {
-        background: linear-gradient(90deg, rgba(48, 48, 48, 0.5), rgba(255, 190, 11, 0.3));
-    }
-}
-
-/* Animate timeline track - more subtle */
-body.disco-mode .timeline-track {
-    animation: disco-track 5.8s ease-in-out infinite;
-}
-
-@keyframes disco-track {
-
-    0%,
-    100% {
-        background-color: rgba(255, 0, 110, 0.2);
-    }
-
-    25% {
-        background-color: rgba(58, 134, 255, 0.2);
-    }
-
-    50% {
-        background-color: rgba(131, 56, 236, 0.2);
-    }
-
-    75% {
-        background-color: rgba(255, 190, 11, 0.2);
-    }
-}
-
-/* Animate progress fills - more subtle */
-body.disco-mode .phase-connector .progress-fill {
-    animation: disco-progress 5.8s ease-in-out infinite;
-}
-
-@keyframes disco-progress {
-
-    0%,
-    100% {
-        background: linear-gradient(90deg, rgba(255, 0, 110, 0.2), rgba(255, 0, 110, 0.4));
-    }
-
-    25% {
-        background: linear-gradient(90deg, rgba(58, 134, 255, 0.2), rgba(58, 134, 255, 0.4));
-    }
-
-    50% {
-        background: linear-gradient(90deg, rgba(131, 56, 236, 0.2), rgba(131, 56, 236, 0.4));
-    }
-
-    75% {
-        background: linear-gradient(90deg, rgba(255, 190, 11, 0.2), rgba(255, 190, 11, 0.4));
-    }
-}
-
-/* Animate water fills in phase indicators - more subtle */
-body.disco-mode .phase-indicator .progress-fill {
-    animation: disco-water-fill 5.8s ease-in-out infinite;
-}
-
-@keyframes disco-water-fill {
-
-    0%,
-    100% {
-        background: linear-gradient(to top, rgba(255, 0, 110, 0.4), rgba(255, 0, 110, 0.1));
-    }
-
-    25% {
-        background: linear-gradient(to top, rgba(58, 134, 255, 0.4), rgba(58, 134, 255, 0.1));
-    }
-
-    50% {
-        background: linear-gradient(to top, rgba(131, 56, 236, 0.4), rgba(131, 56, 236, 0.1));
-    }
-
-    75% {
-        background: linear-gradient(to top, rgba(255, 190, 11, 0.4), rgba(255, 190, 11, 0.1));
-    }
-}
-
-/* Animate water ripples - more subtle */
-body.disco-mode .phase-indicator .progress-fill::after {
-    animation: water-ripple 2s ease-out infinite, disco-ripple 5.8s ease-in-out infinite;
-}
-
-@keyframes disco-ripple {
-
-    0%,
-    100% {
-        background: rgba(255, 255, 255, 0.1);
-    }
-
-    25% {
-        background: rgba(200, 230, 255, 0.1);
-    }
-
-    50% {
-        background: rgba(220, 200, 255, 0.1);
-    }
-
-    75% {
-        background: rgba(255, 230, 200, 0.1);
-    }
-}
-
-/* Animate active phase indicator glow - more subtle */
+/* Enhance phase indicator active state */
 body.disco-mode .phase-indicator.active {
-    animation: disco-active-indicator 5.8s ease-in-out infinite;
+    animation: neon-active-indicator 5.8s ease-in-out infinite;
+    transform: translateY(-8px) scale(1.05) !important;
+    /* Reduced from -10px scale(1.08) */
 }
 
-@keyframes disco-active-indicator {
+@keyframes neon-active-indicator {
 
     0%,
     100% {
-        box-shadow: 0 0 10px rgba(255, 0, 110, 0.2);
+        box-shadow: 0 0 12px rgba(255, 0, 110, 0.6), 0 0 20px rgba(255, 0, 110, 0.3) !important;
+        /* Reduced intensity */
+        border-color: rgba(255, 0, 110, 0.8) !important;
+        /* Reduced from 1 */
     }
 
     25% {
-        box-shadow: 0 0 10px rgba(58, 134, 255, 0.2);
+        box-shadow: 0 0 12px rgba(0, 229, 255, 0.6), 0 0 20px rgba(0, 229, 255, 0.3) !important;
+        /* Reduced intensity */
+        border-color: rgba(0, 229, 255, 0.8) !important;
+        /* Reduced from 1 */
     }
 
     50% {
-        box-shadow: 0 0 10px rgba(131, 56, 236, 0.2);
+        box-shadow: 0 0 12px rgba(174, 0, 255, 0.6), 0 0 20px rgba(174, 0, 255, 0.3) !important;
+        /* Reduced intensity */
+        border-color: rgba(174, 0, 255, 0.8) !important;
+        /* Reduced from 1 */
     }
 
     75% {
-        box-shadow: 0 0 10px rgba(255, 190, 11, 0.2);
+        box-shadow: 0 0 12px rgba(255, 221, 0, 0.6), 0 0 20px rgba(255, 221, 0, 0.3) !important;
+        /* Reduced intensity */
+        border-color: rgba(255, 221, 0, 0.8) !important;
+        /* Reduced from 1 */
+    }
+}
+
+/* Animate phase connectors with neon gradient */
+body.disco-mode .phase-connector {
+    animation: neon-connector 5.8s ease-in-out infinite;
+    height: 5px !important;
+    /* Reduced from 6px */
+}
+
+@keyframes neon-connector {
+
+    0%,
+    100% {
+        background: linear-gradient(90deg, rgba(30, 30, 40, 0.4), rgba(255, 0, 110, 0.6));
+        /* Reduced from 0.7 */
+        box-shadow: 0 0 6px rgba(255, 0, 110, 0.4);
+        /* Reduced from 0.5 */
+    }
+
+    25% {
+        background: linear-gradient(90deg, rgba(30, 30, 40, 0.4), rgba(0, 229, 255, 0.6));
+        /* Reduced from 0.7 */
+        box-shadow: 0 0 6px rgba(0, 229, 255, 0.4);
+        /* Reduced from 0.5 */
+    }
+
+    50% {
+        background: linear-gradient(90deg, rgba(30, 30, 40, 0.4), rgba(174, 0, 255, 0.6));
+        /* Reduced from 0.7 */
+        box-shadow: 0 0 6px rgba(174, 0, 255, 0.4);
+        /* Reduced from 0.5 */
+    }
+
+    75% {
+        background: linear-gradient(90deg, rgba(30, 30, 40, 0.4), rgba(255, 221, 0, 0.6));
+        /* Reduced from 0.7 */
+        box-shadow: 0 0 6px rgba(255, 221, 0, 0.4);
+        /* Reduced from 0.5 */
+    }
+}
+
+/* Animate timeline track with neon glow */
+body.disco-mode .timeline-track {
+    animation: neon-track 5.8s ease-in-out infinite;
+    height: 3px !important;
+    /* Reduced from 4px */
+}
+
+@keyframes neon-track {
+
+    0%,
+    100% {
+        background-color: rgba(255, 0, 110, 0.4);
+        /* Reduced from 0.5 */
+        box-shadow: 0 0 5px rgba(255, 0, 110, 0.5);
+        /* Reduced from 0.7 */
+    }
+
+    25% {
+        background-color: rgba(0, 229, 255, 0.4);
+        /* Reduced from 0.5 */
+        box-shadow: 0 0 5px rgba(0, 229, 255, 0.5);
+        /* Reduced from 0.7 */
+    }
+
+    50% {
+        background-color: rgba(174, 0, 255, 0.4);
+        /* Reduced from 0.5 */
+        box-shadow: 0 0 5px rgba(174, 0, 255, 0.5);
+        /* Reduced from 0.7 */
+    }
+
+    75% {
+        background-color: rgba(255, 221, 0, 0.4);
+        /* Reduced from 0.5 */
+        box-shadow: 0 0 5px rgba(255, 221, 0, 0.5);
+        /* Reduced from 0.7 */
+    }
+}
+
+/* Enhance progress fills with neon glow */
+body.disco-mode .phase-connector .progress-fill {
+    animation: neon-progress 5.8s ease-in-out infinite;
+}
+
+@keyframes neon-progress {
+
+    0%,
+    100% {
+        background: linear-gradient(90deg, rgba(255, 0, 110, 0.4), rgba(255, 0, 110, 0.7));
+        /* Reduced from 0.5/0.9 */
+        box-shadow: 0 0 6px rgba(255, 0, 110, 0.5);
+        /* Reduced from 0.7 */
+    }
+
+    25% {
+        background: linear-gradient(90deg, rgba(0, 229, 255, 0.4), rgba(0, 229, 255, 0.7));
+        /* Reduced from 0.5/0.9 */
+        box-shadow: 0 0 6px rgba(0, 229, 255, 0.5);
+        /* Reduced from 0.7 */
+    }
+
+    50% {
+        background: linear-gradient(90deg, rgba(174, 0, 255, 0.4), rgba(174, 0, 255, 0.7));
+        /* Reduced from 0.5/0.9 */
+        box-shadow: 0 0 6px rgba(174, 0, 255, 0.5);
+        /* Reduced from 0.7 */
+    }
+
+    75% {
+        background: linear-gradient(90deg, rgba(255, 221, 0, 0.4), rgba(255, 221, 0, 0.7));
+        /* Reduced from 0.5/0.9 */
+        box-shadow: 0 0 6px rgba(255, 221, 0, 0.5);
+        /* Reduced from 0.7 */
+    }
+}
+
+/* Enhanced water fills in phase indicators */
+body.disco-mode .phase-indicator .progress-fill {
+    animation: neon-water-fill 5.8s ease-in-out infinite;
+}
+
+@keyframes neon-water-fill {
+
+    0%,
+    100% {
+        background: linear-gradient(to top, rgba(255, 0, 110, 0.6), rgba(255, 0, 110, 0.15));
+        /* Reduced from 0.7/0.2 */
+        box-shadow: 0 0 8px rgba(255, 0, 110, 0.2);
+        /* Reduced from 0.3 */
+    }
+
+    25% {
+        background: linear-gradient(to top, rgba(0, 229, 255, 0.6), rgba(0, 229, 255, 0.15));
+        /* Reduced from 0.7/0.2 */
+        box-shadow: 0 0 8px rgba(0, 229, 255, 0.2);
+        /* Reduced from 0.3 */
+    }
+
+    50% {
+        background: linear-gradient(to top, rgba(174, 0, 255, 0.6), rgba(174, 0, 255, 0.15));
+        /* Reduced from 0.7/0.2 */
+        box-shadow: 0 0 8px rgba(174, 0, 255, 0.2);
+        /* Reduced from 0.3 */
+    }
+
+    75% {
+        background: linear-gradient(to top, rgba(255, 221, 0, 0.6), rgba(255, 221, 0, 0.15));
+        /* Reduced from 0.7/0.2 */
+        box-shadow: 0 0 8px rgba(255, 221, 0, 0.2);
+        /* Reduced from 0.3 */
+    }
+}
+
+/* Enhance water ripples with glow */
+body.disco-mode .phase-indicator .progress-fill::after {
+    animation: water-ripple 2s ease-out infinite, neon-ripple 5.8s ease-in-out infinite;
+}
+
+@keyframes neon-ripple {
+
+    0%,
+    100% {
+        background: rgba(255, 255, 255, 0.25);
+        /* Reduced from 0.3 */
+        box-shadow: 0 0 4px rgba(255, 0, 110, 0.4);
+        /* Reduced from 0.5 */
+    }
+
+    25% {
+        background: rgba(200, 255, 255, 0.25);
+        /* Reduced from 0.3 */
+        box-shadow: 0 0 4px rgba(0, 229, 255, 0.4);
+        /* Reduced from 0.5 */
+    }
+
+    50% {
+        background: rgba(230, 200, 255, 0.25);
+        /* Reduced from 0.3 */
+        box-shadow: 0 0 4px rgba(174, 0, 255, 0.4);
+        /* Reduced from 0.5 */
+    }
+
+    75% {
+        background: rgba(255, 255, 200, 0.25);
+        /* Reduced from 0.3 */
+        box-shadow: 0 0 4px rgba(255, 221, 0, 0.4);
+        /* Reduced from 0.5 */
+    }
+}
+
+/* Enhance text in disco mode */
+body.disco-mode h1,
+body.disco-mode h2,
+body.disco-mode h3 {
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
+    /* Reduced from 0.5 */
+}
+
+body.disco-mode .accent-text,
+body.disco-mode [class*="accent"] {
+    animation: neon-accent-text 5.8s ease-in-out infinite;
+}
+
+@keyframes neon-accent-text {
+
+    0%,
+    100% {
+        color: rgba(255, 0, 110, 0.9);
+        /* Reduced from 1 */
+        text-shadow: 0 0 4px rgba(255, 0, 110, 0.6), 0 0 8px rgba(255, 0, 110, 0.4);
+        /* Reduced intensity */
+    }
+
+    25% {
+        color: rgba(0, 229, 255, 0.9);
+        /* Reduced from 1 */
+        text-shadow: 0 0 4px rgba(0, 229, 255, 0.6), 0 0 8px rgba(0, 229, 255, 0.4);
+        /* Reduced intensity */
+    }
+
+    50% {
+        color: rgba(174, 0, 255, 0.9);
+        /* Reduced from 1 */
+        text-shadow: 0 0 4px rgba(174, 0, 255, 0.6), 0 0 8px rgba(174, 0, 255, 0.4);
+        /* Reduced intensity */
+    }
+
+    75% {
+        color: rgba(255, 221, 0, 0.9);
+        /* Reduced from 1 */
+        text-shadow: 0 0 4px rgba(255, 221, 0, 0.6), 0 0 8px rgba(255, 221, 0, 0.4);
+        /* Reduced intensity */
     }
 }
 
@@ -511,7 +728,7 @@ body.disco-mode .phase-indicator.active {
     position: fixed;
     bottom: 20px;
     right: 80px;
-    background-color: #222;
+    background-color: #111;
     color: white;
     border: none;
     border-radius: 50%;
@@ -529,6 +746,11 @@ body.disco-mode .phase-indicator.active {
     pointer-events: none;
 }
 
+body.disco-mode .mic-toggle {
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    /* Add white border for neon effect */
+}
+
 .mic-toggle:hover {
     transform: scale(1.1);
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
@@ -536,28 +758,96 @@ body.disco-mode .phase-indicator.active {
 
 .mic-toggle.active {
     background-color: var(--accent-color, #64ffda);
-    color: #222;
-    animation: mic-button-pulse 2s ease-in-out infinite;
+    color: #000;
+    /* Darker text for contrast */
+    animation: neon-mic-pulse 2s ease-in-out infinite;
 }
 
-@keyframes mic-button-pulse {
+@keyframes neon-mic-pulse {
 
     0%,
     100% {
-        box-shadow: 0 0 10px rgba(100, 255, 218, 0.7);
+        box-shadow: 0 0 15px rgba(100, 255, 218, 0.8),
+            0 0 25px rgba(100, 255, 218, 0.4);
         transform: scale(1);
     }
 
     50% {
-        box-shadow: 0 0 20px rgba(100, 255, 218, 0.9);
+        box-shadow: 0 0 25px rgba(100, 255, 218, 0.9),
+            0 0 35px rgba(100, 255, 218, 0.5);
         transform: scale(1.05);
     }
 }
 
-/* Audio visualizer canvas styles */
+/* Visualization type switcher with neon effect */
+.viz-toggle {
+    position: fixed;
+    bottom: 20px;
+    right: 140px;
+    background-color: #111;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    font-size: 20px;
+    cursor: pointer;
+    z-index: 1000;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    opacity: 0;
+    pointer-events: none;
+}
+
+body.disco-mode .viz-toggle {
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    /* Add white border for neon effect */
+    animation: neon-viz-pulse 5.8s steps(1, end) infinite;
+}
+
+@keyframes neon-viz-pulse {
+
+    0%,
+    100% {
+        border-color: rgba(255, 0, 110, 0.7);
+        box-shadow: 0 0 10px rgba(255, 0, 110, 0.5);
+    }
+
+    25% {
+        border-color: rgba(0, 229, 255, 0.7);
+        box-shadow: 0 0 10px rgba(0, 229, 255, 0.5);
+    }
+
+    50% {
+        border-color: rgba(174, 0, 255, 0.7);
+        box-shadow: 0 0 10px rgba(174, 0, 255, 0.5);
+    }
+
+    75% {
+        border-color: rgba(255, 221, 0, 0.7);
+        box-shadow: 0 0 10px rgba(255, 221, 0, 0.5);
+    }
+}
+
+/* Audio visualizer canvas with neon effect */
 .audio-visualizer {
     opacity: 0;
     transition: opacity 0.5s ease;
     height: 150px;
-    /* Removed background-color and backdrop-filter for transparency */
+    border: none !important;
+    /* Ensure no border is displayed */
+    outline: none !important;
+    /* Remove any outline */
+}
+
+body.disco-mode .audio-visualizer {
+    box-shadow: none;
+    /* Remove shadow that might create visible edges */
+    background-color: transparent !important;
+    /* Ensure background is transparent */
+    border: none !important;
+    /* Extra insurance against borders */
 }
