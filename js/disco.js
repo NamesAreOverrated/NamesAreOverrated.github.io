@@ -86,6 +86,54 @@ function initDiscoMode() {
     `;
     document.body.appendChild(micButton);
 
+    // Create visualization type switcher
+    const visualizerTypeButton = document.createElement('button');
+    visualizerTypeButton.className = 'viz-toggle';
+    visualizerTypeButton.innerHTML = '📊';
+    visualizerTypeButton.title = 'Change Visualization Type';
+    visualizerTypeButton.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 140px;
+        background-color: #222;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        font-size: 20px;
+        cursor: pointer;
+        z-index: 1000;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+        opacity: 0;
+        pointer-events: none;
+    `;
+    document.body.appendChild(visualizerTypeButton);
+
+    // Create visualization name tooltip
+    const vizTooltip = document.createElement('div');
+    vizTooltip.className = 'viz-tooltip';
+    vizTooltip.textContent = 'Bars';
+    vizTooltip.style.cssText = `
+        position: fixed;
+        bottom: 75px;
+        right: 140px;
+        background-color: rgba(0, 0, 0, 0.7);
+        color: white;
+        border-radius: 4px;
+        padding: 4px 8px;
+        font-size: 12px;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        z-index: 1000;
+    `;
+    document.body.appendChild(vizTooltip);
+
     // Apply disco mode if it was enabled
     if (discoEnabled) {
         document.body.classList.add('disco-mode');
@@ -93,6 +141,8 @@ function initDiscoMode() {
         visualizerContainer.style.opacity = '1';
         micButton.style.opacity = '1';
         micButton.style.pointerEvents = 'auto';
+        visualizerTypeButton.style.opacity = '1';
+        visualizerTypeButton.style.pointerEvents = 'auto';
     }
 
     // Track user interaction to enable audio
@@ -121,6 +171,8 @@ function initDiscoMode() {
         const isDiscoMode = document.body.classList.contains('disco-mode');
         micButton.style.opacity = isDiscoMode ? '1' : '0';
         micButton.style.pointerEvents = isDiscoMode ? 'auto' : 'none';
+        visualizerTypeButton.style.opacity = isDiscoMode && window.AudioVisualizer && window.AudioVisualizer.active ? '1' : '0';
+        visualizerTypeButton.style.pointerEvents = isDiscoMode && window.AudioVisualizer && window.AudioVisualizer.active ? 'auto' : 'none';
 
         // Stop audio visualizer if disco mode is turned off
         if (!isDiscoMode && window.AudioVisualizer) {
@@ -183,10 +235,60 @@ function initDiscoMode() {
                     micButton.title = 'Disable Audio Visualization';
                 }
             }
+
+            // Show visualizer type button when visualizer is active
+            if (window.AudioVisualizer && window.AudioVisualizer.active) {
+                visualizerTypeButton.style.opacity = '1';
+                visualizerTypeButton.style.pointerEvents = 'auto';
+            } else {
+                visualizerTypeButton.style.opacity = '0';
+                visualizerTypeButton.style.pointerEvents = 'none';
+            }
         } else {
             console.error('AudioVisualizer not found. Make sure audio-visualizer.js is loaded.');
             alert('Audio visualization is not available. Please check console for errors.');
         }
+    });
+
+    // Add event listener for visualizer type button
+    visualizerTypeButton.addEventListener('click', () => {
+        if (window.AudioVisualizer && window.AudioVisualizer.active) {
+            // Switch to next visualization type
+            const newType = window.AudioVisualizer.nextVisualization();
+
+            // Update button icon based on type
+            const icons = {
+                'bars': '📊',
+                'wave': '〰️',
+                'circular': '🔄',
+                'particles': '✨',
+                'spectrum': '🌈'
+            };
+
+            visualizerTypeButton.innerHTML = icons[newType] || '📊';
+
+            // Show tooltip with visualization name
+            vizTooltip.textContent = newType.charAt(0).toUpperCase() + newType.slice(1);
+            vizTooltip.style.opacity = '1';
+
+            // Hide tooltip after 2 seconds
+            setTimeout(() => {
+                vizTooltip.style.opacity = '0';
+            }, 2000);
+        }
+    });
+
+    // Hover effect for visualizer type button
+    visualizerTypeButton.addEventListener('mouseenter', () => {
+        if (window.AudioVisualizer && window.AudioVisualizer.active) {
+            vizTooltip.textContent = window.AudioVisualizer.getCurrentVisualizationName().charAt(0).toUpperCase() +
+                window.AudioVisualizer.getCurrentVisualizationName().slice(1);
+            vizTooltip.style.opacity = '1';
+        }
+    });
+
+    visualizerTypeButton.addEventListener('mouseleave', () => {
+        vizTooltip.style.opacity = '0';
     });
 
     // Add window resize handler for visualizer
@@ -228,6 +330,27 @@ document.addEventListener('hashchange', () => {
                 micToggle.title = 'Enable Audio Visualization';
             }
         }
+
+        // Update visualizer type button
+        const visualizerTypeButton = document.querySelector('.viz-toggle');
+        if (visualizerTypeButton) {
+            const isVisualizerActive = window.AudioVisualizer && window.AudioVisualizer.active;
+            visualizerTypeButton.style.opacity = isVisualizerActive ? '1' : '0';
+            visualizerTypeButton.style.pointerEvents = isVisualizerActive ? 'auto' : 'none';
+
+            // Update icon if visualizer is active
+            if (isVisualizerActive && window.AudioVisualizer.getCurrentVisualizationName) {
+                const icons = {
+                    'bars': '📊',
+                    'wave': '〰️',
+                    'circular': '🔄',
+                    'particles': '✨',
+                    'spectrum': '🌈'
+                };
+
+                visualizerTypeButton.innerHTML = icons[window.AudioVisualizer.getCurrentVisualizationName()] || '📊';
+            }
+        }
     } else {
         document.body.classList.remove('disco-mode');
         const discoToggle = document.querySelector('.disco-toggle');
@@ -240,6 +363,17 @@ document.addEventListener('hashchange', () => {
         if (micToggle) {
             micToggle.style.opacity = '0';
             micToggle.style.pointerEvents = 'none';
+        }
+
+        const visualizerTypeButton = document.querySelector('.viz-toggle');
+        if (visualizerTypeButton) {
+            visualizerTypeButton.style.opacity = '0';
+            visualizerTypeButton.style.pointerEvents = 'none';
+        }
+
+        const vizTooltip = document.querySelector('.viz-tooltip');
+        if (vizTooltip) {
+            vizTooltip.style.opacity = '0';
         }
 
         // Stop audio visualizer

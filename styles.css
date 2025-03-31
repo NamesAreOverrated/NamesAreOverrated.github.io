@@ -479,3 +479,108 @@ body.viewing-page #page-content {
 body.viewing-page #about {
     margin-bottom: 0;
 }
+
+/* Audio visualization mic button styles */
+.mic-toggle {
+    position: fixed;
+    bottom: 20px;
+    right: 80px;
+    background-color: #222;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    font-size: 20px;
+    cursor: pointer;
+    z-index: 1000;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.mic-toggle:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.mic-toggle.active {
+    background-color: var(--accent-color, #64ffda);
+    color: #222;
+    animation: mic-button-pulse 2s ease-in-out infinite;
+}
+
+/* Visualization type switcher button */
+.viz-toggle {
+    position: fixed;
+    bottom: 20px;
+    right: 140px;
+    background-color: #222;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    font-size: 20px;
+    cursor: pointer;
+    z-index: 1000;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.viz-toggle:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    background-color: #333;
+}
+
+.viz-toggle:active {
+    transform: scale(0.95);
+}
+
+.viz-tooltip {
+    position: fixed;
+    bottom: 75px;
+    right: 140px;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 12px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 1000;
+    transform: translateX(50%);
+}
+
+@keyframes mic-button-pulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 10px rgba(100, 255, 218, 0.7);
+        transform: scale(1);
+    }
+
+    50% {
+        box-shadow: 0 0 20px rgba(100, 255, 218, 0.9);
+        transform: scale(1.05);
+    }
+}
+
+/* Audio visualizer canvas styles */
+.audio-visualizer {
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    height: 150px;
+    /* Removed background-color and backdrop-filter for transparency */
+}
