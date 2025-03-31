@@ -29,17 +29,16 @@ class AudioVisualizer {
             '#fb5584'  // Rose
         ];
 
-        // Visualization types
+        // Visualization types - removed 'particles'
         this.visualizationTypes = [
             'bars',
             'wave',
             'circular',
-            'particles',
             'spectrum'
         ];
         this.currentVisualization = 0;
 
-        // Particle system
+        // Particle system - keeping this code in case you want to reimplement it later
         this.particles = [];
         this.maxParticles = 100;
     }
@@ -171,9 +170,6 @@ class AudioVisualizer {
             case 'circular':
                 this.drawCircular();
                 break;
-            case 'particles':
-                this.drawParticles();
-                break;
             case 'spectrum':
                 this.drawSpectrum();
                 break;
@@ -248,26 +244,81 @@ class AudioVisualizer {
         const bufferLength = this.analyser.frequencyBinCount;
         const centerX = this.canvas.width / 2;
         const centerY = this.canvas.height / 2;
-        const radius = Math.min(centerX, centerY) * 0.8;
+        const maxRadius = Math.min(centerX, centerY) * 0.7;
 
+        // Calculate average energy for glow effect
+        let totalEnergy = 0;
         for (let i = 0; i < bufferLength; i++) {
-            const barHeight = this.dataArray[i] * 0.5;
-            const angle = (i * 2 * Math.PI) / bufferLength;
-            const x1 = centerX + Math.cos(angle) * radius;
-            const y1 = centerY + Math.sin(angle) * radius;
-            const x2 = centerX + Math.cos(angle) * (radius + barHeight);
-            const y2 = centerY + Math.sin(angle) * (radius + barHeight);
+            totalEnergy += this.dataArray[i];
+        }
+        const avgEnergy = totalEnergy / bufferLength / 255; // Normalize to 0-1
 
-            const colorIndex = Math.floor((this.dataArray[i] / 255) * this.barColors.length);
+        // Draw base circle
+        this.canvasContext.beginPath();
+        this.canvasContext.arc(centerX, centerY, maxRadius * 0.3, 0, Math.PI * 2);
+        this.canvasContext.strokeStyle = `rgba(100, 255, 218, ${0.2 + avgEnergy * 0.5})`;
+        this.canvasContext.lineWidth = 2;
+        this.canvasContext.stroke();
+
+        // Draw middle circle
+        this.canvasContext.beginPath();
+        this.canvasContext.arc(centerX, centerY, maxRadius * 0.6, 0, Math.PI * 2);
+        this.canvasContext.strokeStyle = `rgba(100, 255, 218, ${0.1 + avgEnergy * 0.3})`;
+        this.canvasContext.lineWidth = 1;
+        this.canvasContext.stroke();
+
+        // Draw outer circle with glow based on energy
+        this.canvasContext.beginPath();
+        this.canvasContext.arc(centerX, centerY, maxRadius, 0, Math.PI * 2);
+        this.canvasContext.strokeStyle = `rgba(100, 255, 218, ${0.1 + avgEnergy * 0.4})`;
+        this.canvasContext.lineWidth = 2 + avgEnergy * 3;
+        this.canvasContext.shadowBlur = 10 + avgEnergy * 20;
+        this.canvasContext.shadowColor = 'rgba(100, 255, 218, 0.5)';
+        this.canvasContext.stroke();
+        this.canvasContext.shadowBlur = 0;
+
+        // Draw spectrum around the circle
+        const frequencyStep = Math.ceil(bufferLength / 64); // Use fewer data points for smoother visualization
+
+        for (let i = 0; i < bufferLength; i += frequencyStep) {
+            const amplitude = this.dataArray[i] / 255; // Normalize to 0-1
+            if (amplitude < 0.05) continue; // Skip very low amplitudes for cleaner look
+
+            const barHeight = amplitude * maxRadius * 0.7;
+            const angle = (i * 2 * Math.PI) / bufferLength;
+
+            // Calculate start and end points
+            const innerRadius = maxRadius * 0.4;
+            const x1 = centerX + Math.cos(angle) * innerRadius;
+            const y1 = centerY + Math.sin(angle) * innerRadius;
+            const x2 = centerX + Math.cos(angle) * (innerRadius + barHeight);
+            const y2 = centerY + Math.sin(angle) * (innerRadius + barHeight);
+
+            // Pick color based on frequency and amplitude
+            const hue = (i / bufferLength) * 360;
+            const colorIndex = Math.floor(amplitude * this.barColors.length);
             const color = this.barColors[Math.min(colorIndex, this.barColors.length - 1)];
 
+            // Draw line with glow effect
             this.canvasContext.strokeStyle = color;
-            this.canvasContext.lineWidth = 2;
+            this.canvasContext.lineWidth = 2 + amplitude * 3;
+            this.canvasContext.shadowBlur = 5 + amplitude * 10;
+            this.canvasContext.shadowColor = color;
             this.canvasContext.beginPath();
             this.canvasContext.moveTo(x1, y1);
             this.canvasContext.lineTo(x2, y2);
             this.canvasContext.stroke();
         }
+
+        // Reset shadow effect
+        this.canvasContext.shadowBlur = 0;
+
+        // Draw pulsing center based on bass frequencies
+        const bassEnergy = this.dataArray.slice(0, 10).reduce((sum, val) => sum + val, 0) / (10 * 255);
+        this.canvasContext.beginPath();
+        this.canvasContext.arc(centerX, centerY, maxRadius * 0.1 * (1 + bassEnergy), 0, Math.PI * 2);
+        this.canvasContext.fillStyle = `rgba(100, 255, 218, ${0.5 + bassEnergy * 0.5})`;
+        this.canvasContext.fill();
     }
 
     // Particle visualization

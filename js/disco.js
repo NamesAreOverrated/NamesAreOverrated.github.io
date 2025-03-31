@@ -261,8 +261,8 @@ function initDiscoMode() {
                 'bars': '📊',
                 'wave': '〰️',
                 'circular': '🔄',
-                'particles': '✨',
                 'spectrum': '🌈'
+                // Removed 'particles': '✨'
             };
 
             visualizerTypeButton.innerHTML = icons[newType] || '📊';
@@ -344,8 +344,8 @@ document.addEventListener('hashchange', () => {
                     'bars': '📊',
                     'wave': '〰️',
                     'circular': '🔄',
-                    'particles': '✨',
                     'spectrum': '🌈'
+                    // Removed 'particles': '✨'
                 };
 
                 visualizerTypeButton.innerHTML = icons[window.AudioVisualizer.getCurrentVisualizationName()] || '📊';
