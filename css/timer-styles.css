@@ -456,7 +456,8 @@
 .phase-indicators {
     position: relative;
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
+    /* Changed from space-between to center */
     align-items: center;
     height: 100%;
     padding: 0 2rem;
@@ -485,17 +486,7 @@
 
 /* Phase indicator fill effect - replaces the internal progress bar */
 .phase-indicator::after {
-    content: attr(data-duration);
-    position: absolute;
-    bottom: -25px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 0.8rem;
-    white-space: nowrap;
-    color: var(--text-color);
-    background-color: rgba(15, 15, 15, 0.7);
-    padding: 2px 6px;
-    border-radius: 10px;
+    content: none;
 }
 
 /* New progress fill element inside phase indicators */
@@ -629,14 +620,16 @@
     transform: translateY(-4px);
 }
 
-.phase-indicator .phase-number {
+.phase-indicator .phase-duration {
     font-size: 0.9rem;
     color: var(--text-color);
     opacity: 0.9;
     position: relative;
+    z-index: 2;
+    /* Ensure text stays above the fill */
 }
 
-.phase-indicator.active .phase-number::before {
+.phase-indicator.active .phase-duration::before {
     content: '';
     position: absolute;
     bottom: -10px;
@@ -859,4 +852,90 @@
     flex-direction: column;
     align-items: center;
     gap: 1rem;
+}
+
+/* Return to Timer Notification */
+.timer-return-notification {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    background-color: var(--secondary-color, #333);
+    color: var(--text-color, #fff);
+    padding: 15px;
+    border-radius: 5px;
+    border-left: 4px solid var(--accent-color, #64ffda);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 9999;
+    font-family: 'Courier New', monospace;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 300px;
+    transform: translateY(150%);
+    transition: transform 0.3s ease;
+}
+
+.timer-return-notification.hiding {
+    transform: translateY(150%);
+}
+
+#return-to-timer-btn {
+    align-self: flex-end;
+    background-color: var(--accent-color, #64ffda);
+    color: var(--bg-color, #1d1d21);
+    border: none;
+    padding: 8px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'Courier New', monospace;
+    transition: all 0.3s ease;
+    font-weight: bold;
+}
+
+#return-to-timer-btn:hover {
+    background-color: var(--text-color, #fff);
+    color: var(--accent-color, #64ffda);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+@keyframes slide-in {
+    from {
+        transform: translateY(150%);
+    }
+
+    to {
+        transform: translateY(0);
+    }
+}
+
+@keyframes slide-out {
+    from {
+        transform: translateY(0);
+    }
+
+    to {
+        transform: translateY(150%);
+    }
+}
+
+.timer-return-notification.hiding {
+    animation: slide-out 0.3s ease forwards;
+}
+
+#return-to-timer-btn {
+    align-self: flex-end;
+    background-color: var(--accent-color);
+    color: var(--bg-color);
+    border: none;
+    padding: 5px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-family: 'Courier New', monospace;
+    transition: all 0.3s ease;
+}
+
+#return-to-timer-btn:hover {
+    background-color: var(--text-color);
+    color: var(--accent-color);
 }

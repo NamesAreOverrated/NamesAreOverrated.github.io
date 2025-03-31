@@ -18,6 +18,8 @@ class Timer {
             minutes: 0,
             seconds: 0
         };
+        this.lastActiveTime = Date.now();
+        this.phaseStartTime = null;
 
         // Initialize patterns
         this.initializePatterns();
@@ -25,6 +27,9 @@ class Timer {
 
         // Initialize UI default state
         this.initializeDefaultUIState();
+
+        // Handle visibility changes to adjust for background tabs
+        document.addEventListener('visibilitychange', () => this.handleVisibilityChange());
     }
 
     // Add this new method to initialize default UI state
@@ -45,6 +50,12 @@ class Timer {
         const breathingGuide = document.querySelector('.breathing-guide');
         if (breathingGuide) {
             breathingGuide.style.display = 'none';
+        }
+
+        // Disable start button until a valid pattern is selected
+        const startButton = document.getElementById('start-timer');
+        if (startButton) {
+            startButton.disabled = true;
         }
     }
 
@@ -81,6 +92,30 @@ class Timer {
                 ],
                 repeat: true,
                 visualization: 'breathing-circle'
+            },
+            'calm-anxiety': {
+                name: '5-2-7 Breathing',
+                phases: [
+                    { duration: 5, message: 'Breathe in slowly through your nose', type: 'inhale' },
+                    { duration: 2, message: 'Pause briefly', type: 'hold' },
+                    { duration: 7, message: 'Exhale slowly through your mouth', type: 'exhale' }
+                ],
+                repeat: true,
+                visualization: 'breathing-circle'
+            },
+            'fun': {
+                name: 'Just Have Fun',
+                phases: [
+                    { duration: 10 * 60, message: 'Time for something fun! No pressure, just enjoy.', type: 'break' }
+                ],
+                repeat: false
+            },
+            'meditation': {
+                name: 'Quick Meditation',
+                phases: [
+                    { duration: 5 * 60, message: 'Find a comfortable position and focus on your breath', type: 'focus' }
+                ],
+                repeat: false,
             }
         };
     }
@@ -98,7 +133,7 @@ class Timer {
             this.setPattern(card.dataset.pattern);
         });
 
-        // Tab navigation
+        // Tab navigation - update to reset timer state when switching between internal tabs
         document.querySelectorAll('.pattern-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 // Toggle active class for tabs
@@ -108,18 +143,26 @@ class Timer {
                 // Show/hide relevant content
                 if (btn.dataset.pattern === 'countdown') {
                     document.querySelector('.pattern-grid').style.display = 'none';
+
+                    // Reset timer state for custom timer
+                    this.currentPattern = null; // Reset to force a complete setup
                     this.setupCustomTimer();
+
                     // Show the toggle when in custom timer mode
                     document.querySelector('.timer-mode-toggle').style.display = 'flex';
                 } else {
                     document.querySelector('.pattern-grid').style.display = 'grid';
                     this.disableTimeEditing();
 
+                    // Reset pattern state when switching to presets tab
+                    this.currentPattern = null;
+                    this.patternPhase = 0;
+                    this.timeLeft = 0;
+                    this.reset();
+                    this.resetPhaseInfo();
+
                     // Hide the toggle when not in custom timer mode
                     document.querySelector('.timer-mode-toggle').style.display = 'none';
-
-                    // Reset phase info when switching to presets tab
-                    this.resetPhaseInfo();
                 }
             });
         });
@@ -262,6 +305,9 @@ class Timer {
             this.timeLeft = hours * 3600 + minutes * 60 + seconds;
             this.startTime = this.timeLeft; // Save the initial time for resets
             this.updateDisplay();
+
+            // Update start button state based on new time
+            document.getElementById('start-timer').disabled = (this.timeLeft === 0 && !this.isCountUp);
         }
     }
 
@@ -380,6 +426,9 @@ class Timer {
                             this.updateCustomTime();
                         }
                         this.updateDisplay();
+
+                        // Update start button state - enable for countUp, disable for empty countdown
+                        document.getElementById('start-timer').disabled = (!this.isCountUp && this.timeLeft === 0);
                     }
                 };
 
@@ -391,8 +440,12 @@ class Timer {
         if (this.isCountUp) {
             this.timeLeft = 0;
             this.elapsedTime = 0;
+            // Enable start button for count up mode
+            document.getElementById('start-timer').disabled = false;
         } else {
             this.timeLeft = 0; // Default to 0, user will set it by clicking on timer
+            // Disable start button until user sets a time
+            document.getElementById('start-timer').disabled = true;
         }
         this.updateDisplay();
     }
@@ -410,6 +463,9 @@ class Timer {
 
         // Update display
         this.updateDisplay();
+
+        // Update start button state based on new time
+        document.getElementById('start-timer').disabled = (this.timeLeft === 0);
     }
 
     setPattern(patternId) {
@@ -442,6 +498,9 @@ class Timer {
             if (breathingGuide) {
                 breathingGuide.style.display = pattern.visualization ? 'block' : 'none';
             }
+
+            // Enable start button now that we have a valid pattern
+            document.getElementById('start-timer').disabled = false;
         }
     }
 
@@ -455,11 +514,11 @@ class Timer {
             indicator.dataset.index = index;
             indicator.dataset.duration = this.formatDuration(phase.duration);
 
-            // Add phase number inside indicator
-            const phaseNumber = document.createElement('span');
-            phaseNumber.className = 'phase-number';
-            phaseNumber.textContent = index + 1;
-            indicator.appendChild(phaseNumber);
+            // Change: Show duration instead of phase number
+            const phaseDuration = document.createElement('span');
+            phaseDuration.className = 'phase-duration';
+            phaseDuration.textContent = this.formatDuration(phase.duration);
+            indicator.appendChild(phaseDuration);
 
             // Add progress fill element to each phase indicator
             const progressFill = document.createElement('div');
@@ -524,6 +583,39 @@ class Timer {
         document.querySelector('.edit-overlay').style.display = 'none';
     }
 
+    handleVisibilityChange() {
+        const isVisible = document.visibilityState === 'visible';
+        console.log(`Visibility changed: ${isVisible ? 'visible' : 'hidden'}`);
+
+        if (isVisible && this.isRunning && this.currentPattern && this.currentPattern !== 'custom') {
+            console.log('Tab became visible, checking timer state');
+
+            // Check if we need to update UI
+            const pattern = this.patterns[this.currentPattern];
+            if (pattern) {
+                // Update visualizations
+                this.updateVisualization(pattern);
+                this.updatePhaseInfo(pattern.phases[this.patternPhase]);
+                this.updateProgress();
+
+                // Ensure active phase indicator is highlighted
+                document.querySelectorAll('.phase-indicator').forEach((indicator, i) => {
+                    indicator.classList.toggle('active', i === this.patternPhase);
+                });
+
+                // Make sure the active phase is visible
+                const activeIndicator = document.querySelector('.phase-indicator.active');
+                if (activeIndicator) {
+                    activeIndicator.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'nearest',
+                        inline: 'center'
+                    });
+                }
+            }
+        }
+    }
+
     start() {
         if (this.isRunning) return;
 
@@ -532,17 +624,33 @@ class Timer {
             this.disableTimeEditing();
         }
 
-        if (this.currentPattern === 'custom' && this.timeLeft === 0 && !this.isCountUp) {
-            // Don't start if countdown timer is at 0
+        // Validation checks
+        if (!this.currentPattern) {
+            console.warn('Cannot start timer: No pattern selected');
             return;
+        }
+
+        if (this.currentPattern === 'custom') {
+            if (!this.isCountUp && this.timeLeft === 0) {
+                console.warn('Cannot start timer: No time set for countdown timer');
+                return;
+            }
+        } else {
+            // For preset patterns, ensure timeLeft is valid
+            if (this.timeLeft <= 0) {
+                console.warn('Cannot start timer: Invalid time left value');
+                return;
+            }
         }
 
         this.isRunning = true;
         document.getElementById('start-timer').disabled = true;
         document.getElementById('pause-timer').disabled = false;
+        this.lastActiveTime = Date.now();
+        this.phaseStartTime = Date.now();
 
         // For count up timer, record start time if starting from 0
-        if (this.currentPattern === 'custom' && this.elapsedTime === 0) {
+        if (this.currentPattern === 'custom' && this.isCountUp && this.elapsedTime === 0) {
             this.elapsedTime = 0;
         }
 
@@ -570,11 +678,14 @@ class Timer {
                             body: 'Your timer has finished!'
                         });
                     } else {
-                        // Phase timer finished
+                        // Phase timer finished - CRITICAL FIX
+                        // Don't clear the interval first, let handlePhaseComplete decide
                         this.handlePhaseComplete();
                     }
                 }
             }
+
+            this.lastActiveTime = Date.now();
         }, 1000);
     }
 
@@ -598,19 +709,24 @@ class Timer {
             if (this.isCountUp) {
                 this.timeLeft = 0;
                 this.elapsedTime = 0;
+                // For count up, we can start from 0
+                document.getElementById('start-timer').disabled = false;
             } else {
                 // For countdown timer, restore to the initial time or saved time segments
                 if (this.startTime > 0) {
                     // Restore to the originally set time
                     this.timeLeft = this.startTime;
+                    document.getElementById('start-timer').disabled = false;
                 } else {
                     // If no start time was set yet, use current time segments
                     this.updateCustomTime();
+                    // Disable start button if the time is still 0
+                    document.getElementById('start-timer').disabled = (this.timeLeft === 0);
                 }
             }
             this.updateDisplay();
             this.updateDirectionIndicator();
-        } else {
+        } else if (this.currentPattern) {
             // Reset pattern timer
             const previousPhase = this.patternPhase;
             this.patternPhase = 0;
@@ -636,9 +752,14 @@ class Timer {
                         inline: 'center'
                     });
                 }
+
+                // Enable the start button as we have a valid preset pattern
+                document.getElementById('start-timer').disabled = false;
             } else {
                 this.timeLeft = 0;
                 this.updateDisplay();
+                // Disable start button if no valid pattern
+                document.getElementById('start-timer').disabled = true;
             }
 
             // Reset progress fills
@@ -648,61 +769,93 @@ class Timer {
             document.querySelectorAll('.phase-indicator .progress-fill').forEach(fill => {
                 fill.style.height = '0%';
             });
+        } else {
+            // No pattern selected yet
+            this.timeLeft = 0;
+            this.updateDisplay();
+            document.getElementById('start-timer').disabled = true;
         }
 
-        document.getElementById('start-timer').disabled = false;
         document.getElementById('pause-timer').disabled = true;
     }
 
     handlePhaseComplete() {
-        this.pause();
+        // Don't clear the interval yet - this is a key part of the fix
+        // Only pause when we're actually done with all phases
 
         const pattern = this.patterns[this.currentPattern];
         if (!pattern) {
+            if (this.intervalId) {
+                clearInterval(this.intervalId);
+                this.intervalId = null;
+            }
             this.notifications.notify({
                 title: 'Timer Complete',
                 body: 'Your timer has finished!'
             });
+            this.isRunning = false;
+            document.getElementById('start-timer').disabled = false;
+            document.getElementById('pause-timer').disabled = true;
             return;
         }
 
         const currentPhase = pattern.phases[this.patternPhase];
+        const isLastPhase = this.patternPhase === pattern.phases.length - 1;
 
         // Notify user of phase completion
         this.notifications.notify({
             title: pattern.name,
             body: currentPhase.message,
-            pattern: this.currentPattern
+            pattern: this.currentPattern,
+            phaseIndex: this.patternPhase,
+            isLastPhase: isLastPhase && !pattern.repeat
         });
 
         // Progress to next phase
-        const isLastPhase = this.patternPhase === pattern.phases.length - 1;
         if (isLastPhase && !pattern.repeat) {
-            this.reset();
+            // Timer complete
+            if (this.intervalId) {
+                clearInterval(this.intervalId);
+                this.intervalId = null;
+            }
+            this.isRunning = false;
+            document.getElementById('start-timer').disabled = false;
+            document.getElementById('pause-timer').disabled = true;
         } else {
+            // Remove active class from current indicator
             const indicators = document.querySelectorAll('.phase-indicator');
-            indicators[this.patternPhase].classList.remove('active');
+            if (indicators.length > this.patternPhase) {
+                indicators[this.patternPhase].classList.remove('active');
+            }
 
+            // Move to next phase
             this.patternPhase = (this.patternPhase + 1) % pattern.phases.length;
             this.timeLeft = pattern.phases[this.patternPhase].duration;
+            this.phaseStartTime = Date.now();
 
-            // Update UI
-            this.updatePhaseInfo(pattern.phases[this.patternPhase]);
-            this.updateVisualization(pattern);
-            indicators[this.patternPhase].classList.add('active');
+            // Update UI if we're currently viewing the timer page
+            if (window.location.hash === '#/timer') {
+                this.updatePhaseInfo(pattern.phases[this.patternPhase]);
+                this.updateVisualization(pattern);
 
-            // Ensure active phase is visible in viewport
-            indicators[this.patternPhase].scrollIntoView({
-                behavior: 'smooth',
-                block: 'nearest',
-                inline: 'center'
-            });
+                // Add active class to new indicator
+                if (indicators.length > this.patternPhase) {
+                    indicators[this.patternPhase].classList.add('active');
 
-            // Reset and start the progress for the new phase
-            this.updateProgress();
+                    // Ensure active phase is visible in viewport
+                    indicators[this.patternPhase].scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'nearest',
+                        inline: 'center'
+                    });
+                }
 
-            // Auto-start next phase
-            this.start();
+                // Reset and show progress for the new phase
+                this.updateProgress();
+            }
+
+            // IMPORTANT FIX: Don't try to call start() again or create new interval
+            // Just continue with the existing interval by NOT clearing it above
         }
     }
 
@@ -847,8 +1000,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.location.hash === '#/timer') {
         initializeTimer();
     }
-
-    // Hash change listener is handled by the router now, removing duplicate handling here
 });
 
 // Function to initialize timer

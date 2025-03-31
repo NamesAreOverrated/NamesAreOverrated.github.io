@@ -50,3 +50,28 @@ document.addEventListener('DOMContentLoaded', function () {
     // Also call when hash changes
     window.addEventListener('hashchange', updateNavLinks);
 });
+
+// Update navigation active states based on current hash
+function updateNavActiveStates() {
+    const currentHash = window.location.hash || '#/';
+    const navLinks = document.querySelectorAll('nav a');
+
+    // Remove active class from all links
+    navLinks.forEach(link => {
+        link.classList.remove('active');
+    });
+
+    // Add active class to current link
+    const activeLink = document.querySelector(`nav a[href="${currentHash}"]`);
+    if (activeLink) {
+        activeLink.classList.add('active');
+    } else if (currentHash === '#/') {
+        // Default to home if no match
+        const homeLink = document.querySelector('nav a[href="#/"]');
+        if (homeLink) homeLink.classList.add('active');
+    }
+}
+
+// Update on page load and when hash changes
+document.addEventListener('DOMContentLoaded', updateNavActiveStates);
+window.addEventListener('hashchange', updateNavActiveStates);

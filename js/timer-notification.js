@@ -75,9 +75,7 @@ class TimerNotification {
         }
     }
 
-    async notify({ title = 'Timer', body = 'Time is up!', pattern = null }) {
-        const notifications = [];
-
+    async notify({ title = 'Timer', body = 'Time is up!', pattern = null, phaseIndex = null, isLastPhase = false }) {
         // Play notifications
         if (this.permission === 'granted' && this.notificationEnabled) {
             this.showDesktopNotification(title, body);
@@ -85,7 +83,71 @@ class TimerNotification {
         if (this.soundEnabled) {
             this.playSound();
         }
-        this.showInPageNotification(title, body, pattern);
+
+        // Only show in-page notification if we're on the timer page
+        if (window.location.hash === '#/timer') {
+            this.showInPageNotification(title, body, pattern);
+        } else {
+            // Create or update a "return to timer" button with phase information
+            this.showReturnToTimerNotification(title, body, pattern, phaseIndex, isLastPhase);
+        }
+    }
+
+    showReturnToTimerNotification(title, body, pattern, phaseIndex, isLastPhase) {
+        // Remove any existing notification first
+        const existingNotification = document.getElementById('timer-return-notification');
+        if (existingNotification) {
+            document.body.removeChild(existingNotification);
+        }
+
+        // Create the notification element
+        const notificationElement = document.createElement('div');
+        notificationElement.id = 'timer-return-notification';
+        notificationElement.className = 'timer-return-notification';
+        document.body.appendChild(notificationElement);
+
+        // Store phase data as attributes for when user returns to timer
+        if (pattern && phaseIndex !== null) {
+            notificationElement.dataset.pattern = pattern;
+            notificationElement.dataset.phaseIndex = phaseIndex;
+            notificationElement.dataset.isLastPhase = isLastPhase;
+        }
+
+        // Update the notification content
+        notificationElement.innerHTML = `
+            <div>
+                <div style="font-weight: bold; margin-bottom: 5px;">${title}</div>
+                <div>${body}</div>
+            </div>
+            <button id="return-to-timer-btn">Return to Timer</button>
+        `;
+
+        // Slide in the notification after a short delay (to ensure animation works)
+        setTimeout(() => {
+            notificationElement.style.transform = 'translateY(0)';
+        }, 10);
+
+        // Add click handler to the button
+        document.getElementById('return-to-timer-btn').addEventListener('click', () => {
+            window.location.hash = '#/timer';
+            // Hide the notification
+            notificationElement.classList.add('hiding');
+            setTimeout(() => {
+                if (notificationElement.parentNode) {
+                    document.body.removeChild(notificationElement);
+                }
+            }, 300); // Match the animation duration
+        });
+
+        // Auto-hide after 10 seconds
+        setTimeout(() => {
+            notificationElement.classList.add('hiding');
+            setTimeout(() => {
+                if (notificationElement.parentNode) {
+                    document.body.removeChild(notificationElement);
+                }
+            }, 300); // Match the animation duration
+        }, 10000);
     }
 
     async showDesktopNotification(title, body) {

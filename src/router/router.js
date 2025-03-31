@@ -67,21 +67,23 @@ const router = {
         // Handle initial page load - this will ensure the hash route is handled even on first load
         this.handleRouting();
 
-        // Listen for hash changes with improved timer cleanup
+        // Listen for hash changes
         window.addEventListener('hashchange', () => {
             const previousRoute = this.currentRoute;
             this.currentRoute = window.location.hash;
 
             // Check if we're navigating away from timer page
             const leavingTimerPage = previousRoute === '#/timer' && this.currentRoute !== '#/timer';
+            const enteringTimerPage = previousRoute !== '#/timer' && this.currentRoute === '#/timer';
 
             // Handle the routing
             this.handleRouting();
 
-            // If we were on timer page but now we're navigating elsewhere, clean up
-            if (leavingTimerPage) {
-                console.log('Router: Leaving timer page, cleaning up timer');
-                cleanupTimer();
+            // If entering timer page and we have a saved timer instance, restore timer UI
+            if (enteringTimerPage && window.timerInstance) {
+                console.log('Router: Returning to timer page, updating UI');
+                // Update timer UI without stopping the timer
+                restoreTimerUI();
             }
         });
 
@@ -116,8 +118,18 @@ const router = {
 
 // Function to display a blog post
 async function displayBlogPost(id) {
+    // Clear any body classes first
     document.body.classList.remove('viewing-timer', 'viewing-habit-tracker');
     document.body.classList.add('viewing-page');
+
+    // Hide all sections properly
+    document.getElementById('projects').style.display = 'none';
+    document.getElementById('tools').style.display = 'none';
+    document.getElementById('blogs').style.display = 'none';
+    document.getElementById('timer-section').style.display = 'none';
+    document.getElementById('habit-tracker-section').style.display = 'none';
+    document.getElementById('page-content').style.display = 'block';
+
     try {
         // Hide all sections explicitly (about removed)
         document.getElementById('projects').style.display = 'none';
@@ -177,8 +189,18 @@ async function displayBlogPost(id) {
 
 // Function to display a project
 async function displayProject(id) {
+    // Clear any body classes first
     document.body.classList.remove('viewing-timer', 'viewing-habit-tracker');
     document.body.classList.add('viewing-page');
+
+    // Hide all sections properly
+    document.getElementById('projects').style.display = 'none';
+    document.getElementById('tools').style.display = 'none';
+    document.getElementById('blogs').style.display = 'none';
+    document.getElementById('timer-section').style.display = 'none';
+    document.getElementById('habit-tracker-section').style.display = 'none';
+    document.getElementById('page-content').style.display = 'block';
+
     try {
         // Hide all sections explicitly (about removed)
         document.getElementById('projects').style.display = 'none';
@@ -232,8 +254,18 @@ async function displayProject(id) {
 
 // Function to display a tool
 async function displayTool(id) {
+    // Clear any body classes first
     document.body.classList.remove('viewing-timer', 'viewing-habit-tracker');
     document.body.classList.add('viewing-page');
+
+    // Hide all sections properly
+    document.getElementById('projects').style.display = 'none';
+    document.getElementById('tools').style.display = 'none';
+    document.getElementById('blogs').style.display = 'none';
+    document.getElementById('timer-section').style.display = 'none';
+    document.getElementById('habit-tracker-section').style.display = 'none';
+    document.getElementById('page-content').style.display = 'block';
+
     try {
         // Hide all sections explicitly (about removed)
         document.getElementById('projects').style.display = 'none';
@@ -280,25 +312,23 @@ async function displayTool(id) {
 
 // New function to display the habit tracker
 function displayHabitTracker() {
-    document.body.classList.remove('viewing-timer', 'viewing-page');
-    document.body.classList.add('viewing-habit-tracker');
     console.log("Router: Displaying habit tracker");
 
-    // Hide all sections explicitly (about removed)
+    // Reset body classes
+    document.body.classList.remove('viewing-timer', 'viewing-page');
+    document.body.classList.add('viewing-habit-tracker');
+
+    // Hide all sections properly and explicitly
     document.getElementById('projects').style.display = 'none';
     document.getElementById('tools').style.display = 'none';
     document.getElementById('blogs').style.display = 'none';
     document.getElementById('page-content').style.display = 'none';
-
-    // Explicitly hide the timer section
-    const timerSection = document.getElementById('timer-section');
-    if (timerSection) timerSection.style.display = 'none';
+    document.getElementById('timer-section').style.display = 'none';
 
     // Show habit tracker section
     const habitSection = document.getElementById('habit-tracker-section');
     if (habitSection) {
         habitSection.style.display = 'block';
-        document.body.classList.add('viewing-habit-tracker');
 
         // Wait a brief moment to ensure DOM elements are ready before initializing or refreshing
         setTimeout(() => {
@@ -332,7 +362,11 @@ function displayHabitTracker() {
 function displayTimer() {
     console.log("Router: Displaying timer");
 
-    // Hide all main sections
+    // Reset body classes
+    document.body.classList.remove('viewing-habit-tracker', 'viewing-page');
+    document.body.classList.add('viewing-timer');
+
+    // Hide all main sections explicitly
     document.getElementById('projects').style.display = 'none';
     document.getElementById('tools').style.display = 'none';
     document.getElementById('blogs').style.display = 'none';
@@ -343,14 +377,48 @@ function displayTimer() {
     const timerSection = document.getElementById('timer-section');
     if (timerSection) {
         timerSection.style.display = 'block';
-        document.body.classList.add('viewing-timer');
-        document.body.classList.remove('viewing-habit-tracker', 'viewing-page');
+
+        // Check if we have phase information in a notification
+        const timerNotification = document.getElementById('timer-return-notification');
+        let notificationData = null;
+
+        if (timerNotification) {
+            // Extract data from notification
+            notificationData = {
+                pattern: timerNotification.dataset.pattern,
+                phaseIndex: parseInt(timerNotification.dataset.phaseIndex),
+                isLastPhase: timerNotification.dataset.isLastPhase === 'true'
+            };
+
+            // Remove the notification after getting its data
+            timerNotification.classList.add('hiding');
+            setTimeout(() => {
+                if (timerNotification.parentNode) {
+                    document.body.removeChild(timerNotification);
+                }
+            }, 300);
+        }
 
         // Initialize timer if Timer class is available
         if (typeof Timer === 'function') {
             if (!window.timerInstance) {
                 console.log('Timer initialized from router');
                 window.timerInstance = new Timer();
+
+                // If we have notification data and no timer instance yet
+                if (notificationData && notificationData.pattern) {
+                    // Set up the pattern that was active in notification
+                    window.timerInstance.setPattern(notificationData.pattern);
+
+                    // Jump to the correct phase if needed
+                    if (!isNaN(notificationData.phaseIndex)) {
+                        window.timerInstance.jumpToPhase(notificationData.phaseIndex);
+                    }
+                }
+            } else {
+                // Update the display if timer instance already exists
+                console.log('Refreshing timer display');
+                restoreTimerUI(notificationData);
             }
         } else {
             console.warn('Router: Timer class not found. Make sure timer.js is loaded correctly.');
@@ -360,41 +428,119 @@ function displayTimer() {
     }
 }
 
-// Add a new function to clean up the timer when navigating away
-function cleanupTimer() {
-    if (window.timerInstance) {
-        console.log('Router: Cleaning up timer instance');
+// Function to restore just the timer UI without stopping the timer
+function restoreTimerUI(notificationData) {
+    if (!window.timerInstance) return;
 
-        // Pause the timer if it's running
-        if (window.timerInstance.isRunning) {
-            window.timerInstance.pause();
+    console.log('Router: Restoring timer UI with data:', notificationData);
+
+    // If we're returning from a notification with phase information,
+    // make sure we update to the correct phase
+    if (notificationData &&
+        notificationData.pattern === window.timerInstance.currentPattern &&
+        !isNaN(notificationData.phaseIndex)) {
+
+        console.log(`Updating timer to phase ${notificationData.phaseIndex} from notification`);
+
+        // Force UI update for the specified phase
+        const pattern = window.timerInstance.patterns[window.timerInstance.currentPattern];
+
+        if (pattern) {
+            // If timer is running but isn't on the correct phase, update it
+            if (window.timerInstance.patternPhase !== notificationData.phaseIndex) {
+                // Update phase index without stopping the timer
+                window.timerInstance.patternPhase = notificationData.phaseIndex;
+
+                // Only update timeLeft if not running to avoid timer jumps
+                if (!window.timerInstance.isRunning) {
+                    window.timerInstance.timeLeft = pattern.phases[notificationData.phaseIndex].duration;
+                }
+
+                // Update timer visualizations
+                window.timerInstance.updateVisualization(pattern);
+                window.timerInstance.updatePhaseInfo(pattern.phases[notificationData.phaseIndex]);
+            }
         }
+    }
 
-        // Clear any intervals to ensure nothing runs in background
-        if (window.timerInstance.intervalId) {
-            clearInterval(window.timerInstance.intervalId);
-            window.timerInstance.intervalId = null;
+    // Make sure disabled state of buttons is correct
+    const startButton = document.getElementById('start-timer');
+    const pauseButton = document.getElementById('pause-timer');
+
+    // Running state check
+    if (window.timerInstance.isRunning) {
+        startButton.disabled = true;
+        pauseButton.disabled = false;
+    } else {
+        // For non-running timers, we need more specific validation
+        pauseButton.disabled = true;
+
+        // Start button validation - should be disabled if:
+        // 1. No pattern is selected
+        // 2. Custom countdown timer with time = 0
+        if (!window.timerInstance.currentPattern) {
+            startButton.disabled = true;
+        } else if (window.timerInstance.currentPattern === 'custom' &&
+            !window.timerInstance.isCountUp &&
+            window.timerInstance.timeLeft === 0) {
+            startButton.disabled = true;
+        } else {
+            startButton.disabled = false;
         }
+    }
 
-        // Reset any phase info and event handlers
-        const phaseInfo = document.querySelector('.phase-info');
-        if (phaseInfo && phaseInfo.hasClickHandler) {
-            phaseInfo.removeEventListener('click', phaseInfo._clickHandler);
-            phaseInfo.hasClickHandler = false;
-            delete phaseInfo._clickHandler;
-            phaseInfo.classList.remove('clickable');
+    // Update the time display
+    window.timerInstance.updateDisplay();
+
+    // Restore visualization state if applicable
+    if (window.timerInstance.currentPattern && window.timerInstance.currentPattern !== 'custom') {
+        const pattern = window.timerInstance.patterns[window.timerInstance.currentPattern];
+        if (pattern) {
+            // Highlight the correct pattern card
+            document.querySelectorAll('.pattern-card').forEach(card => {
+                card.classList.toggle('active', card.dataset.pattern === window.timerInstance.currentPattern);
+            });
+
+            // Ensure correct phase is highlighted in timeline
+            const indicators = document.querySelectorAll('.phase-indicator');
+            indicators.forEach((indicator, i) => {
+                indicator.classList.toggle('active', i === window.timerInstance.patternPhase);
+            });
+
+            // Update progress display
+            window.timerInstance.updateProgress();
+
+            // Restart visual elements like breathing circle if they were running
+            if (window.timerInstance.isRunning) {
+                window.timerInstance.updateVisualization(pattern);
+            }
+
+            // Scroll active phase into view
+            const activeIndicator = document.querySelector('.phase-indicator.active');
+            if (activeIndicator) {
+                activeIndicator.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'nearest',
+                    inline: 'center'
+                });
+            }
         }
+    } else if (window.timerInstance.currentPattern === 'custom') {
+        // Ensure correct tab is active
+        document.querySelectorAll('.pattern-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.pattern === 'countdown');
+        });
 
-        // Clean up any animations
-        const circleElement = document.querySelector('.breathing-guide .circle');
-        if (circleElement) {
-            circleElement.style.animation = 'none';
-        }
+        // Ensure timer mode toggle is visible and in correct state
+        document.querySelector('.timer-mode-toggle').style.display = 'flex';
 
-        // Delete the timer instance
-        window.timerInstance = null;
+        // Update direction toggle state
+        const toggle = document.getElementById('count-direction-toggle');
+        if (toggle) toggle.checked = window.timerInstance.isCountUp;
 
-        console.log('Router: Timer instance cleanup complete');
+        // Display label
+        const toggleLabel = document.querySelector('.toggle-label');
+        if (toggleLabel) toggleLabel.textContent = window.timerInstance.isCountUp ? 'Count Up' : 'Count Down';
     }
 }
 
