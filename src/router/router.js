@@ -384,11 +384,19 @@ function displayTimer() {
 
         if (timerNotification) {
             // Extract data from notification
+            const timestamp = parseInt(timerNotification.dataset.timestamp || '0');
+            const currentTime = Date.now();
+            const timeDiff = currentTime - timestamp;
+
             notificationData = {
                 pattern: timerNotification.dataset.pattern,
                 phaseIndex: parseInt(timerNotification.dataset.phaseIndex),
-                isLastPhase: timerNotification.dataset.isLastPhase === 'true'
+                isLastPhase: timerNotification.dataset.isLastPhase === 'true',
+                timestamp: timestamp,
+                timeDiff: timeDiff
             };
+
+            console.log('Notification data with time diff:', notificationData);
 
             // Remove the notification after getting its data
             timerNotification.classList.add('hiding');
@@ -446,20 +454,26 @@ function restoreTimerUI(notificationData) {
         const pattern = window.timerInstance.patterns[window.timerInstance.currentPattern];
 
         if (pattern) {
-            // If timer is running but isn't on the correct phase, update it
-            if (window.timerInstance.patternPhase !== notificationData.phaseIndex) {
-                // Update phase index without stopping the timer
-                window.timerInstance.patternPhase = notificationData.phaseIndex;
+            // Update phase index without stopping the timer
+            const originalPhase = window.timerInstance.patternPhase;
+            window.timerInstance.patternPhase = notificationData.phaseIndex;
 
-                // Only update timeLeft if not running to avoid timer jumps
-                if (!window.timerInstance.isRunning) {
-                    window.timerInstance.timeLeft = pattern.phases[notificationData.phaseIndex].duration;
-                }
-
-                // Update timer visualizations
-                window.timerInstance.updateVisualization(pattern);
-                window.timerInstance.updatePhaseInfo(pattern.phases[notificationData.phaseIndex]);
+            // If timer is running and phase has changed, we need to reset the phase start time
+            if (window.timerInstance.isRunning && originalPhase !== notificationData.phaseIndex) {
+                window.timerInstance.phaseStartTime = Date.now();
+                // The phase should have just started - set timeLeft to duration of current phase
+                window.timerInstance.timeLeft = pattern.phases[notificationData.phaseIndex].duration;
+            } else if (!window.timerInstance.isRunning) {
+                // If timer is not running, just set to the phase duration
+                window.timerInstance.timeLeft = pattern.phases[notificationData.phaseIndex].duration;
             }
+
+            // Update timer visualizations
+            window.timerInstance.updateVisualization(pattern);
+            window.timerInstance.updatePhaseInfo(pattern.phases[notificationData.phaseIndex]);
+
+            // Update progress indicators
+            window.timerInstance.updateProgress();
         }
     }
 

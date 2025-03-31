@@ -111,6 +111,8 @@ class TimerNotification {
             notificationElement.dataset.pattern = pattern;
             notificationElement.dataset.phaseIndex = phaseIndex;
             notificationElement.dataset.isLastPhase = isLastPhase;
+            // Add the current timestamp to track when notification was created
+            notificationElement.dataset.timestamp = Date.now();
         }
 
         // Update the notification content

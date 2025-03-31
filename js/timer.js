@@ -133,37 +133,23 @@ class Timer {
             this.setPattern(card.dataset.pattern);
         });
 
-        // Tab navigation - update to reset timer state when switching between internal tabs
+        // Tab navigation - update to show confirmation dialog when needed
         document.querySelectorAll('.pattern-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                // Toggle active class for tabs
-                document.querySelectorAll('.pattern-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
+            btn.addEventListener('click', (e) => {
+                // Check if timer is running or paused and we need confirmation
+                if ((this.isRunning || (this.timeLeft > 0 && this.currentPattern)) &&
+                    !btn.classList.contains('active')) {
 
-                // Show/hide relevant content
-                if (btn.dataset.pattern === 'countdown') {
-                    document.querySelector('.pattern-grid').style.display = 'none';
+                    // Prevent the default tab switch
+                    e.preventDefault();
 
-                    // Reset timer state for custom timer
-                    this.currentPattern = null; // Reset to force a complete setup
-                    this.setupCustomTimer();
-
-                    // Show the toggle when in custom timer mode
-                    document.querySelector('.timer-mode-toggle').style.display = 'flex';
-                } else {
-                    document.querySelector('.pattern-grid').style.display = 'grid';
-                    this.disableTimeEditing();
-
-                    // Reset pattern state when switching to presets tab
-                    this.currentPattern = null;
-                    this.patternPhase = 0;
-                    this.timeLeft = 0;
-                    this.reset();
-                    this.resetPhaseInfo();
-
-                    // Hide the toggle when not in custom timer mode
-                    document.querySelector('.timer-mode-toggle').style.display = 'none';
+                    // Show confirmation dialog
+                    this.showTabChangeConfirmation(btn);
+                    return;
                 }
+
+                // If no confirmation needed, proceed with tab change
+                this.switchTimerTab(btn);
             });
         });
 
@@ -267,6 +253,82 @@ class Timer {
         document.getElementById('cancel-edit').addEventListener('click', () => {
             this.hideEditor();
         });
+    }
+
+    // New method to handle tab switching with confirmation
+    showTabChangeConfirmation(targetTab) {
+        // Create confirmation overlay if it doesn't exist
+        let confirmationOverlay = document.querySelector('.tab-change-confirmation');
+        if (!confirmationOverlay) {
+            confirmationOverlay = document.createElement('div');
+            confirmationOverlay.className = 'tab-change-confirmation';
+            confirmationOverlay.innerHTML = `
+                <div class="confirmation-dialog">
+                    <h3>Timer in Progress</h3>
+                    <p>Changing tabs will reset your current timer. Are you sure you want to continue?</p>
+                    <div class="confirmation-buttons">
+                        <button id="cancel-tab-change" class="timer-btn">Cancel</button>
+                        <button id="confirm-tab-change" class="timer-btn warning">Continue</button>
+                    </div>
+                </div>
+            `;
+            document.querySelector('.timer-container').appendChild(confirmationOverlay);
+
+            // Add event listeners to the buttons
+            document.getElementById('cancel-tab-change').addEventListener('click', () => {
+                confirmationOverlay.classList.remove('active');
+            });
+        }
+
+        // Store the target tab to switch to if confirmed
+        confirmationOverlay.dataset.targetTab = targetTab.dataset.pattern;
+
+        // Show the confirmation dialog
+        confirmationOverlay.classList.add('active');
+
+        // Add event listener for confirmation - use once to prevent multiple handlers
+        const confirmBtn = document.getElementById('confirm-tab-change');
+        const handleConfirm = () => {
+            confirmationOverlay.classList.remove('active');
+            this.switchTimerTab(targetTab);
+            confirmBtn.removeEventListener('click', handleConfirm);
+        };
+
+        // Remove any existing listeners first
+        confirmBtn.removeEventListener('click', handleConfirm);
+        confirmBtn.addEventListener('click', handleConfirm);
+    }
+
+    // New method to actually perform the tab switch
+    switchTimerTab(btn) {
+        // Toggle active class for tabs
+        document.querySelectorAll('.pattern-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        // Show/hide relevant content
+        if (btn.dataset.pattern === 'countdown') {
+            document.querySelector('.pattern-grid').style.display = 'none';
+
+            // Reset timer state for custom timer
+            this.currentPattern = null; // Reset to force a complete setup
+            this.setupCustomTimer();
+
+            // Show the toggle when in custom timer mode
+            document.querySelector('.timer-mode-toggle').style.display = 'flex';
+        } else {
+            document.querySelector('.pattern-grid').style.display = 'grid';
+            this.disableTimeEditing();
+
+            // Reset pattern state when switching to presets tab
+            this.currentPattern = null;
+            this.patternPhase = 0;
+            this.timeLeft = 0;
+            this.reset();
+            this.resetPhaseInfo();
+
+            // Hide the toggle when not in custom timer mode
+            document.querySelector('.timer-mode-toggle').style.display = 'none';
+        }
     }
 
     enableTimeEditing() {
@@ -566,6 +628,7 @@ class Timer {
 
         this.patternPhase = index;
         this.timeLeft = pattern.phases[index].duration;
+        this.phaseStartTime = Date.now(); // Add this to reset phase timing
         this.updateDisplay();
         this.updatePhaseInfo(pattern.phases[index]);
         this.updateVisualization(pattern);
@@ -654,6 +717,14 @@ class Timer {
             this.elapsedTime = 0;
         }
 
+        // Update visualization with animations now that timer is running
+        if (this.currentPattern !== 'custom') {
+            const pattern = this.patterns[this.currentPattern];
+            if (pattern && pattern.visualization) {
+                this.updateVisualization(pattern);
+            }
+        }
+
         this.intervalId = setInterval(() => {
             if (this.currentPattern === 'custom' && this.isCountUp) {
                 // Count up logic
@@ -698,6 +769,14 @@ class Timer {
             }
             document.getElementById('start-timer').disabled = false;
             document.getElementById('pause-timer').disabled = true;
+
+            // Update visualization to static state when paused
+            if (this.currentPattern !== 'custom') {
+                const pattern = this.patterns[this.currentPattern];
+                if (pattern && pattern.visualization) {
+                    this.updateVisualization(pattern);
+                }
+            }
         }
     }
 
@@ -802,12 +881,16 @@ class Timer {
         const currentPhase = pattern.phases[this.patternPhase];
         const isLastPhase = this.patternPhase === pattern.phases.length - 1;
 
+        // Record the phase we're about to transition from and to
+        const currentPhaseIndex = this.patternPhase;
+        const nextPhaseIndex = isLastPhase && !pattern.repeat ? null : (this.patternPhase + 1) % pattern.phases.length;
+
         // Notify user of phase completion
         this.notifications.notify({
             title: pattern.name,
             body: currentPhase.message,
             pattern: this.currentPattern,
-            phaseIndex: this.patternPhase,
+            phaseIndex: nextPhaseIndex !== null ? nextPhaseIndex : currentPhaseIndex,
             isLastPhase: isLastPhase && !pattern.repeat
         });
 
@@ -897,18 +980,36 @@ class Timer {
         guide.style.display = 'block';
         const phase = pattern.phases[this.patternPhase];
 
-        if (phase.type === 'inhale') {
-            circle.style.animation = `breathe-in ${phase.duration}s cubic-bezier(0.4, 0, 0.2, 1) forwards`;
-        } else if (phase.type === 'exhale') {
-            circle.style.animation = `breathe-out ${phase.duration}s cubic-bezier(0.4, 0, 0.2, 1) forwards`;
-        } else if (phase.type === 'hold') {
-            circle.style.animation = `hold-breath ${phase.duration}s ease infinite`;
+        // Only apply animations if the timer is running
+        if (this.isRunning) {
+            if (phase.type === 'inhale') {
+                circle.style.animation = `breathe-in ${phase.duration}s cubic-bezier(0.4, 0, 0.2, 1) forwards`;
+            } else if (phase.type === 'exhale') {
+                circle.style.animation = `breathe-out ${phase.duration}s cubic-bezier(0.4, 0, 0.2, 1) forwards`;
+            } else if (phase.type === 'hold') {
+                circle.style.animation = `hold-breath ${phase.duration}s ease infinite`;
+            } else {
+                circle.style.animation = 'none';
+            }
         } else {
+            // When timer is not running, show a static visualization based on phase type
             circle.style.animation = 'none';
-        }
 
-        // Remove this line that duplicates the phase info
-        // instruction.textContent = phase.message;
+            // Set static styles based on the phase type
+            if (phase.type === 'inhale') {
+                circle.style.transform = 'translate(-50%, -50%) scale(1)';
+                circle.style.borderColor = 'var(--accent-color)';
+            } else if (phase.type === 'exhale') {
+                circle.style.transform = 'translate(-50%, -50%) scale(1.2)';
+                circle.style.borderColor = 'var(--text-color)';
+            } else if (phase.type === 'hold') {
+                circle.style.transform = 'translate(-50%, -50%) scale(1.3)';
+                circle.style.borderColor = 'var(--accent-color)';
+            } else {
+                circle.style.transform = 'translate(-50%, -50%) scale(1)';
+                circle.style.borderColor = 'var(--accent-color)';
+            }
+        }
     }
 
     // Updated method to update progress display

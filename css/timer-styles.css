@@ -939,3 +939,111 @@
     background-color: var(--text-color);
     color: var(--accent-color);
 }
+
+/* Tab change confirmation dialog */
+.tab-change-confirmation {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(29, 29, 33, 0.85);
+    /* More refined semi-transparent background */
+    backdrop-filter: blur(3px);
+    /* Add blur effect for modern browsers */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    border-radius: 10px;
+    z-index: 100;
+}
+
+.tab-change-confirmation.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.confirmation-dialog {
+    background-color: var(--secondary-color, #333);
+    border: 1px solid var(--accent-color, #64ffda);
+    border-radius: 8px;
+    padding: 2rem;
+    max-width: 400px;
+    text-align: center;
+    box-shadow: 0 0 30px rgba(100, 255, 218, 0.15);
+    /* Subtle glow matching the accent color */
+    animation: dialog-appear 0.3s ease-out;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Add a subtle accent line at the top of the dialog */
+.confirmation-dialog::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--accent-color, #64ffda), transparent);
+}
+
+@keyframes dialog-appear {
+    from {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.confirmation-dialog h3 {
+    color: var(--accent-color, #64ffda);
+    margin-top: 0;
+    margin-bottom: 1rem;
+    font-size: 1.4rem;
+    font-family: 'Courier New', monospace;
+}
+
+.confirmation-dialog p {
+    margin-bottom: 1.5rem;
+    line-height: 1.7;
+    color: var(--text-color, #fff);
+    opacity: 0.9;
+}
+
+.confirmation-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 1.2rem;
+    margin-top: 1.5rem;
+}
+
+.timer-btn.warning {
+    background-color: rgba(255, 100, 100, 0.15);
+    border-color: #ff6464;
+    transition: all 0.2s ease;
+}
+
+.timer-btn.warning:hover {
+    background-color: #ff6464;
+    color: var(--bg-color, #1d1d21);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(255, 100, 100, 0.3);
+}
+
+/* Add animation for the cancel button too */
+#cancel-tab-change {
+    transition: all 0.2s ease;
+}
+
+#cancel-tab-change:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(100, 255, 218, 0.2);
+}
