@@ -144,10 +144,10 @@ class Timer {
                     this.timeSegments = { hours: 0, minutes: 0, seconds: 0 };
 
                     // Update phase info
-                    document.querySelector('.phase-info').textContent = 'Custom Count Up Timer';
+                    document.querySelector('.phase-info').textContent = 'Count Up Timer';
                 } else {
                     // Update phase info
-                    document.querySelector('.phase-info').textContent = 'Custom Countdown Timer';
+                    document.querySelector('.phase-info').textContent = 'Countdown Timer';
                 }
             });
         }
@@ -260,7 +260,7 @@ class Timer {
         if (this.currentPattern === 'custom') {
             const { hours, minutes, seconds } = this.timeSegments;
             this.timeLeft = hours * 3600 + minutes * 60 + seconds;
-            this.startTime = this.timeLeft;
+            this.startTime = this.timeLeft; // Save the initial time for resets
             this.updateDisplay();
         }
     }
@@ -326,6 +326,9 @@ class Timer {
             minutes: 0,
             seconds: 0
         };
+
+        // Store an initial startTime of 0
+        this.startTime = 0;
 
         this.reset();
 
@@ -563,7 +566,7 @@ class Timer {
                         // Custom countdown finished
                         this.pause();
                         this.notifications.notify({
-                            title: 'Custom Timer',
+                            title: 'Timer',
                             body: 'Your timer has finished!'
                         });
                     } else {
@@ -578,7 +581,10 @@ class Timer {
     pause() {
         if (this.isRunning) {
             this.isRunning = false;
-            clearInterval(this.intervalId);
+            if (this.intervalId) {
+                clearInterval(this.intervalId);
+                this.intervalId = null;
+            }
             document.getElementById('start-timer').disabled = false;
             document.getElementById('pause-timer').disabled = true;
         }
@@ -593,13 +599,20 @@ class Timer {
                 this.timeLeft = 0;
                 this.elapsedTime = 0;
             } else {
-                // Reset to existing time segments for countdown
-                this.updateCustomTime();
+                // For countdown timer, restore to the initial time or saved time segments
+                if (this.startTime > 0) {
+                    // Restore to the originally set time
+                    this.timeLeft = this.startTime;
+                } else {
+                    // If no start time was set yet, use current time segments
+                    this.updateCustomTime();
+                }
             }
             this.updateDisplay();
             this.updateDirectionIndicator();
         } else {
             // Reset pattern timer
+            const previousPhase = this.patternPhase;
             this.patternPhase = 0;
             const pattern = this.patterns[this.currentPattern];
             if (pattern) {
@@ -607,6 +620,22 @@ class Timer {
                 this.updateDisplay();
                 this.updatePhaseInfo(pattern.phases[0]);
                 this.updateVisualization(pattern);
+
+                // Update the active indicator in the phase timeline
+                const indicators = document.querySelectorAll('.phase-indicator');
+                if (indicators.length > 0) {
+                    // Remove active class from all indicators
+                    indicators.forEach(indicator => indicator.classList.remove('active'));
+                    // Add active class to first indicator
+                    indicators[0].classList.add('active');
+
+                    // Ensure it's visible
+                    indicators[0].scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'nearest',
+                        inline: 'center'
+                    });
+                }
             } else {
                 this.timeLeft = 0;
                 this.updateDisplay();
@@ -778,9 +807,9 @@ class Timer {
         const phaseInfo = document.querySelector('.phase-info');
         if (phaseInfo && this.currentPattern === 'custom') {
             if (this.isCountUp) {
-                phaseInfo.innerHTML = '<span class="timer-direction up">⬆</span> Custom Count Up Timer';
+                phaseInfo.innerHTML = '<span class="timer-direction up">⬆</span> Count Up Timer';
             } else {
-                phaseInfo.innerHTML = '<span class="timer-direction down">⬇</span> Custom Countdown Timer';
+                phaseInfo.innerHTML = '<span class="timer-direction down">⬇</span> Countdown Timer';
             }
         }
     }
@@ -803,9 +832,10 @@ class Timer {
     }
 }
 
-// Initialize timer when script is loaded
+// Update initialization to prevent unwanted Timer instances
 document.addEventListener('DOMContentLoaded', () => {
-    window.Timer = Timer; // Make Timer class globally available
+    // Make Timer class globally available but don't initialize yet
+    window.Timer = Timer;
 
     // Hide the toggle by default on page load
     const toggleElement = document.querySelector('.timer-mode-toggle');
@@ -813,26 +843,26 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleElement.style.display = 'none';
     }
 
-    // Add a forced initialization for routing cases
+    // Only initialize if we're on the timer page
     if (window.location.hash === '#/timer') {
-        setTimeout(() => {
-            const timerInstance = new Timer();
-            window.timerInstance = timerInstance;
+        initializeTimer();
+    }
 
-            // Just initialize without adding empty-timeline message
-            if (!document.querySelector('.pattern-card.active')) {
-                const phaseIndicators = document.querySelector('.phase-indicators');
-                if (phaseIndicators) {
-                    // Simply clear the indicators
-                    phaseIndicators.innerHTML = '';
-                }
-            }
+    // Hash change listener is handled by the router now, removing duplicate handling here
+});
+
+// Function to initialize timer
+function initializeTimer() {
+    setTimeout(() => {
+        if (!window.timerInstance) {
+            console.log('Timer initialized');
+            window.timerInstance = new Timer();
 
             // Check if we need to show the countdown tab
             const countdownButton = document.querySelector('.pattern-btn[data-pattern="countdown"]');
             if (countdownButton && countdownButton.classList.contains('active')) {
-                timerInstance.setupCustomTimer();
+                window.timerInstance.setupCustomTimer();
             }
-        }, 100); // Short delay to ensure DOM is ready
-    }
-});
+        }
+    }, 100); // Short delay to ensure DOM is ready
+}

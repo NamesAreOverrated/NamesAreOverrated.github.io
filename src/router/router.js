@@ -20,6 +20,10 @@ const router = {
                 // Hide habit tracker section
                 const habitSection = document.getElementById('habit-tracker-section');
                 if (habitSection) habitSection.style.display = 'none';
+
+                // Hide timer section
+                const timerSection = document.getElementById('timer-section');
+                if (timerSection) timerSection.style.display = 'none';
             }
         },
         blog: {
@@ -54,12 +58,32 @@ const router = {
         }
     },
 
+    currentRoute: '',
+
     init() {
+        // Store initial route
+        this.currentRoute = window.location.hash;
+
         // Handle initial page load - this will ensure the hash route is handled even on first load
         this.handleRouting();
 
-        // Listen for hash changes
-        window.addEventListener('hashchange', () => this.handleRouting());
+        // Listen for hash changes with improved timer cleanup
+        window.addEventListener('hashchange', () => {
+            const previousRoute = this.currentRoute;
+            this.currentRoute = window.location.hash;
+
+            // Check if we're navigating away from timer page
+            const leavingTimerPage = previousRoute === '#/timer' && this.currentRoute !== '#/timer';
+
+            // Handle the routing
+            this.handleRouting();
+
+            // If we were on timer page but now we're navigating elsewhere, clean up
+            if (leavingTimerPage) {
+                console.log('Router: Leaving timer page, cleaning up timer');
+                cleanupTimer();
+            }
+        });
 
         // If no hash on initial load, default to home
         if (!window.location.hash) {
@@ -92,6 +116,8 @@ const router = {
 
 // Function to display a blog post
 async function displayBlogPost(id) {
+    document.body.classList.remove('viewing-timer', 'viewing-habit-tracker');
+    document.body.classList.add('viewing-page');
     try {
         // Hide all sections explicitly (about removed)
         document.getElementById('projects').style.display = 'none';
@@ -151,6 +177,8 @@ async function displayBlogPost(id) {
 
 // Function to display a project
 async function displayProject(id) {
+    document.body.classList.remove('viewing-timer', 'viewing-habit-tracker');
+    document.body.classList.add('viewing-page');
     try {
         // Hide all sections explicitly (about removed)
         document.getElementById('projects').style.display = 'none';
@@ -204,6 +232,8 @@ async function displayProject(id) {
 
 // Function to display a tool
 async function displayTool(id) {
+    document.body.classList.remove('viewing-timer', 'viewing-habit-tracker');
+    document.body.classList.add('viewing-page');
     try {
         // Hide all sections explicitly (about removed)
         document.getElementById('projects').style.display = 'none';
@@ -250,6 +280,8 @@ async function displayTool(id) {
 
 // New function to display the habit tracker
 function displayHabitTracker() {
+    document.body.classList.remove('viewing-timer', 'viewing-page');
+    document.body.classList.add('viewing-habit-tracker');
     console.log("Router: Displaying habit tracker");
 
     // Hide all sections explicitly (about removed)
@@ -257,6 +289,10 @@ function displayHabitTracker() {
     document.getElementById('tools').style.display = 'none';
     document.getElementById('blogs').style.display = 'none';
     document.getElementById('page-content').style.display = 'none';
+
+    // Explicitly hide the timer section
+    const timerSection = document.getElementById('timer-section');
+    if (timerSection) timerSection.style.display = 'none';
 
     // Show habit tracker section
     const habitSection = document.getElementById('habit-tracker-section');
@@ -308,14 +344,57 @@ function displayTimer() {
     if (timerSection) {
         timerSection.style.display = 'block';
         document.body.classList.add('viewing-timer');
+        document.body.classList.remove('viewing-habit-tracker', 'viewing-page');
 
-        // Initialize timer if not already done
-        if (typeof Timer === 'function' && !window.timerInstance) {
-            window.timerInstance = new Timer();
-            console.log('Timer initialized from router');
+        // Initialize timer if Timer class is available
+        if (typeof Timer === 'function') {
+            if (!window.timerInstance) {
+                console.log('Timer initialized from router');
+                window.timerInstance = new Timer();
+            }
+        } else {
+            console.warn('Router: Timer class not found. Make sure timer.js is loaded correctly.');
         }
     } else {
         console.error('Router: Timer section not found in the DOM');
+    }
+}
+
+// Add a new function to clean up the timer when navigating away
+function cleanupTimer() {
+    if (window.timerInstance) {
+        console.log('Router: Cleaning up timer instance');
+
+        // Pause the timer if it's running
+        if (window.timerInstance.isRunning) {
+            window.timerInstance.pause();
+        }
+
+        // Clear any intervals to ensure nothing runs in background
+        if (window.timerInstance.intervalId) {
+            clearInterval(window.timerInstance.intervalId);
+            window.timerInstance.intervalId = null;
+        }
+
+        // Reset any phase info and event handlers
+        const phaseInfo = document.querySelector('.phase-info');
+        if (phaseInfo && phaseInfo.hasClickHandler) {
+            phaseInfo.removeEventListener('click', phaseInfo._clickHandler);
+            phaseInfo.hasClickHandler = false;
+            delete phaseInfo._clickHandler;
+            phaseInfo.classList.remove('clickable');
+        }
+
+        // Clean up any animations
+        const circleElement = document.querySelector('.breathing-guide .circle');
+        if (circleElement) {
+            circleElement.style.animation = 'none';
+        }
+
+        // Delete the timer instance
+        window.timerInstance = null;
+
+        console.log('Router: Timer instance cleanup complete');
     }
 }
 
