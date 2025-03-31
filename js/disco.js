@@ -11,6 +11,9 @@ function initDiscoMode() {
     discoButton.title = 'Toggle Club Mode';
     document.body.appendChild(discoButton);
 
+    // Track visualizer state across disco mode toggles
+    let wasVisualizerActive = false;
+
     // Check if disco mode was previously enabled
     const discoEnabled = localStorage.getItem('discoMode') === 'true';
 
@@ -55,11 +58,41 @@ function initDiscoMode() {
     `;
     document.head.appendChild(styleSheet);
 
+    // Create mic access button
+    const micButton = document.createElement('button');
+    micButton.className = 'mic-toggle';
+    micButton.innerHTML = '🎙️';
+    micButton.title = 'Enable Visualizer (Requires Microphone)';
+    micButton.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 80px;
+        background-color: #222;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        font-size: 20px;
+        cursor: pointer;
+        z-index: 1000;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+        opacity: 0;
+        pointer-events: none;
+    `;
+    document.body.appendChild(micButton);
+
     // Apply disco mode if it was enabled
     if (discoEnabled) {
         document.body.classList.add('disco-mode');
         discoButton.classList.add('active');
         visualizerContainer.style.opacity = '1';
+        micButton.style.opacity = '1';
+        micButton.style.pointerEvents = 'auto';
     }
 
     // Track user interaction to enable audio
@@ -68,8 +101,15 @@ function initDiscoMode() {
         document.removeEventListener('click', userInteraction);
     }, { once: true });
 
-    // Add toggle functionality
+    // Add toggle functionality for disco mode
     discoButton.addEventListener('click', () => {
+        // Check if visualizer is active before toggling
+        if (window.AudioVisualizer && window.AudioVisualizer.active) {
+            wasVisualizerActive = true;
+        } else {
+            wasVisualizerActive = false;
+        }
+
         // Toggle the disco mode class on body
         document.body.classList.toggle('disco-mode');
         discoButton.classList.toggle('active');
@@ -77,10 +117,83 @@ function initDiscoMode() {
         // Toggle visualizer
         visualizerContainer.style.opacity = discoButton.classList.contains('active') ? '1' : '0';
 
+        // Toggle mic button visibility
+        const isDiscoMode = document.body.classList.contains('disco-mode');
+        micButton.style.opacity = isDiscoMode ? '1' : '0';
+        micButton.style.pointerEvents = isDiscoMode ? 'auto' : 'none';
+
+        // Stop audio visualizer if disco mode is turned off
+        if (!isDiscoMode && window.AudioVisualizer) {
+            if (window.AudioVisualizer.active) {
+                window.AudioVisualizer.stop();
+                // Remember that we were active, but update button state to match current state
+                micButton.classList.remove('active');
+                micButton.innerHTML = '🎙️';
+                micButton.title = 'Enable Audio Visualization';
+            }
+        } else if (isDiscoMode && wasVisualizerActive && window.AudioVisualizer && window.AudioVisualizer.microphone) {
+            // Restart visualizer if it was active before and we have microphone permissions
+            window.AudioVisualizer.start();
+            micButton.classList.add('active');
+            micButton.innerHTML = '🔊';
+            micButton.title = 'Disable Audio Visualization';
+        }
 
         // Save preference in localStorage
-        const isDiscoMode = document.body.classList.contains('disco-mode');
         localStorage.setItem('discoMode', isDiscoMode);
+    });
+
+    // Add event listener for microphone button
+    micButton.addEventListener('click', async () => {
+        // Initialize audio visualizer if needed
+        if (window.AudioVisualizer) {
+            if (!window.AudioVisualizer.initialized) {
+                const initialized = await window.AudioVisualizer.init();
+                if (!initialized) {
+                    alert('Could not initialize audio visualizer. Please check console for errors.');
+                    return;
+                }
+            }
+
+            // Request microphone access if not already granted
+            if (!window.AudioVisualizer.microphone) {
+                alert('Note: Browsers cannot directly access your system audio. The visualizer will use your microphone to capture ambient sound.');
+                const micAccessGranted = await window.AudioVisualizer.requestMicrophoneAccess();
+                if (!micAccessGranted) {
+                    alert('Microphone access is required for audio visualization.');
+                    return;
+                }
+                micButton.classList.add('active');
+                micButton.innerHTML = '🔊';
+                micButton.title = 'Disable Audio Visualization';
+
+                // Start visualization
+                window.AudioVisualizer.start();
+            } else {
+                // Toggle visualization state
+                if (window.AudioVisualizer.active) {
+                    window.AudioVisualizer.stop();
+                    micButton.classList.remove('active');
+                    micButton.innerHTML = '🎙️';
+                    micButton.title = 'Enable Audio Visualization';
+                } else {
+                    window.AudioVisualizer.start();
+                    micButton.classList.add('active');
+                    micButton.innerHTML = '🔊';
+                    micButton.title = 'Disable Audio Visualization';
+                }
+            }
+        } else {
+            console.error('AudioVisualizer not found. Make sure audio-visualizer.js is loaded.');
+            alert('Audio visualization is not available. Please check console for errors.');
+        }
+    });
+
+    // Add window resize handler for visualizer
+    window.addEventListener('resize', () => {
+        if (window.AudioVisualizer) {
+            window.AudioVisualizer.handleResize();
+        }
     });
 }
 
@@ -99,7 +212,22 @@ document.addEventListener('hashchange', () => {
             discoToggle.querySelector('.beat-visualizer').style.opacity = '1';
         }
 
+        const micToggle = document.querySelector('.mic-toggle');
+        if (micToggle) {
+            micToggle.style.opacity = '1';
+            micToggle.style.pointerEvents = 'auto';
 
+            // Ensure mic button state reflects visualizer state
+            if (window.AudioVisualizer && window.AudioVisualizer.active) {
+                micToggle.classList.add('active');
+                micToggle.innerHTML = '🔊';
+                micToggle.title = 'Disable Audio Visualization';
+            } else {
+                micToggle.classList.remove('active');
+                micToggle.innerHTML = '🎙️';
+                micToggle.title = 'Enable Audio Visualization';
+            }
+        }
     } else {
         document.body.classList.remove('disco-mode');
         const discoToggle = document.querySelector('.disco-toggle');
@@ -108,6 +236,15 @@ document.addEventListener('hashchange', () => {
             discoToggle.querySelector('.beat-visualizer').style.opacity = '0';
         }
 
+        const micToggle = document.querySelector('.mic-toggle');
+        if (micToggle) {
+            micToggle.style.opacity = '0';
+            micToggle.style.pointerEvents = 'none';
+        }
 
+        // Stop audio visualizer
+        if (window.AudioVisualizer && window.AudioVisualizer.active) {
+            window.AudioVisualizer.stop();
+        }
     }
 });
