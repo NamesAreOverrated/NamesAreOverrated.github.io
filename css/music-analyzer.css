@@ -281,31 +281,139 @@ body.disco-mode .close-analyzer:hover {
     padding: 15px;
 }
 
-/* Mode selector */
+/* Mode selector adjustments */
 .music-mode-selector {
     margin-bottom: 15px;
-    padding: 8px 10px;
-    background-color: rgba(255, 255, 255, 0.05);
-    border-radius: 6px;
     display: flex;
-    justify-content: space-around;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
 }
 
-/* Disco mode styling for selector */
-body.disco-mode .music-mode-selector {
-    background-color: rgba(30, 30, 40, 0.6);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    animation: panel-pulse 5.8s ease-in-out infinite;
+.mode-option {
+    background-color: rgba(35, 35, 40, 0.7);
+    border: 1px solid rgba(80, 80, 100, 0.3);
+    border-radius: 6px;
+    overflow: hidden;
+    transition: all 0.2s ease;
+    flex: 1;
+    min-width: 85px;
+    max-width: 110px;
+    /* Keep cards reasonably sized */
+    position: relative;
+}
+
+.mode-option:hover {
+    background-color: rgba(45, 45, 50, 0.7);
+    transform: translateY(-2px);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Responsive adjustments for narrow screens */
+@media (max-width: 300px) {
+    .music-mode-selector {
+        flex-direction: column;
+    }
+
+    .mode-option {
+        width: 100%;
+        max-width: none;
+    }
 }
 
 .mode-label {
-    display: flex;
-    align-items: center;
     cursor: pointer;
+    display: block;
+    padding: 8px 12px;
+    text-align: center;
+    font-size: 14px;
+    transition: all 0.2s ease;
 }
 
 .mode-label input {
-    margin-right: 8px;
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+    height: 0;
+    width: 0;
+}
+
+.mode-label .mode-icon {
+    display: block;
+    font-size: 18px;
+    margin-bottom: 4px;
+}
+
+.mode-label .mode-name {
+    display: block;
+    font-size: 12px;
+}
+
+/* Active state */
+.mode-option.active {
+    background-color: rgba(55, 55, 60, 0.9);
+    border-color: var(--accent-color);
+    transform: translateY(-2px);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+}
+
+.mode-option.active .mode-name {
+    color: var(--accent-color);
+}
+
+/* Disco mode styling for mode selector */
+body.disco-mode .music-mode-selector {
+    gap: 15px;
+}
+
+body.disco-mode .mode-option {
+    background-color: rgba(30, 30, 40, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+body.disco-mode .mode-option:hover {
+    background-color: rgba(35, 35, 45, 0.7);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+body.disco-mode .mode-option.active {
+    animation: neon-mode-glow 5.8s steps(1, end) infinite;
+}
+
+@keyframes neon-mode-glow {
+
+    0%,
+    100% {
+        border-color: rgba(255, 0, 110, 0.6);
+        box-shadow: 0 0 8px rgba(255, 0, 110, 0.3);
+    }
+
+    25% {
+        border-color: rgba(0, 229, 255, 0.6);
+        box-shadow: 0 0 8px rgba(0, 229, 255, 0.3);
+    }
+
+    50% {
+        border-color: rgba(174, 0, 255, 0.6);
+        box-shadow: 0 0 8px rgba(174, 0, 255, 0.3);
+    }
+
+    75% {
+        border-color: rgba(255, 221, 0, 0.6);
+        box-shadow: 0 0 8px rgba(255, 221, 0, 0.3);
+    }
+}
+
+/* Responsive adjustments for narrow screens */
+@media (max-width: 300px) {
+    .music-mode-selector {
+        flex-direction: column;
+    }
+
+    .mode-option {
+        width: 100%;
+    }
 }
 
 /* Status display */

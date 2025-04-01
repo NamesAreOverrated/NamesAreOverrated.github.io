@@ -62,14 +62,20 @@ class MusicAnalyzer {
                         <p>Analysis will start automatically. Play or sing into your microphone.</p>
                     </div>
                     <div class="music-mode-selector">
-                        <label class="mode-label">
-                            <input type="radio" name="music-mode" value="singing" checked>
-                            <span>Singing</span>
-                        </label>
-                        <label class="mode-label">
-                            <input type="radio" name="music-mode" value="guitar">
-                            <span>Guitar</span>
-                        </label>
+                        <div class="mode-option" data-mode="singing">
+                            <label class="mode-label">
+                                <input type="radio" name="music-mode" value="singing" checked>
+                                <span class="mode-icon">🎤</span>
+                                <span class="mode-name">Singing</span>
+                            </label>
+                        </div>
+                        <div class="mode-option" data-mode="guitar">
+                            <label class="mode-label">
+                                <input type="radio" name="music-mode" value="guitar">
+                                <span class="mode-icon">🎸</span>
+                                <span class="mode-name">Guitar</span>
+                            </label>
+                        </div>
                     </div>
                     <div class="music-result" style="display: none;">
                         <div class="singing-analysis">
@@ -121,7 +127,8 @@ class MusicAnalyzer {
         this.tunerNeedle = this.container.querySelector('.tuner-needle');
         this.tuningDirectionElement = this.container.querySelector('.tuning-direction');
         this.guitarStrings = this.container.querySelectorAll('.guitar-strings .string');
-        this.modeSelector = this.container.querySelectorAll('input[name="music-mode"]');
+        this.modeSelectors = this.container.querySelectorAll('input[name="music-mode"]');
+        this.modeOptions = this.container.querySelectorAll('.mode-option');
 
         // Initially hide the panel
         this.panel.style.display = 'none';
@@ -198,11 +205,37 @@ class MusicAnalyzer {
             }
         });
 
-        // Mode selector
-        this.modeSelector.forEach(radio => {
+        // Mode selector - updated to work with new structure
+        this.modeSelectors.forEach(radio => {
             radio.addEventListener('change', () => {
                 this.updateMode(radio.value);
+
+                // Update active state on mode options
+                this.modeOptions.forEach(option => {
+                    option.classList.toggle('active', option.dataset.mode === radio.value);
+                });
             });
+        });
+
+        // Also allow clicking the entire mode option to select
+        this.modeOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                const radio = option.querySelector('input[type="radio"]');
+                if (radio && !radio.checked) {
+                    radio.checked = true;
+                    this.updateMode(radio.value);
+
+                    // Update active states
+                    this.modeOptions.forEach(opt => {
+                        opt.classList.toggle('active', opt === option);
+                    });
+                }
+            });
+
+            // Set initial active class
+            if (option.querySelector('input[type="radio"]:checked')) {
+                option.classList.add('active');
+            }
         });
     }
 
@@ -461,6 +494,7 @@ class MusicAnalyzer {
         this.mode = mode;
         console.log("[MUSIC UI] Mode updated to:", mode);
 
+        // Show the right analysis panel based on mode
         if (mode === 'singing') {
             this.container.querySelector('.singing-analysis').style.display = 'block';
             this.container.querySelector('.guitar-analysis').style.display = 'none';
