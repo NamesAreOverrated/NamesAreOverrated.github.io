@@ -10,7 +10,7 @@
     position: relative;
     background-color: #222;
     border-radius: 30px;
-    margin: 20px 0;
+    margin: 20px 0 15px;
     overflow: hidden;
 }
 
@@ -21,58 +21,79 @@ body.disco-mode .tuner {
     animation: disco-timeline-bg 5.8s ease-in-out infinite;
 }
 
+/* Hide the tuner needle */
 .tuner-needle {
+    display: none;
+}
+
+/* Simplified frequency line visualization */
+.frequency-visualization {
     position: absolute;
-    width: 2px;
-    height: 30px;
-    background-color: var(--accent-color);
+    top: 0;
+    left: 0;
+    right: 0;
     bottom: 0;
-    left: 50%;
-    transform-origin: bottom center;
-    transition: transform 0.3s ease;
+    z-index: 0;
 }
 
-/* Disco mode needle */
-body.disco-mode .tuner-needle {
-    animation: neon-needle-glow 5.8s steps(1, end) infinite;
+.line-container {
+    position: absolute;
+    height: 100%;
+    width: 100%;
+    top: 0;
+    left: 0;
 }
 
-@keyframes neon-needle-glow {
-
-    0%,
-    100% {
-        background-color: rgba(255, 0, 110, 0.9);
-        box-shadow: 0 0 5px rgba(255, 0, 110, 0.7);
-    }
-
-    25% {
-        background-color: rgba(0, 229, 255, 0.9);
-        box-shadow: 0 0 5px rgba(0, 229, 255, 0.7);
-    }
-
-    50% {
-        background-color: rgba(174, 0, 255, 0.9);
-        box-shadow: 0 0 5px rgba(174, 0, 255, 0.7);
-    }
-
-    75% {
-        background-color: rgba(255, 221, 0, 0.9);
-        box-shadow: 0 0 5px rgba(255, 221, 0, 0.7);
-    }
+/* Horizontal lines */
+.target-line,
+.current-line {
+    position: absolute;
+    width: 100%;
+    height: 2px;
+    left: 0;
+    background-color: rgba(255, 255, 255, 0.2);
+    transition: top 0.3s ease;
 }
 
+.target-line {
+    top: 50%;
+    background-color: rgba(255, 255, 255, 0.4);
+    z-index: 1;
+}
+
+.current-line {
+    background-color: var(--accent-color);
+    opacity: 0.7;
+    z-index: 2;
+}
+
+/* Line status indicators */
+.current-line.in-tune {
+    background-color: #4CAF50;
+    opacity: 0.9;
+    height: 3px;
+}
+
+.target-line.in-tune {
+    opacity: 0.8;
+    height: 3px;
+}
+
+.current-line.tune-up {
+    background-color: #4CAF50;
+}
+
+.current-line.tune-down {
+    background-color: #2196F3;
+}
+
+.current-line.far-off {
+    background-color: #f44336;
+}
+
+/* Hide the tuning direction text */
 .tuning-direction {
-    text-align: center;
-    margin-top: -15px;
-    font-size: 14px;
-    color: #ccc;
-    height: 20px;
-}
-
-.tuning-direction.in-tune {
-    color: var(--accent-color);
-    font-weight: bold;
-    animation: pulse-glow 1.5s infinite;
+    display: none;
 }
 
 /* Guitar strings */
@@ -89,6 +110,43 @@ body.disco-mode .tuner-needle {
     border-radius: 4px;
     cursor: pointer;
     transition: all 0.2s ease;
+    position: relative;
+}
+
+/* Visual indicators for strings that need tuning */
+.guitar-strings .string.tune-up {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.guitar-strings .string.tune-down {
+    background-color: #2196F3;
+    color: white;
+}
+
+/* Add up/down indicators on strings */
+.guitar-strings .string.tune-up::after {
+    content: '↑';
+    position: absolute;
+    top: -18px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #4CAF50;
+    font-weight: bold;
+    font-size: 16px;
+    text-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+}
+
+.guitar-strings .string.tune-down::after {
+    content: '↓';
+    position: absolute;
+    bottom: -18px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #2196F3;
+    font-weight: bold;
+    font-size: 16px;
+    text-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
 }
 
 /* Disco mode strings */
@@ -135,6 +193,32 @@ body.disco-mode .guitar-strings .string.active {
     box-shadow: 0 0 10px var(--accent-color);
 }
 
+/* Disco mode effects for lines */
+body.disco-mode .current-line {
+    animation: neon-line-glow 5.8s steps(1, end) infinite;
+}
+
+@keyframes neon-line-glow {
+
+    0%,
+    100% {
+        box-shadow: 0 0 5px rgba(255, 0, 110, 0.7);
+    }
+
+    25% {
+        box-shadow: 0 0 5px rgba(0, 229, 255, 0.7);
+    }
+
+    50% {
+        box-shadow: 0 0 5px rgba(174, 0, 255, 0.7);
+    }
+
+    75% {
+        box-shadow: 0 0 5px rgba(255, 221, 0, 0.7);
+    }
+}
+
+/* Improve responsiveness for smaller screens */
 @media (max-width: 360px) {
     .guitar-strings {
         flex-wrap: wrap;
