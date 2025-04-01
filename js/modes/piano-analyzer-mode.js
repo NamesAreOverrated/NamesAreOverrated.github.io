@@ -508,7 +508,7 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
     renderNotationWithVexFlow() {
         if (!this.parsedNotes.length || !this.notationContainer) return;
 
-        // Clear notation container - removed instructions
+        // Clear notation container
         this.notationContainer.innerHTML = '';
 
         try {
@@ -520,139 +520,49 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
 
             // Check if VexFlow is properly loaded
             if (typeof Vex === 'undefined' || typeof Vex.Flow === 'undefined') {
-                // Replace with useful fallback instead of error message
                 this.renderSimpleNotation();
                 return;
             }
 
-            // Create SVG container
+            // Create SVG container with fixed dimensions
             const svgContainer = document.createElement('div');
             svgContainer.className = 'notation-svg-container';
+            svgContainer.style.width = '100%';
+            svgContainer.style.height = '100%';
 
-            // Initialize VexFlow with simpler approach
+            // Initialize VexFlow
             const VF = Vex.Flow;
-            const renderer = new VF.Renderer(svgContainer, VF.Renderer.Backends.SVG);
-            const width = this.notationContainer.clientWidth - 20;
-            const height = 240;
 
-            // Set up renderer
+            // Use fixed width and height that work reliably
+            const width = Math.min(this.notationContainer.clientWidth - 10, 1200);
+            const height = 180;
+
+            // Create renderer with explicit dimensions
+            const renderer = new VF.Renderer(svgContainer, VF.Renderer.Backends.SVG);
             renderer.resize(width, height);
             const context = renderer.getContext();
             context.setFont("Arial", 10);
 
-            // Create treble and bass staves
-            const stave = new VF.Stave(10, 40, width - 20);
+            // Get SVG element and set fixed properties
+            const svgElement = svgContainer.querySelector('svg');
+            if (svgElement) {
+                svgElement.setAttribute('width', '100%');
+                svgElement.setAttribute('height', '100%');
+                // svgElement.setAttribute('viewBox', `0 0 ${width} ${height}`);
+                svgElement.style.display = 'block';
+            }
+
+            // Create staves with fixed positions
+            const staveWidth = width - 50;
+            const stave = new VF.Stave(10, 25, staveWidth);
             stave.addClef("treble");
             stave.setContext(context).draw();
 
-            const bassStave = new VF.Stave(10, 140, width - 20);
+            const bassStave = new VF.Stave(10, 100, staveWidth);
             bassStave.addClef("bass");
             bassStave.setContext(context).draw();
 
-            // Find notes to display
-            const startTime = this.currentPosition;
-            const endTime = startTime + this.visibleDuration;
-            const visibleNotes = this.parsedNotes
-                .filter(note => note.start >= startTime && note.start < endTime)
-                .sort((a, b) => a.start - b.start);
-
-            // Create single quarter rest if no notes
-            if (visibleNotes.length === 0) {
-                // Create treble voice with a rest
-                const trebleVoice = new VF.Voice({ num_beats: 4, beat_value: 4 });
-                trebleVoice.addTickables([
-                    new VF.StaveNote({ keys: ["b/4"], duration: "qr" }),
-                    new VF.StaveNote({ keys: ["b/4"], duration: "qr" }),
-                    new VF.StaveNote({ keys: ["b/4"], duration: "qr" }),
-                    new VF.StaveNote({ keys: ["b/4"], duration: "qr" })
-                ]);
-
-                // Create bass voice with a rest
-                const bassVoice = new VF.Voice({ num_beats: 4, beat_value: 4 });
-                bassVoice.addTickables([
-                    new VF.StaveNote({ keys: ["d/3"], duration: "qr" }),
-                    new VF.StaveNote({ keys: ["d/3"], duration: "qr" }),
-                    new VF.StaveNote({ keys: ["d/3"], duration: "qr" }),
-                    new VF.StaveNote({ keys: ["d/3"], duration: "qr" })
-                ]);
-
-                // Format and draw voices
-                new VF.Formatter().joinVoices([trebleVoice]).format([trebleVoice], width - 50);
-                new VF.Formatter().joinVoices([bassVoice]).format([bassVoice], width - 50);
-
-                trebleVoice.draw(context, stave);
-                bassVoice.draw(context, bassStave);
-            } else {
-                // Take only a few notes to avoid overcrowding
-                const displayNotes = visibleNotes.slice(0, 4);
-
-                // Split notes between treble and bass staves
-                const trebleNotes = [];
-                const bassNotes = [];
-
-                for (const note of displayNotes) {
-                    try {
-                        // Create note key string
-                        let noteKey = note.step.toLowerCase();
-                        if (note.alter === 1) noteKey += "#";
-                        else if (note.alter === -1) noteKey += "b";
-                        noteKey += `/${note.octave}`;
-
-                        // Always use quarter notes for simplicity
-                        const vfNote = new VF.StaveNote({
-                            keys: [noteKey],
-                            duration: "q"
-                        });
-
-                        // Add accidental if needed
-                        if (note.alter === 1) {
-                            vfNote.addModifier(new VF.Accidental("#"));
-                        } else if (note.alter === -1) {
-                            vfNote.addModifier(new VF.Accidental("b"));
-                        }
-
-                        // Decide which staff based on octave
-                        if (note.octave >= 4) {
-                            trebleNotes.push(vfNote);
-                        } else {
-                            bassNotes.push(vfNote);
-                        }
-                    } catch (err) {
-                        console.warn('Error creating note:', note, err);
-                    }
-                }
-
-                // Fill with rests to complete 4 beats
-                while (trebleNotes.length < 4) {
-                    trebleNotes.push(new VF.StaveNote({ keys: ["b/4"], duration: "qr" }));
-                }
-
-                while (bassNotes.length < 4) {
-                    bassNotes.push(new VF.StaveNote({ keys: ["d/3"], duration: "qr" }));
-                }
-
-                // Format and draw - we need exactly 4 notes for each voice
-                try {
-                    // Create voices with exactly 4 beats
-                    const trebleVoice = new VF.Voice({ num_beats: 4, beat_value: 4 }).setStrict(true);
-                    trebleVoice.addTickables(trebleNotes.slice(0, 4));
-
-                    const bassVoice = new VF.Voice({ num_beats: 4, beat_value: 4 }).setStrict(true);
-                    bassVoice.addTickables(bassNotes.slice(0, 4));
-
-                    // Format and draw
-                    new VF.Formatter().joinVoices([trebleVoice]).format([trebleVoice], width - 50);
-                    new VF.Formatter().joinVoices([bassVoice]).format([bassVoice], width - 50);
-
-                    trebleVoice.draw(context, stave);
-                    bassVoice.draw(context, bassStave);
-                } catch (formattingError) {
-                    console.error('Error formatting notes:', formattingError);
-                    // If formatting fails, create a fallback with only rests
-                    this.renderSimpleNotation();
-                    return;
-                }
-            }
+            /* ...existing code for drawing notes... */
 
             // Replace the loading view with the SVG container
             this.notationContainer.removeChild(loadingView);
@@ -663,12 +573,10 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
 
         } catch (error) {
             console.error('Error rendering notation:', error);
-            // Fall back to simple text representation when VexFlow fails
             this.renderSimpleNotation();
         }
     }
 
-    // New separate method for simple notation rendering as fallback
     renderSimpleNotation() {
         // Clear everything - removed instructions
         this.notationContainer.innerHTML = '';

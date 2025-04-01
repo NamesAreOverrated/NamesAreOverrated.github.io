@@ -139,22 +139,23 @@
     /* Completely transparent */
 }
 
-/* Notation container at top of the screen - make it completely transparent */
+/* Notation container at top of the screen */
 .notation-container {
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
     height: 200px;
-    overflow-x: auto;
+    overflow: visible;
     background-color: transparent;
-    /* Completely transparent */
     padding: 10px;
     cursor: pointer;
-    border-bottom: 1px solid rgba(51, 51, 51, 0.2);
-    /* Very light border */
+    border-bottom: 1px solid rgba(51, 51, 51, 0.1);
     z-index: 10;
-    /* Above the note bars */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.15);
 }
 
 /* Remove notation-instructions styles as it's removed from HTML */
@@ -202,16 +203,36 @@
     background-color: #00ccaa;
 }
 
-/* Notation SVG styling */
+/* Notation SVG styling - fix height issues */
 .notation-svg-container {
     width: 100%;
-    height: 100%;
-    /* Adjusted to take full height now that instructions are gone */
-    overflow-x: auto;
-    background-color: rgba(255, 255, 255, 0.2);
-    /* Very light background for readability */
+    height: 180px;
+    /* background-color: rgba(255, 255, 255, 0.2); */
     position: relative;
     border-radius: 4px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Ensure SVG scales properly */
+.notation-svg-container svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+/* Ensure SVG elements respect container dimensions */
+.notation-svg-container .vf-stave {
+    max-width: 100%;
+}
+
+/* Make VexFlow elements respect the SVG boundaries */
+.notation-svg-container .vf-stave,
+.notation-svg-container .vf-note,
+.notation-svg-container .vf-stem,
+.notation-svg-container .vf-stavenote {
+    vector-effect: non-scaling-stroke;
 }
 
 /* Notation position indicator */
@@ -398,8 +419,8 @@
     top: 10px;
     right: 10px;
     font-size: 10px;
-    color: rgba(255, 255, 255, 0.5);
-    background-color: rgba(0, 0, 0, 0.5);
+    /* color: rgba(255, 255, 255, 0.5);
+    background-color: rgba(0, 0, 0, 0.5); */
     padding: 3px 6px;
     border-radius: 3px;
     opacity: 0;
@@ -417,10 +438,10 @@ body.disco-mode .piano-visualization-container {
     animation: panel-pulse 5.8s ease-in-out infinite;
 }
 
-body.disco-mode .piano-visualization-header {
+/* body.disco-mode .piano-visualization-header {
     background-color: rgba(25, 25, 35, 0.8);
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
+} */
 
 body.disco-mode .piano-keyboard-container {
     background-color: transparent;
@@ -429,9 +450,9 @@ body.disco-mode .piano-keyboard-container {
     /* Keep just the border */
 }
 
-body.disco-mode .notation-container {
+/* body.disco-mode .notation-container {
     background-color: rgba(20, 20, 30, 0.8);
-}
+} */
 
 /* Pulsing animation for active keys in disco mode */
 body.disco-mode .piano-key.active {
