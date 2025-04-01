@@ -1385,7 +1385,7 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
 
             // Use full container width with small margins
             const width = containerWidth - 40;
-            const height = containerHeight - 40;
+            const height = containerWidth / 6.5;
 
             // Create renderer with explicit dimensions
             const renderer = new VF.Renderer(svgContainer, VF.Renderer.Backends.SVG);

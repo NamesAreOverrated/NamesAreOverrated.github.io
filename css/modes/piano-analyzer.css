@@ -150,18 +150,14 @@
     top: 0;
     left: 0;
     right: 0;
-    height: 250px;
-    /* Increased from 200px to allow more space for notation */
     overflow: visible;
     background-color: transparent;
     padding: 10px;
     cursor: pointer;
-    border-bottom: 1px solid rgba(51, 51, 51, 0.1);
     z-index: 10;
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: rgba(0, 0, 0, 0.15);
     padding-bottom: 40px;
 }
 
@@ -213,18 +209,15 @@
 /* Notation SVG styling - fix height issues */
 .notation-svg-container {
     width: 100%;
-    height: 230px;
+    height: 100%;
     /* Increased from 180px to better fit the staves */
     position: relative;
-    border-radius: 4px;
     display: flex;
     justify-content: center;
     align-items: center;
-    background-color: rgba(255, 255, 255, 0.03);
     padding: 5px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    height: calc(100% - 40px);
-    margin-bottom: 10px;
+    background-color: transparent;
+
 }
 
 /* Ensure SVG scales properly */
@@ -638,19 +631,6 @@ body.disco-mode .note-bar.playing {
     transform: scale(1.1);
 }
 
-/* Improved notation SVG styling */
-.notation-svg-container {
-    width: 100%;
-    height: 100%;
-    position: relative;
-    border-radius: 4px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background-color: rgba(255, 255, 255, 0.03);
-    padding: 5px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-}
 
 /* Ensure SVG scales properly */
 .notation-svg-container svg {
