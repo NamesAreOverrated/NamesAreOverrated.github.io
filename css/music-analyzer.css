@@ -1,0 +1,303 @@
+/* Music Analyzer Styles */
+
+.music-analyzer {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    z-index: 1000;
+    font-family: 'Courier New', monospace;
+}
+
+.music-analyzer-toggle {
+    margin-bottom: 10px;
+}
+
+.music-toggle {
+    background-color: #222;
+    color: white;
+    border: none;
+    border-radius: 50px;
+    padding: 8px 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    opacity: 0;
+    pointer-events: none;
+}
+
+.music-toggle:hover {
+    background-color: var(--accent-color);
+    color: #222;
+}
+
+body.disco-mode .music-toggle {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.music-analyzer-panel {
+    width: 320px;
+    background-color: #222;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+}
+
+.music-analyzer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    background-color: #333;
+    border-bottom: 1px solid #444;
+}
+
+.music-analyzer-header h3 {
+    margin: 0;
+    color: var(--accent-color);
+    font-size: 16px;
+}
+
+.close-analyzer {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.close-analyzer:hover {
+    color: var(--accent-color);
+}
+
+.music-analyzer-body {
+    padding: 15px;
+}
+
+/* Mode selector */
+.music-mode-selector {
+    margin-bottom: 15px;
+    padding: 8px 10px;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    display: flex;
+    justify-content: space-around;
+}
+
+.mode-label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.mode-label input {
+    margin-right: 8px;
+}
+
+/* Status display */
+.music-status {
+    margin-bottom: 15px;
+    min-height: 50px;
+}
+
+.music-status p {
+    margin: 0;
+    line-height: 1.4;
+}
+
+.music-status .info {
+    color: #ccc;
+}
+
+.music-status .error {
+    color: #ff6b6b;
+}
+
+.music-status .active {
+    color: #4ecdc4;
+}
+
+/* Results display */
+.music-result {
+    margin-bottom: 20px;
+    padding: 12px;
+    background-color: #333;
+    border-radius: 8px;
+}
+
+.music-info {
+    margin: 0 0 12px 0;
+}
+
+.music-info span {
+    color: #888;
+    margin-right: 5px;
+}
+
+.current-notes {
+    margin-top: 15px;
+}
+
+.notes-display {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 5px;
+}
+
+.note-badge {
+    background-color: var(--accent-color);
+    color: #222;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: bold;
+    min-width: 30px;
+    text-align: center;
+}
+
+.no-notes {
+    color: #666;
+    font-style: italic;
+    font-size: 13px;
+}
+
+/* Guitar tuner */
+.tuner {
+    height: 60px;
+    position: relative;
+    background-color: #222;
+    border-radius: 30px;
+    margin: 20px 0;
+    overflow: hidden;
+}
+
+.tuner-needle {
+    position: absolute;
+    width: 2px;
+    height: 30px;
+    background-color: var(--accent-color);
+    bottom: 0;
+    left: 50%;
+    transform-origin: bottom center;
+    transition: transform 0.3s ease;
+}
+
+.tuning-direction {
+    text-align: center;
+    margin-top: -15px;
+    font-size: 14px;
+    color: #ccc;
+    height: 20px;
+}
+
+.tuning-direction.in-tune {
+    color: var(--accent-color);
+    font-weight: bold;
+    animation: pulse-glow 1.5s infinite;
+}
+
+.guitar-strings {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+}
+
+.guitar-strings .string {
+    background-color: #444;
+    color: #ccc;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.guitar-strings .string.active {
+    background-color: var(--accent-color);
+    color: #222;
+}
+
+.guitar-strings .string.in-tune {
+    box-shadow: 0 0 10px var(--accent-color);
+}
+
+/* Controls */
+.music-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.start-analysis,
+.stop-analysis {
+    flex: 1;
+    background-color: #333;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-family: 'Courier New', monospace;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.start-analysis:hover:not(:disabled) {
+    background-color: var(--accent-color);
+    color: #222;
+}
+
+.stop-analysis:hover:not(:disabled) {
+    background-color: #ff6b6b;
+}
+
+.start-analysis:disabled,
+.stop-analysis:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.music-info {
+    font-size: 12px;
+    color: #888;
+}
+
+.music-info p {
+    margin: 5px 0;
+}
+
+@media (max-width: 360px) {
+    .music-analyzer-panel {
+        width: 280px;
+    }
+
+    .guitar-strings {
+        flex-wrap: wrap;
+        gap: 5px;
+    }
+
+    .guitar-strings .string {
+        font-size: 12px;
+        padding: 4px 8px;
+    }
+}
+
+@keyframes pulse-glow {
+
+    0%,
+    100% {
+        box-shadow: 0 0 5px var(--accent-color);
+    }
+
+    50% {
+        box-shadow: 0 0 15px var(--accent-color);
+    }
+}

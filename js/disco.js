@@ -175,6 +175,23 @@ function initDiscoMode() {
         micButton.style.opacity = isDiscoMode ? '1' : '0';
         micButton.style.pointerEvents = isDiscoMode ? 'auto' : 'none';
 
+        // Toggle voice analyzer button visibility
+        const voiceToggle = document.querySelector('.voice-toggle');
+        if (voiceToggle) {
+            // If turning off disco mode, hide voice analyzer panel too
+            if (!isDiscoMode) {
+                const voicePanel = document.querySelector('.voice-analyzer-panel');
+                if (voicePanel) {
+                    voicePanel.style.display = 'none';
+                }
+
+                // Stop voice analysis if it's running
+                if (window.voiceAnalyzer && window.voiceAnalyzer.analyzing) {
+                    window.voiceAnalyzer.stopAnalysis();
+                }
+            }
+        }
+
         // Only show visualizer type button if disco mode is on AND visualizer is active
         const isVisualizerActive = window.AudioVisualizer && window.AudioVisualizer.active;
         visualizerTypeButton.style.opacity = isDiscoMode && isVisualizerActive ? '1' : '0';

@@ -584,3 +584,245 @@ body.viewing-page #about {
     height: 150px;
     /* Removed background-color and backdrop-filter for transparency */
 }
+
+/* Voice Analyzer Styles */
+.voice-analyzer {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    z-index: 1000;
+    font-family: 'Courier New', monospace;
+}
+
+.voice-analyzer-toggle {
+    margin-bottom: 10px;
+}
+
+.voice-toggle {
+    background-color: #222;
+    color: white;
+    border: none;
+    border-radius: 50px;
+    padding: 8px 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    opacity: 0;
+    pointer-events: none;
+}
+
+.voice-toggle:hover {
+    background-color: var(--accent-color);
+    color: #222;
+}
+
+body.disco-mode .voice-toggle {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.voice-analyzer-panel {
+    width: 320px;
+    background-color: #222;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+}
+
+.voice-analyzer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    background-color: #333;
+    border-bottom: 1px solid #444;
+}
+
+.voice-analyzer-header h3 {
+    margin: 0;
+    color: var(--accent-color);
+    font-size: 16px;
+}
+
+.close-analyzer {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.close-analyzer:hover {
+    color: var(--accent-color);
+}
+
+.voice-analyzer-body {
+    padding: 15px;
+}
+
+.voice-status {
+    margin-bottom: 15px;
+    min-height: 50px;
+}
+
+.voice-status p {
+    margin: 0;
+    line-height: 1.4;
+}
+
+.voice-status .info {
+    color: #ccc;
+}
+
+.voice-status .error {
+    color: #ff6b6b;
+}
+
+.voice-status .active {
+    color: #4ecdc4;
+}
+
+.voice-status .result {
+    color: #f9f9f9;
+}
+
+.voice-result {
+    background-color: #333;
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 15px;
+}
+
+.voice-type,
+.frequency-range p {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+}
+
+.voice-type span,
+.frequency-range p span {
+    color: #888;
+}
+
+.range-visualization {
+    margin-top: 12px;
+}
+
+.range-bar {
+    height: 12px;
+    background-color: #444;
+    border-radius: 6px;
+    position: relative;
+    overflow: hidden;
+}
+
+.range-fill {
+    position: absolute;
+    height: 100%;
+    background-color: var(--accent-color);
+    border-radius: 6px;
+    transition: all 0.5s ease;
+}
+
+/* Colors for different voice types */
+.range-fill.bass {
+    background-color: #3a86ff;
+}
+
+.range-fill.baritone {
+    background-color: #4361ee;
+}
+
+.range-fill.tenor {
+    background-color: #4cc9f0;
+}
+
+.range-fill.contraltoalto {
+    background-color: #7209b7;
+}
+
+.range-fill.mezzosoprano {
+    background-color: #f72585;
+}
+
+.range-fill.soprano {
+    background-color: #ff0a54;
+}
+
+.range-fill.verylow {
+    background-color: #184e77;
+}
+
+.range-fill.veryhigh {
+    background-color: #ff5400;
+}
+
+.range-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #888;
+    margin-top: 4px;
+}
+
+.voice-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.start-analysis,
+.stop-analysis {
+    padding: 8px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.start-analysis {
+    background-color: var(--accent-color);
+    color: #222;
+    flex: 1;
+}
+
+.start-analysis:hover:not(:disabled) {
+    background-color: #53d8bb;
+}
+
+.stop-analysis {
+    background-color: #444;
+    color: white;
+    flex: 1;
+}
+
+.stop-analysis:hover:not(:disabled) {
+    background-color: #555;
+}
+
+.start-analysis:disabled,
+.stop-analysis:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.voice-info {
+    font-size: 12px;
+    color: #888;
+    line-height: 1.4;
+}
+
+.voice-info p {
+    margin: 0 0 8px 0;
+}
