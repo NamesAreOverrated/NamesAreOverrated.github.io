@@ -604,3 +604,115 @@ body.disco-mode .note-bar.playing {
     background-color: rgba(255, 0, 0, 0.5);
     transform: scale(1.1);
 }
+
+/* Improved notation SVG styling */
+.notation-svg-container {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    border-radius: 4px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(255, 255, 255, 0.03);
+    padding: 5px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Ensure SVG scales properly */
+.notation-svg-container svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+/* Better visual styles for notation elements */
+.notation-svg-container .vf-stave {
+    stroke-width: 1px;
+    opacity: 0.95;
+}
+
+/* Enhance measure lines and bar lines */
+.notation-svg-container .vf-bar,
+.notation-svg-container .vf-bar-line {
+    stroke-width: 1px;
+}
+
+/* Enhance note display */
+.notation-svg-container .vf-note .vf-notehead,
+.notation-svg-container .vf-note .vf-stem {
+    stroke-width: 1.2px;
+}
+
+/* Enhance highlighted notes */
+.notation-svg-container .vf-note[style*="rgb(0, 150, 215)"] .vf-notehead,
+.notation-svg-container .vf-note[style*="rgb(0, 150, 215)"] .vf-stem {
+    stroke-width: 1.5px;
+}
+
+/* Style playhead indicator */
+.notation-position-indicator {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    width: 2px;
+    background-color: #FF5722;
+    z-index: 10;
+    pointer-events: none;
+    box-shadow: 0 0 3px rgba(255, 87, 34, 0.7);
+}
+
+/* Enhanced info panel styling */
+.notation-info-panel {
+    background-color: rgba(0, 0, 0, 0.6);
+    padding: 8px 12px;
+    border-radius: 4px;
+    color: #fff;
+    font-size: 12px;
+    line-height: 1.4;
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    z-index: 20;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(2px);
+}
+
+.notation-info-panel .position-info,
+.notation-info-panel .measure-info,
+.notation-info-panel .speed-info,
+.notation-info-panel .playback-status,
+.notation-info-panel .view-info {
+    margin-bottom: 4px;
+}
+
+.notation-info-panel .measure-info {
+    color: var(--accent-color);
+    font-weight: bold;
+}
+
+.notation-info-panel .playback-status {
+    color: var(--accent-color);
+}
+
+/* Interactive area helpers for notation */
+.notation-container::before {
+    content: "Drag to navigate music";
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 5px;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.5);
+    background-color: rgba(0, 0, 0, 0.3);
+    padding: 3px 8px;
+    border-radius: 3px;
+    z-index: 10;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.notation-container:hover::before {
+    opacity: 1;
+}
