@@ -16,6 +16,12 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         this.parsedNotes = [];
         this.visibleDuration = 10; // Seconds visible in view
 
+        // Add variables for note bars
+        this.noteBars = [];
+        this.noteBarContainer = null;
+        this.noteBarLookAhead = 4; // Seconds of notes to show ahead of playback
+        this.fallDuration = 4; // Time in seconds for notes to fall from top to bottom
+
         // Playback animation frame ID for cancellation
         this.animationFrameId = null;
 
@@ -315,21 +321,25 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             existingContainer.remove();
         }
 
-        // Create a new container at the bottom of the page
+        // Create a new container that covers the entire screen
         this.pianoVisualizationContainer = document.createElement('div');
         this.pianoVisualizationContainer.id = 'piano-visualization-container';
         this.pianoVisualizationContainer.className = 'piano-visualization-container';
 
-        // Create simplified layout with piano keyboard and notation only - removed header
+        // Create layout with piano keyboard at bottom, notation at top, and falling notes in between
         this.pianoVisualizationContainer.innerHTML = `
+            <div class="notation-container">
+                <!-- Musical notation will be rendered here -->
+            </div>
+            <div class="note-bar-container">
+                <!-- Falling note bars will be rendered here -->
+            </div>
             <div class="piano-keyboard-container">
                 <div class="piano-keyboard">
                     <!-- Piano keys will be generated here -->
                 </div>
             </div>
-            <div class="notation-container">
-                <!-- Musical notation will be rendered here -->
-            </div>
+            <button class="piano-close-btn" title="Close Visualization">×</button>
         `;
 
         document.body.appendChild(this.pianoVisualizationContainer);
@@ -337,12 +347,16 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         // Store references to containers
         this.notationContainer = this.pianoVisualizationContainer.querySelector('.notation-container');
         this.keyboardContainer = this.pianoVisualizationContainer.querySelector('.piano-keyboard-container');
+        this.noteBarContainer = this.pianoVisualizationContainer.querySelector('.note-bar-container');
+        this.closeButton = this.pianoVisualizationContainer.querySelector('.piano-close-btn');
 
         // Generate piano keyboard
         this.generatePianoKeyboard();
 
-        // Add event listeners for navigation and playback control
-        // Removed the close button listener since header is removed
+        // Add close button listener
+        this.closeButton.addEventListener('click', () => {
+            this.closePianoVisualization();
+        });
 
         // Click to toggle playback on notation
         this.notationContainer.addEventListener('click', (e) => {
@@ -382,6 +396,7 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         window.addEventListener('resize', () => {
             if (this.pianoVisualizationContainer.style.display !== 'none') {
                 this.renderNotation();
+                this.updateNoteBarsPosition(); // Re-position note bars on resize
             }
         });
     }
@@ -438,6 +453,9 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         if (Math.floor(this.currentPosition * 2) > Math.floor((this.currentPosition - deltaTime) * 2)) {
             this.renderNotation();
         }
+
+        // Update note bars - add this new function call
+        this.updateNoteBars();
 
         // Find notes that should be triggered at current position
         const notesToPlay = this.parsedNotes.filter(
@@ -753,6 +771,9 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             playPauseButton.textContent = 'Pause';
         }
 
+        // Initialize note bars on playback start
+        this.updateNoteBars();
+
         // Start animation loop
         this.animationFrameId = requestAnimationFrame(this.updatePlayback.bind(this));
     }
@@ -847,6 +868,28 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         this.renderNotation();
     }
 
+    // Handle seeking when position changes drastically (after dragging, etc.)
+    handlePositionSeek() {
+        // Clear existing note bars
+        if (this.noteBarContainer) {
+            this.noteBarContainer.innerHTML = '';
+            this.noteBars = [];
+        }
+
+        // Reset animation frame to ensure accurate timing
+        if (this.isPlaying) {
+            if (this.animationFrameId) {
+                cancelAnimationFrame(this.animationFrameId);
+            }
+            this.lastRenderTime = performance.now();
+            this.animationFrameId = requestAnimationFrame(this.updatePlayback.bind(this));
+        } else {
+            // For paused state, still update notes and visualization
+            this.updateNoteBars();
+            this.renderNotation();
+        }
+    }
+
     // Stop dragging
     stopDragging() {
         if (!this.isDragging) return;
@@ -861,8 +904,193 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             this.startPlayback();
         }
 
+        // Handle position change after dragging
+        this.handlePositionSeek();
+
         // Clean up
         this.notationContainer.dataset.wasPlaying = 'false';
+    }
+
+    updateNoteBars() {
+        if (!this.noteBarContainer || !this.parsedNotes.length) return;
+
+        // Clear existing note bars if playback has restarted
+        if (this.currentPosition < 0.1 && this.noteBars.length > 0) {
+            this.noteBarContainer.innerHTML = '';
+            this.noteBars = [];
+        }
+
+        // Get the container dimensions
+        const containerHeight = this.keyboardContainer.clientHeight;
+        const containerWidth = this.keyboardContainer.clientWidth;
+
+        // Calculate which notes should be visible (within look-ahead window)
+        const startTime = this.currentPosition;
+        const endTime = startTime + this.noteBarLookAhead;
+
+        // Find which notes should be visible
+        const visibleNotes = this.parsedNotes.filter(note =>
+            (note.start >= startTime && note.start <= endTime) || // Notes starting within window
+            (note.start < startTime && note.start + note.duration > startTime) // Notes already playing
+        );
+
+        // Add new note bars for notes that don't have them yet
+        visibleNotes.forEach(note => {
+            // Check if this note already has a bar
+            const existingBar = this.noteBars.find(bar => bar.noteId === note.noteNumber + '-' + note.start);
+
+            if (!existingBar) {
+                this.createNoteBar(note, containerHeight);
+            }
+        });
+
+        // Update positions of all note bars
+        this.updateNoteBarsPosition();
+
+        // Remove note bars that are finished and far behind current position
+        const cleanupThreshold = startTime - 1; // Remove notes 1 second behind current position
+        this.noteBars = this.noteBars.filter(bar => {
+            const note = bar.note;
+            const isFinished = note.start + note.duration < cleanupThreshold;
+
+            if (isFinished) {
+                if (bar.element && bar.element.parentNode) {
+                    bar.element.parentNode.removeChild(bar.element);
+                }
+                return false;
+            }
+            return true;
+        });
+    }
+
+    // Create a new note bar element
+    createNoteBar(note, containerHeight) {
+        // Get piano key element to match position and width
+        const keyElement = this.pianoVisualizationContainer.querySelector(`.piano-key[data-note="${note.noteNumber}"]`);
+        if (!keyElement) return;
+
+        // Create the note bar element
+        const noteBar = document.createElement('div');
+        noteBar.className = 'note-bar';
+
+        // Add class for black keys
+        const isBlackKey = [1, 3, 6, 8, 10].includes(note.noteNumber % 12);
+        if (isBlackKey) {
+            noteBar.classList.add('black-note');
+        }
+
+        // Determine hand (left or right) based on note number
+        // This is a simple approximation - middle C (60) and above is right hand
+        if (note.noteNumber >= 60) {
+            noteBar.classList.add('right-hand');
+        } else {
+            noteBar.classList.add('left-hand');
+        }
+
+        // Set the note bar ID for tracking
+        const noteId = note.noteNumber + '-' + note.start;
+        noteBar.dataset.noteId = noteId;
+
+        // Add to container
+        this.noteBarContainer.appendChild(noteBar);
+
+        // Store reference to this bar
+        this.noteBars.push({
+            noteId: noteId,
+            element: noteBar,
+            note: note,
+            keyElement: keyElement
+        });
+    }
+
+    // Update positions of all note bars based on current playback position
+    updateNoteBarsPosition() {
+        if (!this.noteBarContainer || !this.noteBars.length) return;
+
+        // Get the full container height for the falling notes
+        const containerHeight = this.noteBarContainer.clientHeight;
+
+        // Calculate the window where notes should be visible
+        // Convert time to position in the container
+        const lookAheadTime = this.noteBarLookAhead;
+
+        this.noteBars.forEach(bar => {
+            const note = bar.note;
+            const keyElement = bar.keyElement;
+
+            if (!keyElement || !bar.element) return;
+
+            // Get key position relative to container for horizontal alignment
+            const keyRect = keyElement.getBoundingClientRect();
+            const containerRect = this.keyboardContainer.getBoundingClientRect();
+
+            // Calculate left position (center of the key)
+            const left = keyRect.left - containerRect.left + (keyRect.width / 2);
+
+            // Calculate width based on key type
+            const isBlackKey = keyElement.classList.contains('black-key');
+            const width = isBlackKey ? 14 : 22; // Slightly narrower than keys for visual separation
+
+            // Calculate timing information
+            const noteStart = note.start;
+            const noteDuration = note.duration;
+            const noteEnd = noteStart + noteDuration;
+
+            // Calculate how far in advance the note should appear (in pixels)
+            // Map the time difference between note start and current position to pixel space
+            const timeToNote = noteStart - this.currentPosition;
+
+            // Only show notes that are within our lookahead window or currently playing
+            const isPlaying = noteStart <= this.currentPosition &&
+                noteStart + noteDuration > this.currentPosition;
+
+            const isUpcoming = timeToNote >= 0 && timeToNote < lookAheadTime;
+            const isVisible = isPlaying || isUpcoming;
+
+            if (isVisible) {
+                // Make the note visible
+                bar.element.style.display = 'block';
+
+                // Calculate vertical position
+                // For playing notes: position relative to current time
+                // For upcoming notes: position based on how far in the future they are
+
+                // Height of note is proportional to duration
+                const noteHeight = Math.max(20, noteDuration * containerHeight / lookAheadTime * 0.8);
+
+                // Position is based on time difference
+                let topPosition;
+
+                if (isPlaying) {
+                    // For notes currently playing, position them based on how much of the note has been played
+                    const percentPlayed = (this.currentPosition - noteStart) / noteDuration;
+                    topPosition = containerHeight - (noteHeight * (1 - percentPlayed));
+                } else {
+                    // For upcoming notes, position them based on when they will be played
+                    // Map the time to note to a position from top of container
+                    const percentOfLookahead = timeToNote / lookAheadTime;
+                    topPosition = containerHeight * (1 - percentOfLookahead) - noteHeight;
+                }
+
+                // Position the note bar
+                bar.element.style.left = `${left - (width / 2)}px`;
+                bar.element.style.top = `${topPosition}px`;
+                bar.element.style.width = `${width}px`;
+                bar.element.style.height = `${noteHeight}px`;
+
+                // Highlight currently playing notes
+                bar.element.classList.toggle('playing', isPlaying);
+
+                // Apply animation only when the note first appears within our window
+                if (timeToNote <= lookAheadTime && timeToNote > lookAheadTime - 0.1) {
+                    // Only animate if the note is just appearing at the top
+                    bar.element.style.animation = `note-fall ${this.fallDuration / this.playbackSpeed}s linear`;
+                }
+            } else {
+                // Hide notes outside our window
+                bar.element.style.display = 'none';
+            }
+        });
     }
 
     handleScroll(event) {

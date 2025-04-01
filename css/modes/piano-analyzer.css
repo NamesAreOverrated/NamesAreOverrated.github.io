@@ -69,15 +69,14 @@
     min-width: 40px;
 }
 
-/* Piano Visualization Container - fixed at bottom of the page */
+/* Piano Visualization Container - now covers the full screen */
 .piano-visualization-container {
     position: fixed;
-    bottom: 0;
+    top: 0;
     left: 0;
     right: 0;
-    height: 400px;
-    background-color: #111;
-    border-top: 1px solid #333;
+    bottom: 0;
+    /* Slightly transparent background */
     z-index: 999;
     display: flex;
     flex-direction: column;
@@ -88,16 +87,22 @@
 
 /* Remove piano-visualization-header styles as it's removed from HTML */
 
-/* New piano keyboard container (replaced piano-roll-container) */
+/* Rearrange layout - keyboard at bottom, notation container above, falling notes in between */
 .piano-keyboard-container {
-    height: 80px;
-    width: 100%;
-    border-bottom: 1px solid #333;
-    background-color: #222;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 120px;
+    border-top: 1px solid #333;
+    background-color: transparent;
+    /* Changed from #222 to transparent */
     overflow-x: auto;
     /* Center the piano keyboard */
     display: flex;
     justify-content: center;
+    z-index: 10;
+    /* Above the note bars */
 }
 
 .piano-keyboard {
@@ -107,7 +112,8 @@
     /* Full height */
     overflow-x: auto;
     /* Allow horizontal scrolling */
-    background-color: #222;
+    background-color: transparent;
+    /* Changed from #222 to transparent */
     display: flex;
     flex-direction: row;
     /* Horizontal layout */
@@ -118,19 +124,37 @@
     /* Ensures keyboard is at least as wide as its content */
 }
 
-/* Notation container takes remaining space */
-.notation-container {
-    flex: 1;
-    overflow-x: auto;
-    background-color: #1a1a1a;
-    padding: 10px;
-    width: 100%;
-    cursor: pointer;
-    position: relative;
+/* Note bar container now covers the whole viewport - make it completely transparent */
+.note-bar-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 120px;
+    /* Leave space for keyboard at bottom */
+    pointer-events: none;
+    /* Allow clicks to pass through to piano keys */
+    overflow: hidden;
+    background-color: transparent;
+    /* Completely transparent */
 }
 
-.notation-container.dragging {
-    cursor: grabbing;
+/* Notation container at top of the screen - make it completely transparent */
+.notation-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 200px;
+    overflow-x: auto;
+    background-color: transparent;
+    /* Completely transparent */
+    padding: 10px;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(51, 51, 51, 0.2);
+    /* Very light border */
+    z-index: 10;
+    /* Above the note bars */
 }
 
 /* Remove notation-instructions styles as it's removed from HTML */
@@ -145,13 +169,15 @@
 .white-key {
     width: 24px;
     height: 100%;
-    background-color: #f0f0f0;
+    background-color: rgba(240, 240, 240, 0.9);
+    /* Slightly transparent white keys */
 }
 
 .black-key {
     width: 16px;
     height: 60%;
-    background-color: #222;
+    background-color: rgba(34, 34, 34, 0.9);
+    /* Slightly transparent black keys */
     z-index: 2;
     margin-left: -8px;
     margin-right: -8px;
@@ -182,7 +208,8 @@
     height: 100%;
     /* Adjusted to take full height now that instructions are gone */
     overflow-x: auto;
-    background-color: #fff;
+    background-color: rgba(255, 255, 255, 0.2);
+    /* Very light background for readability */
     position: relative;
     border-radius: 4px;
 }
@@ -220,35 +247,18 @@
 
 /* Simple notation fallback styling */
 .simple-notation {
-    background-color: rgba(0, 0, 0, 0.3);
-    padding: 15px;
-    border-radius: 4px;
-    max-height: 300px;
-    overflow-y: auto;
-}
-
-.simple-notation ul {
-    list-style-type: none;
-    padding: 0;
-    margin: 10px 0;
-}
-
-.simple-notation li {
-    padding: 4px 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* Enhanced simple notation fallback styling */
-.simple-notation {
-    background-color: rgba(40, 40, 50, 0.8);
+    background-color: rgba(40, 40, 50, 0.2);
+    /* Very transparent */
     padding: 15px;
     border-radius: 4px;
     max-height: 300px;
     overflow-y: auto;
     font-family: 'Courier New', monospace;
-    color: #ddd;
+    color: #fff;
+    /* Brighter text for readability */
     margin-top: 10px;
-    border: 1px solid rgba(80, 80, 100, 0.4);
+    border: 1px solid rgba(80, 80, 100, 0.1);
+    /* Nearly invisible border */
 }
 
 .simple-notation h3 {
@@ -304,18 +314,18 @@
 
 /* Responsive adjustments */
 @media (max-height: 700px) {
-    .piano-visualization-container {
-        height: 300px;
-    }
-
-    .piano-keyboard-container {
-        height: 60px;
+    .notation-container {
+        height: 150px;
     }
 }
 
 @media (max-width: 600px) {
     .piano-keyboard-container {
-        height: 60px;
+        height: 80px;
+    }
+
+    .note-bar-container {
+        bottom: 80px;
     }
 
     .white-key {
@@ -413,8 +423,10 @@ body.disco-mode .piano-visualization-header {
 }
 
 body.disco-mode .piano-keyboard-container {
-    background-color: rgba(25, 25, 35, 0.9);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background-color: transparent;
+    /* Changed from rgba to transparent */
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    /* Keep just the border */
 }
 
 body.disco-mode .notation-container {
@@ -434,4 +446,135 @@ body.disco-mode .piano-key.active {
     100% {
         box-shadow: 0 0 15px var(--accent-color), 0 0 5px #fff;
     }
+}
+
+/* New styles for falling note bars */
+.note-bar {
+    position: absolute;
+    background-color: var(--accent-color);
+    opacity: 0.7;
+    border-radius: 3px 3px 0 0;
+    box-shadow: 0 0 5px rgba(0, 255, 200, 0.4);
+    transform-origin: top center;
+    transition: opacity 0.2s ease-out;
+    /* Updated from bottom border radius to top */
+}
+
+.note-bar.black-note {
+    background-color: #00ccaa;
+    opacity: 0.8;
+}
+
+/* Note bar that's currently playing */
+.note-bar.playing {
+    opacity: 1;
+    box-shadow: 0 0 10px rgba(0, 255, 200, 0.7);
+}
+
+/* Different colors for different hand parts in piano music */
+.note-bar.right-hand {
+    background-color: var(--accent-color);
+}
+
+.note-bar.left-hand {
+    background-color: #ff5588;
+}
+
+.note-bar.black-note.left-hand {
+    background-color: #ff3366;
+}
+
+/* Add falling animation effect */
+@keyframes note-fall {
+    from {
+        transform: translateY(-100%);
+    }
+
+    to {
+        transform: translateY(0);
+    }
+}
+
+/* Disco mode styles for note bars */
+body.disco-mode .note-bar {
+    animation: disco-note-color 5.8s steps(1, end) infinite;
+}
+
+body.disco-mode .note-bar.playing {
+    animation: disco-note-pulse 1s infinite alternate;
+}
+
+@keyframes disco-note-color {
+
+    0%,
+    100% {
+        background-color: rgba(255, 0, 110, 0.7);
+    }
+
+    20% {
+        background-color: rgba(0, 229, 255, 0.7);
+    }
+
+    40% {
+        background-color: rgba(174, 0, 255, 0.7);
+    }
+
+    60% {
+        background-color: rgba(255, 221, 0, 0.7);
+    }
+
+    80% {
+        background-color: rgba(0, 255, 136, 0.7);
+    }
+}
+
+@keyframes disco-note-pulse {
+    0% {
+        box-shadow: 0 0 5px var(--accent-color);
+        opacity: 0.8;
+    }
+
+    100% {
+        box-shadow: 0 0 15px var(--accent-color), 0 0 5px #fff;
+        opacity: 1;
+    }
+}
+
+/* Update vertical grid lines to be subtler */
+.note-bar-container::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    /* More subtle lines */
+    background-size: 100% 100px;
+    pointer-events: none;
+}
+
+/* Add close button since we now take up the entire screen */
+.piano-close-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background-color: rgba(0, 0, 0, 0.5);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 20;
+    transition: all 0.2s ease;
+}
+
+.piano-close-btn:hover {
+    background-color: rgba(255, 0, 0, 0.5);
+    transform: scale(1.1);
 }
