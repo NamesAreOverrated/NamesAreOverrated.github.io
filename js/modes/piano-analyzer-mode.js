@@ -42,6 +42,9 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         this.currentPage = 0;
         this.measuresPerPage = 2;
         this.totalPages = 1;
+
+        // Add navigation mode state
+        this.navigationMode = false;
     }
 
     initialize() {
@@ -1208,6 +1211,7 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
 
         this.pianoVisualizationContainer.innerHTML = `
             <div class="notation-container">
+                <div class="navigation-mode-indicator">Navigation Mode</div>
             </div>
             <div class="note-bar-container">
             </div>
@@ -1224,6 +1228,10 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         this.keyboardContainer = this.pianoVisualizationContainer.querySelector('.piano-keyboard-container');
         this.noteBarContainer = this.pianoVisualizationContainer.querySelector('.note-bar-container');
         this.closeButton = this.pianoVisualizationContainer.querySelector('.piano-close-btn');
+        this.navigationIndicator = this.pianoVisualizationContainer.querySelector('.navigation-mode-indicator');
+
+        // Hide the navigation indicator initially
+        this.navigationIndicator.style.display = 'none';
 
         this.generatePianoKeyboard();
 
@@ -1231,24 +1239,18 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             this.closePianoVisualization();
         });
 
-        this.notationContainer.addEventListener('click', (e) => {
-        });
-
-        this.notationContainer.addEventListener('mousedown', (e) => {
-            this.startDragging(e);
-        });
-
-        document.addEventListener('mousemove', (e) => {
-            this.handleDragging(e);
-        });
-
-        document.addEventListener('mouseup', () => {
-            this.stopDragging();
-        });
+        // Replace old mouse event handlers with new navigation mode handlers
+        this.setupNavigationHandlers();
 
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && this.pianoVisualizationContainer.style.display !== 'none') {
-                this.closePianoVisualization();
+            if (e.key === 'Escape') {
+                if (this.navigationMode) {
+                    // If in navigation mode, exit it
+                    this.toggleNavigationMode(false);
+                } else if (this.pianoVisualizationContainer.style.display !== 'none') {
+                    // Otherwise close the visualization
+                    this.closePianoVisualization();
+                }
             }
         });
 
@@ -2149,78 +2151,6 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         console.log(`BPM adjusted to ${this.bpm} via scroll`);
     }
 
-    startDragging(event) {
-        this.isDragging = false;
-        this.dragStartX = event.clientX;
-        this.dragStartY = event.clientY;
-        this.dragStartPosition = this.scoreModel.currentPosition;
-        this.hasDragged = false;
-        this.mouseDownTime = Date.now();
-
-        event.currentTarget.style.cursor = 'grab';
-
-        this.wasPlayingBeforeDrag = this.scoreModel.isPlaying;
-    }
-
-    handleDragging(event) {
-        if (this.dragStartX === undefined) return;
-
-        const dragDistanceX = event.clientX - this.dragStartX;
-        const dragDistanceY = event.clientY - this.dragStartY;
-        const totalDragDistance = Math.sqrt(dragDistanceX * dragDistanceX + dragDistanceY * dragDistanceY);
-
-        if (totalDragDistance > 5) {
-            if (!this.isDragging) {
-                this.isDragging = true;
-                event.currentTarget.style.cursor = 'grabbing';
-
-                if (this.scoreModel.isPlaying) {
-                    this.scoreModel.pause();
-                }
-            }
-
-            const sensitivity = 0.02;
-            const newPosition = this.dragStartPosition + (dragDistanceX * sensitivity);
-
-            this.scoreModel.seekTo(Math.max(0, newPosition));
-            this.hasDragged = true;
-        }
-    }
-
-    stopDragging() {
-        if (this.dragStartX === undefined) return;
-
-        if (!this.hasDragged) {
-            const clickDuration = Date.now() - this.mouseDownTime;
-            if (clickDuration < 300) {
-                this.togglePlayback();
-            }
-        }
-        else if (this.hasDragged) {
-            this.handlePositionSeek();
-
-            if (this.wasPlayingBeforeDrag) {
-                this.scoreModel.play();
-            }
-        }
-
-        if (this.notationContainer) {
-            this.notationContainer.style.cursor = 'default';
-        }
-
-        this.isDragging = false;
-        this.hasDragged = false;
-        this.dragStartX = undefined;
-        this.dragStartY = undefined;
-    }
-
-    handlePositionSeek() {
-        if (this.noteBarContainer) {
-            this.noteBarContainer.innerHTML = '';
-            this.noteBars = [];
-        }
-    }
-
     closePianoVisualization() {
         this.scoreModel.pause();
 
@@ -2325,8 +2255,109 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             <div class="speed-info">Tempo: ${this.bpm} BPM</div>
             <div class="playback-status">${this.isPlaying ? 'Playing' : 'Paused'}</div>
             <div class="view-info">Page: ${this.currentPage + 1}/${this.totalPages}</div>
+            ${this.navigationMode ? '<div class="nav-info">Navigation Mode: Double-click to exit</div>' :
+                '<div class="nav-info">Double-click to enter Navigation Mode</div>'}
         `;
 
         svgContainer.appendChild(infoPanel);
+    }
+
+    // Setup navigation handlers - completely rewritten to remove all drag functionality outside navigation mode
+    setupNavigationHandlers() {
+        // Double click toggles navigation mode
+        this.notationContainer.addEventListener('dblclick', (e) => {
+            // Toggle navigation mode on double click
+            this.toggleNavigationMode(!this.navigationMode);
+            e.preventDefault();
+        });
+
+        // Single click for play/pause (when not in navigation mode)
+        this.notationContainer.addEventListener('click', (e) => {
+            if (!this.navigationMode) {
+                this.togglePlayback();
+            }
+        });
+
+        // Mouse wheel event for page navigation (only in navigation mode)
+        this.notationContainer.addEventListener('wheel', (e) => {
+            if (this.navigationMode) {
+                e.preventDefault();
+                if (e.deltaY < 0) {
+                    // Scroll up = previous page
+                    this.goToPreviousPage();
+                } else {
+                    // Scroll down = next page
+                    this.goToNextPage();
+                }
+            }
+        });
+
+        // Mouse move for position seeking (only in navigation mode)
+        this.notationContainer.addEventListener('mousemove', (e) => {
+            if (this.navigationMode) {
+                this.handleNavigationMouseMove(e);
+            }
+        });
+    }
+
+    // Toggle navigation mode on/off
+    toggleNavigationMode(enable) {
+        this.navigationMode = enable;
+
+        // Show/hide navigation indicator
+        if (this.navigationIndicator) {
+            this.navigationIndicator.style.display = enable ? 'block' : 'none';
+        }
+
+        // Update cursor style
+        this.notationContainer.style.cursor = enable ? 'crosshair' : 'pointer';
+
+        // Add/remove class to notation container
+        this.notationContainer.classList.toggle('navigation-mode', enable);
+
+        console.log(`Navigation mode ${enable ? 'enabled' : 'disabled'}`);
+    }
+
+    // Handle mouse movement in navigation mode - improved to be the only method that changes playback position
+    handleNavigationMouseMove(e) {
+        if (!this.navigationMode) return;
+
+        // Get mouse position relative to notation container
+        const rect = this.notationContainer.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        // Find the current measure indices for this page
+        const startMeasureIndex = this.currentPage * this.measuresPerPage;
+        const endMeasureIndex = Math.min(
+            this.measureData.length - 1,
+            startMeasureIndex + this.measuresPerPage - 1
+        );
+
+        // Calculate which measure based on horizontal position
+        const measureWidth = rect.width / this.measuresPerPage;
+        const measureOffset = Math.floor(x / measureWidth);
+        const targetMeasureIndex = startMeasureIndex + measureOffset;
+
+        // Ensure valid measure index
+        if (targetMeasureIndex >= 0 && targetMeasureIndex <= endMeasureIndex) {
+            const measureData = this.measureData[targetMeasureIndex];
+            if (!measureData) return;
+
+            // Calculate position within measure based on x position
+            const measureX = x - (measureOffset * measureWidth);
+            const measurePosition = measureX / measureWidth; // 0-1 position within measure
+
+            // Calculate time within measure
+            const measureStartTime = measureData.startPosition;
+            const measureDuration = measureData.durationSeconds;
+            const targetTime = measureStartTime + (measurePosition * measureDuration);
+
+            // Update position
+            this.scoreModel.seekTo(targetTime);
+
+            // Provide visual feedback
+            this.renderNotation();
+        }
     }
 }
