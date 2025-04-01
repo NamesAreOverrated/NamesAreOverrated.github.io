@@ -6,20 +6,22 @@
 class PianoAnalyzerMode extends MusicAnalyzerMode {
     constructor(analyzer) {
         super(analyzer);
+
+        // Create the music score model instance
+        this.scoreModel = new MusicScoreModel();
+
+        // Old state variables (some will be removed)
         this.musicXML = null;
         this.isPlaying = false;
         this.currentPosition = 0;
 
-        // Simplify BPM handling - just use a single BPM value
-        this.bpm = 120; // Current BPM, the only tempo value we need
-
+        // UI containers
         this.pianoRollContainer = null;
         this.notationContainer = null;
         this.lastRenderTime = 0;
-        this.parsedNotes = [];
         this.visibleDuration = 10; // Seconds visible in view
 
-        // Add variables for note bars
+        // Note bar visualization
         this.noteBars = [];
         this.noteBarContainer = null;
         this.noteBarLookAhead = 4; // Seconds of notes to show ahead of playback
@@ -33,13 +35,8 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         this.dragStartX = 0;
         this.dragStartPosition = 0;
 
-        // Add time signature and division information
-        this.divisions = 24; // Default divisions per quarter note (will be updated from file)
-        this.timeSignatureNumerator = 4;   // Default 4/4 time
-        this.timeSignatureDenominator = 4; // Default 4/4 time
-
-        // Add a reference tempo to handle timing correctly
-        this.referenceBPM = 60; // At 60 BPM, musical time = real time
+        // Set up event listeners for the score model
+        this.setupScoreModelListeners();
     }
 
     initialize() {
@@ -91,16 +88,15 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
                 newSpeedControl.min = "40";  // Minimum BPM
                 newSpeedControl.max = "240"; // Maximum BPM
                 newSpeedControl.step = "1";  // BPM increments by 1
-                newSpeedControl.value = this.bpm; // Set initial value
+                newSpeedControl.value = this.scoreModel.bpm; // Set initial value
 
                 newSpeedControl.addEventListener('input', (e) => {
-                    this.bpm = parseFloat(e.target.value);
-                    speedValue.textContent = `${this.bpm} BPM`;
-                    console.log(`BPM changed to ${this.bpm}`);
+                    this.scoreModel.setTempo(parseFloat(e.target.value));
+                    // The update will be handled by the tempochange event listener
                 });
 
                 // Initialize the speed display
-                speedValue.textContent = `${this.bpm} BPM`;
+                speedValue.textContent = `${this.scoreModel.bpm} BPM`;
             }
         }
 
@@ -109,6 +105,81 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         if (resultElement && resultElement.style.display === 'none') {
             resultElement.style.display = 'block';
         }
+    }
+
+    /**
+     * Set up event listeners for the score model
+     */
+    setupScoreModelListeners() {
+        // Listen for position changes to update visualizations
+        this.scoreModel.addEventListener('positionchange', (data) => {
+            // Skip visualization updates if containers aren't created yet
+            if (!this.pianoVisualizationContainer) return;
+
+            // Get current position from score model
+            this.currentPosition = data.position;
+
+            // Update notebars and notation with improved timing
+            requestAnimationFrame(() => {
+                this.updateNoteBars();
+
+                // Don't update notation on every frame for performance reasons
+                if (Math.floor(data.position * 2) > Math.floor((data.previousPosition || 0) * 2)) {
+                    this.renderNotation();
+                }
+
+                // Highlight piano keys
+                const playingNotes = this.scoreModel.getCurrentlyPlayingNotes();
+                this.highlightPianoKeys(playingNotes);
+            });
+        });
+
+        // Listen for tempo changes to update UI
+        this.scoreModel.addEventListener('tempochange', (data) => {
+            this.updateTempoDisplay(data.tempo);
+        });
+
+        // Listen for play/pause events to update UI
+        this.scoreModel.addEventListener('play', () => {
+            this.isPlaying = true;
+            this.updatePlayPauseButton();
+
+            // Resume animations in the note bar container
+            if (this.noteBarContainer) {
+                this.noteBarContainer.classList.remove('paused');
+            }
+        });
+
+        this.scoreModel.addEventListener('pause', () => {
+            this.isPlaying = false;
+            this.updatePlayPauseButton();
+
+            // Pause all animations in the note bar container
+            if (this.noteBarContainer) {
+                this.noteBarContainer.classList.add('paused');
+            }
+        });
+
+        this.scoreModel.addEventListener('stop', () => {
+            this.isPlaying = false;
+            this.updatePlayPauseButton();
+
+            // Clear note bars
+            if (this.noteBarContainer) {
+                this.noteBarContainer.innerHTML = '';
+                this.noteBars = [];
+            }
+        });
+
+        // Listen for loaded event to update UI
+        this.scoreModel.addEventListener('loaded', () => {
+            // Don't automatically create visualizations here, as this event might be triggered
+            // before containers are ready. Instead, we'll call updateScoreUI() explicitly
+            // after setting score data in processMusicXMLString.
+
+            // We can still use this for non-UI updates if needed
+            console.log("Score model loaded data successfully");
+        });
     }
 
     loadMusicXMLFile(file) {
@@ -238,11 +309,28 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             // Final post-processing of parsed notes
             this.processNoteRelationships();
 
-            // Show success message and prepare UI
+            // Create a data object to pass to the score model
+            const scoreData = {
+                title: title,
+                composer: this.composer || '',
+                notes: this.parsedNotes,
+                measures: this.measureData,
+                timeSignatures: this.timeSignatureChanges,
+                tempoChanges: this.tempoChanges,
+                divisions: this.divisions,
+                timeSignatureNumerator: this.timeSignatureNumerator,
+                timeSignatureDenominator: this.timeSignatureDenominator
+            };
+
+            // Update the score model - but DON'T rely on the 'loaded' event for UI updates
+            // as it may trigger visualization code before containers are created
+            this.scoreModel.setScoreData(scoreData);
+
+            // Show success message
             statusElement.textContent = `Loaded: ${title}`;
-            this.updateScoreTitle(title);
-            this.showPlaybackControls();
-            this.createVisualization();
+
+            // Explicitly update UI after data is loaded
+            this.updateScoreUI();
 
         } catch (error) {
             console.error('Error processing MusicXML:', error);
@@ -435,8 +523,23 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
                 currentDivisions
             );
 
-            // Calculate duration in seconds based on current tempo
-            const measureDurationSeconds = this.ticksToSeconds(measureDurationTicks, currentDivisions, this.bpm);
+            // Fix timing calculation: calculate seconds based on active tempo at measure start
+            let currentTempo = this.bpm;
+            // Find the most recent tempo change that applies to this measure
+            for (const tempoChange of this.tempoChanges) {
+                if (tempoChange.position <= currentMeasurePosition) {
+                    currentTempo = tempoChange.tempo;
+                } else {
+                    break;
+                }
+            }
+
+            // Calculate duration using the tempo at the START of the measure
+            const measureDurationSeconds = this.ticksToSeconds(
+                measureDurationTicks,
+                currentDivisions,
+                currentTempo
+            );
 
             // Store measure duration and timing information
             measureInfo.durationTicks = measureDurationTicks;
@@ -475,10 +578,10 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         // Calculate ticks per whole note
         const ticksPerWholeNote = divisions * 4;
 
-        // Calculate ticks per beat
+        // Calculate ticks per beat based on denominator (beat unit)
         const ticksPerBeat = ticksPerWholeNote / denominator;
 
-        // Total ticks for the measure
+        // Total ticks for the measure - simple formula that works for all time signatures
         return ticksPerBeat * numerator;
     }
 
@@ -916,25 +1019,59 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         const noteById = new Map();
         this.parsedNotes.forEach(note => noteById.set(note.id, note));
 
-        // Process tie connections
+        // First pass - identify all tie chains
+        const tieChains = new Map(); // Map of starting note ID to array of tied notes
+
+        // Identify starting notes of each tie chain
         for (const note of this.parsedNotes) {
-            if (note.tiedToId && noteById.has(note.tiedToId)) {
-                const nextNote = noteById.get(note.tiedToId);
+            if (note.isTieStart && !note.isTiedFromPrevious) {
+                // This is the start of a tie chain
+                tieChains.set(note.id, [note]);
+            }
+        }
 
-                // Extend the first note's duration to include the tied note
-                note.extendedDuration = note.duration + nextNote.duration;
-                note.visualDuration = note.extendedDuration; // For rendering
+        // Build tie chains by following the tiedToId links
+        for (const [startId, chain] of tieChains.entries()) {
+            let currentNote = chain[0];
+            while (currentNote.tiedToId && noteById.has(currentNote.tiedToId)) {
+                const nextNote = noteById.get(currentNote.tiedToId);
+                chain.push(nextNote);
+                currentNote = nextNote;
 
-                // Mark tied notes
-                note.hasTie = true;
-                nextNote.isTiedFromPrevious = true;
-            } else if (!note.hasTie && !note.isTiedFromPrevious) {
-                // Regular untied notes keep their original duration for visuals
+                // Break if we've reached the end of the chain
+                if (!currentNote.isTieStart) break;
+            }
+        }
+
+        // Process each tie chain to calculate total duration
+        for (const chain of tieChains.values()) {
+            if (chain.length <= 1) continue;
+
+            // Calculate total duration of the tie chain
+            let totalDuration = 0;
+            for (const note of chain) {
+                totalDuration += note.duration;
+            }
+
+            // Set extended duration on first note
+            const firstNote = chain[0];
+            firstNote.visualDuration = totalDuration;
+            firstNote.hasTie = true;
+
+            // Mark all subsequent notes in the chain
+            for (let i = 1; i < chain.length; i++) {
+                chain[i].isTiedFromPrevious = true;
+            }
+        }
+
+        // Ensure all notes have a visualDuration property
+        for (const note of this.parsedNotes) {
+            if (!note.visualDuration) {
                 note.visualDuration = note.duration;
             }
         }
 
-        console.log("Processed tied notes");
+        console.log("Processed tied notes with improved accuracy");
     }
 
     // Apply effects of articulations to note durations and rendering
@@ -957,7 +1094,7 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         }
     }
 
-    // Convert ticks to seconds with BPM consideration
+    // Convert ticks to seconds with more accurate BPM consideration
     ticksToSeconds(ticks, divisions, tempo) {
         if (!ticks || ticks <= 0) return 0;
 
@@ -968,32 +1105,30 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         const quarterNoteFraction = ticks / divisions;
 
         // Apply time signature adjustment if necessary
-        // For compound meters (6/8, 9/8, 12/8), we need to adjust the duration
-        const beatUnitFactor = this.timeSignatureDenominator === 8 &&
-            [6, 9, 12].includes(this.timeSignatureNumerator)
-            ? 3 / this.timeSignatureDenominator
-            : 4 / this.timeSignatureDenominator;
+        // For compound meters (6/8, 9/8, 12/8), we need to adjust the duration correctly
+        // This does NOT need a factor as MusicXML already accounts for this in duration values
+        // We need to remove the beatUnitFactor to prevent incorrect timing
 
-        // Final duration calculation with all factors considered
-        return quarterNoteFraction * quarterNoteSeconds * beatUnitFactor;
+        // Final duration calculation without an unnecessary time signature factor
+        return quarterNoteFraction * quarterNoteSeconds;
     }
 
     // Update the note bar visualization with greatly improved timing accuracy
     updateNoteBars() {
-        if (!this.noteBarContainer || !this.parsedNotes.length) return;
+        if (!this.noteBarContainer || !this.scoreModel.notes.length) return;
 
         // Clear existing note bars if playback has restarted
-        if (this.currentPosition < 0.1 && this.noteBars.length > 0) {
+        if (this.scoreModel.currentPosition < 0.1 && this.noteBars.length > 0) {
             this.noteBarContainer.innerHTML = '';
             this.noteBars = [];
         }
 
         // Calculate visible time window with ahead and behind margins
-        const startTime = this.currentPosition - 0.5; // Allow some margin for notes that just passed
-        const endTime = this.currentPosition + this.noteBarLookAhead;
+        const startTime = this.scoreModel.currentPosition - 0.5; // Allow some margin for notes that just passed
+        const endTime = this.scoreModel.currentPosition + this.noteBarLookAhead;
 
         // Find which notes should be visible with enhanced filtering
-        const visibleNotes = this.getVisibleNotes(startTime, endTime);
+        const visibleNotes = this.scoreModel.getVisibleNotes(startTime, endTime);
 
         // Create missing note bars
         this.createMissingNoteBars(visibleNotes);
@@ -1106,7 +1241,10 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         // Minimum size for very short notes
         const MIN_NOTE_HEIGHT = 8;
 
-        // Process each note bar
+        // Get current playback position from score model (single source of truth)
+        const currentTime = this.scoreModel.currentPosition;
+
+        // Process each note bar with improved timing accuracy
         this.noteBars.forEach(bar => {
             const note = bar.note;
             const element = bar.element;
@@ -1136,10 +1274,9 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             const noteEnd = noteStart + noteDuration;
 
             // Status checks with precise timing
-            const currentTime = this.currentPosition;
             const isPlaying = noteStart <= currentTime && noteEnd > currentTime;
             const isUpcoming = noteStart > currentTime && noteStart <= currentTime + lookAheadTime;
-            const isPartiallyVisible = noteStart < currentTime && noteEnd > currentTime && noteEnd <= currentTime + lookAheadTime;
+            const isPartiallyVisible = noteStart < currentTime && noteEnd > currentTime;
             const isPassed = noteEnd <= currentTime && noteEnd > currentTime - 0.5; // Recently passed notes
 
             // Determine visibility
@@ -1166,10 +1303,10 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
                 else if (isUpcoming) {
                     // Upcoming notes - calculate based on time until they play
                     const timeToStart = noteStart - currentTime;
-                    const startPosition = containerHeight - (timeToStart * timeToPixelRatio);
+                    const distanceFromBottom = timeToStart * timeToPixelRatio;
 
-                    // Position so the bottom of the note is at the calculated start position
-                    topPosition = startPosition - noteHeight;
+                    // Position note at correct distance from bottom
+                    topPosition = containerHeight - distanceFromBottom - noteHeight;
                 }
                 else if (isPartiallyVisible) {
                     // Notes that started before but aren't finished
@@ -1190,7 +1327,7 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
                     topPosition = containerHeight;
                 }
 
-                // Apply positions and dimensions with hardware acceleration
+                // Use hardware-accelerated transforms for better performance
                 element.style.transform = `translate3d(${keyPosition.left - (keyPosition.width / 2)}px, ${topPosition}px, 0)`;
                 element.style.width = `${keyPosition.width}px`;
                 element.style.height = `${noteHeight}px`;
@@ -1520,7 +1657,7 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             // Find current measure based on playback position with improved accuracy
             let currentMeasureIndex = 0;
             for (let i = 0; i < this.measureData.length; i++) {
-                if (this.currentPosition >= this.measureData[i].startPosition) {
+                if (this.scoreModel.currentPosition >= this.measureData[i].startPosition) {
                     currentMeasureIndex = i;
                 } else {
                     break;
@@ -1924,9 +2061,9 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
                         : measureStartTime + this.measureData[measureIndex].durationSeconds;
 
                     // Check if current position is within this measure
-                    if (this.currentPosition >= measureStartTime && this.currentPosition < measureEndTime) {
+                    if (this.scoreModel.currentPosition >= measureStartTime && this.scoreModel.currentPosition < measureEndTime) {
                         // Calculate relative position within measure (0-1)
-                        const measurePos = (this.currentPosition - measureStartTime) /
+                        const measurePos = (this.scoreModel.currentPosition - measureStartTime) /
                             (measureEndTime - measureStartTime);
 
                         // Get the stave to determine x position
@@ -1962,10 +2099,10 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
     }
 
     togglePlayback() {
-        if (this.isPlaying) {
-            this.pausePlayback();
+        if (this.scoreModel.isPlaying) {
+            this.scoreModel.pause();
         } else {
-            this.startPlayback();
+            this.scoreModel.play();
         }
     }
 
@@ -2015,6 +2152,9 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
     }
 
     highlightPianoKeys(notes) {
+        // Guard against being called before UI is initialized
+        if (!this.pianoVisualizationContainer) return;
+
         // Remove existing highlights
         const keys = this.pianoVisualizationContainer.querySelectorAll('.piano-key');
         keys.forEach(key => key.classList.remove('active'));
@@ -2056,7 +2196,7 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         this.isDragging = false; // Start as false until we've moved enough
         this.dragStartX = event.clientX;
         this.dragStartY = event.clientY; // Track Y position too
-        this.dragStartPosition = this.currentPosition;
+        this.dragStartPosition = this.scoreModel.currentPosition;
         this.hasDragged = false; // New flag to track if actual dragging occurred
         this.mouseDownTime = Date.now(); // Track when the mouse went down
 
@@ -2064,7 +2204,7 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         event.currentTarget.style.cursor = 'grab';
 
         // Store playing state
-        this.wasPlayingBeforeDrag = this.isPlaying;
+        this.wasPlayingBeforeDrag = this.scoreModel.isPlaying;
         // We'll pause only if we actually start dragging, not on just a click
     }
 
@@ -2085,8 +2225,8 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
                 event.currentTarget.style.cursor = 'grabbing';
 
                 // Now we pause if was playing
-                if (this.isPlaying) {
-                    this.pausePlayback();
+                if (this.scoreModel.isPlaying) {
+                    this.scoreModel.pause();
                 }
             }
 
@@ -2096,11 +2236,8 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             const newPosition = this.dragStartPosition + (dragDistanceX * sensitivity);
 
             // Update position (don't allow negative values)
-            this.currentPosition = Math.max(0, newPosition);
+            this.scoreModel.seekTo(Math.max(0, newPosition));
             this.hasDragged = true;
-
-            // Update visualizations
-            this.renderNotation();
         }
     }
 
@@ -2122,7 +2259,7 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
 
             // Restore playback if it was playing before drag started
             if (this.wasPlayingBeforeDrag) {
-                this.startPlayback();
+                this.scoreModel.play();
             }
         }
 
@@ -2145,23 +2282,13 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             this.noteBars = [];
         }
 
-        // Reset animation frame to ensure accurate timing
-        if (this.isPlaying) {
-            if (this.animationFrameId) {
-                cancelAnimationFrame(this.animationFrameId);
-            }
-            this.lastRenderTime = performance.now();
-            this.animationFrameId = requestAnimationFrame(this.updatePlayback.bind(this));
-        } else {
-            // For paused state, still update notes and visualization
-            this.updateNoteBars();
-            this.renderNotation();
-        }
+        // Note: The score model's positionchange event will trigger 
+        // the necessary updates to notation and note bars
     }
 
     closePianoVisualization() {
         // Stop playback
-        this.pausePlayback();
+        this.scoreModel.pause();
 
         // Make sure all animations are stopped
         if (this.noteBarContainer) {
@@ -2232,7 +2359,7 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         }
 
         if (isNaN(octave)) {
-            console.warn(`Invalid octave: ${octave}, defaulting to 4`);
+            console.warn(`Invalid octave: ${octave} defaulting to 4}`);
             octave = 4;
         }
 
@@ -2255,5 +2382,19 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         return Array.from(notesByTime.entries())
             .sort((a, b) => parseFloat(a[0]) - parseFloat(b[0]))
             .map(entry => entry[1]);
+    }
+
+    /**
+     * Update the UI with the loaded score
+     */
+    updateScoreUI() {
+        // Update song title
+        this.updateScoreTitle(this.scoreModel.title);
+
+        // Show playback controls
+        this.showPlaybackControls();
+
+        // Create visualization
+        this.createVisualization();
     }
 }
