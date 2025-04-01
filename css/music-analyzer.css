@@ -24,17 +24,56 @@
     font-size: 14px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
     opacity: 0;
+    /* Start hidden by default */
     pointer-events: none;
 }
 
 .music-toggle:hover {
-    background-color: var(--accent-color);
-    color: #222;
+    transform: scale(1.05);
+    box-shadow: 0 4px 15px rgba(255, 255, 255, 0.4);
 }
 
-body.disco-mode .music-toggle {
+/* Remove the disco-mode dependency since we now handle visibility through JavaScript events */
+.music-toggle.visible {
     opacity: 1;
     pointer-events: auto;
+}
+
+/* New styles to match the visualization buttons */
+body.disco-mode .music-toggle {
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 0 12px rgba(0, 0, 0, 0.3);
+    animation: music-button-pulse 5.8s steps(1, end) infinite;
+}
+
+.music-toggle.active {
+    background-color: #222;
+    animation: music-button-pulse 5.8s steps(1, end) infinite;
+    border: 2px solid white;
+}
+
+@keyframes music-button-pulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 25px rgba(255, 0, 110, 0.9);
+    }
+
+    20% {
+        box-shadow: 0 0 25px rgba(0, 229, 255, 0.9);
+    }
+
+    40% {
+        box-shadow: 0 0 25px rgba(174, 0, 255, 0.9);
+    }
+
+    60% {
+        box-shadow: 0 0 25px rgba(255, 221, 0, 0.9);
+    }
+
+    80% {
+        box-shadow: 0 0 25px rgba(0, 255, 136, 0.9);
+    }
 }
 
 .music-analyzer-panel {
@@ -43,6 +82,79 @@ body.disco-mode .music-toggle {
     border-radius: 8px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
     overflow: hidden;
+}
+
+/* Add disco mode styling for the panel */
+body.disco-mode .music-analyzer-panel {
+    animation: panel-pulse 5.8s ease-in-out infinite;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.4);
+    background-color: rgba(25, 25, 35, 0.9);
+    position: relative;
+}
+
+/* Create that neon edge glow effect like the cards have */
+body.disco-mode .music-analyzer-panel::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    pointer-events: none;
+    z-index: 2;
+    animation: neon-analyzer-border 5.8s steps(1, end) infinite;
+}
+
+@keyframes panel-pulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 15px rgba(255, 0, 110, 0.2);
+    }
+
+    25% {
+        box-shadow: 0 0 15px rgba(0, 229, 255, 0.2);
+    }
+
+    50% {
+        box-shadow: 0 0 15px rgba(174, 0, 255, 0.2);
+    }
+
+    75% {
+        box-shadow: 0 0 15px rgba(255, 221, 0, 0.2);
+    }
+}
+
+@keyframes neon-analyzer-border {
+
+    0%,
+    100% {
+        border-color: rgba(255, 0, 110, 0.3);
+        box-shadow: 0 0 6px rgba(255, 0, 110, 0.3), inset 0 0 3px rgba(255, 0, 110, 0.2);
+    }
+
+    20% {
+        border-color: rgba(0, 229, 255, 0.3);
+        box-shadow: 0 0 6px rgba(0, 229, 255, 0.3), inset 0 0 3px rgba(0, 229, 255, 0.2);
+    }
+
+    40% {
+        border-color: rgba(174, 0, 255, 0.3);
+        box-shadow: 0 0 6px rgba(174, 0, 255, 0.3), inset 0 0 3px rgba(174, 0, 255, 0.2);
+    }
+
+    60% {
+        border-color: rgba(255, 221, 0, 0.3);
+        box-shadow: 0 0 6px rgba(255, 221, 0, 0.3), inset 0 0 3px rgba(255, 221, 0, 0.2);
+    }
+
+    80% {
+        border-color: rgba(0, 255, 136, 0.3);
+        box-shadow: 0 0 6px rgba(0, 255, 136, 0.3), inset 0 0 3px rgba(0, 255, 136, 0.2);
+    }
 }
 
 .music-analyzer-header {
@@ -54,10 +166,91 @@ body.disco-mode .music-toggle {
     border-bottom: 1px solid #444;
 }
 
+/* Add these new styles for the analyzer controls */
+.analyzer-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pause-analysis {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.pause-analysis:hover:not(:disabled) {
+    transform: scale(1.1);
+    color: var(--accent-color);
+}
+
+.pause-analysis:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.pause-analysis.paused .pause-icon {
+    color: var(--accent-color);
+}
+
+/* Disco mode styles for pause button */
+body.disco-mode .pause-analysis:hover:not(:disabled) {
+    animation: neon-text-pulse 2s ease infinite;
+}
+
+body.disco-mode .pause-analysis.paused {
+    animation: pulse-glow 1.5s infinite;
+}
+
+/* Disco mode styling for header */
+body.disco-mode .music-analyzer-header {
+    background-color: rgba(30, 30, 40, 0.7);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
 .music-analyzer-header h3 {
     margin: 0;
     color: var(--accent-color);
     font-size: 16px;
+}
+
+/* Disco mode title glow effect */
+body.disco-mode .music-analyzer-header h3 {
+    animation: neon-accent-text 5.8s ease-in-out infinite;
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
+}
+
+@keyframes neon-accent-text {
+
+    0%,
+    100% {
+        color: rgba(255, 0, 110, 0.9);
+        text-shadow: 0 0 4px rgba(255, 0, 110, 0.6), 0 0 8px rgba(255, 0, 110, 0.4);
+    }
+
+    25% {
+        color: rgba(0, 229, 255, 0.9);
+        text-shadow: 0 0 4px rgba(0, 229, 255, 0.6), 0 0 8px rgba(0, 229, 255, 0.4);
+    }
+
+    50% {
+        color: rgba(174, 0, 255, 0.9);
+        text-shadow: 0 0 4px rgba(174, 0, 255, 0.6), 0 0 8px rgba(174, 0, 255, 0.4);
+    }
+
+    75% {
+        color: rgba(255, 221, 0, 0.9);
+        text-shadow: 0 0 4px rgba(255, 221, 0, 0.6), 0 0 8px rgba(255, 221, 0, 0.4);
+    }
 }
 
 .close-analyzer {
@@ -79,6 +272,11 @@ body.disco-mode .music-toggle {
     color: var(--accent-color);
 }
 
+/* Special hover effect in disco mode */
+body.disco-mode .close-analyzer:hover {
+    animation: neon-text-pulse 2s ease infinite;
+}
+
 .music-analyzer-body {
     padding: 15px;
 }
@@ -91,6 +289,13 @@ body.disco-mode .music-toggle {
     border-radius: 6px;
     display: flex;
     justify-content: space-around;
+}
+
+/* Disco mode styling for selector */
+body.disco-mode .music-mode-selector {
+    background-color: rgba(30, 30, 40, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    animation: panel-pulse 5.8s ease-in-out infinite;
 }
 
 .mode-label {
@@ -126,12 +331,78 @@ body.disco-mode .music-toggle {
     color: #4ecdc4;
 }
 
+/* Disco mode status highlight */
+body.disco-mode .music-status .active {
+    color: var(--accent-color);
+    text-shadow: 0 0 5px rgba(100, 255, 218, 0.5);
+}
+
 /* Results display */
 .music-result {
     margin-bottom: 20px;
     padding: 12px;
     background-color: #333;
     border-radius: 8px;
+}
+
+/* Disco mode result card */
+body.disco-mode .music-result {
+    background-color: rgba(25, 25, 35, 0.7);
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    animation: card-border-pulse 5.8s steps(1, end) infinite;
+}
+
+/* Light flash effect just like the cards */
+body.disco-mode .music-result::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, transparent 95%, rgba(255, 255, 255, 0.8) 100%);
+    animation: card-flash 9s cubic-bezier(0.42, 0, 0.58, 1) infinite;
+    opacity: 0;
+    z-index: 1;
+    pointer-events: none;
+}
+
+@keyframes card-flash {
+
+    0%,
+    95%,
+    100% {
+        opacity: 0;
+        transform: translateX(-100%) translateY(-100%);
+    }
+
+    96%,
+    99% {
+        opacity: 1;
+        transform: translateX(100%) translateY(100%);
+    }
+}
+
+@keyframes card-border-pulse {
+
+    0%,
+    100% {
+        border-color: rgba(255, 0, 110, 0.25) !important;
+    }
+
+    25% {
+        border-color: rgba(0, 229, 255, 0.25) !important;
+    }
+
+    50% {
+        border-color: rgba(174, 0, 255, 0.25) !important;
+    }
+
+    75% {
+        border-color: rgba(255, 221, 0, 0.25) !important;
+    }
 }
 
 .music-info {
@@ -141,6 +412,36 @@ body.disco-mode .music-toggle {
 .music-info span {
     color: #888;
     margin-right: 5px;
+}
+
+/* Note badges in disco mode */
+body.disco-mode .note-badge {
+    animation: neon-note-pulse 5.8s steps(1, end) infinite;
+    box-shadow: 0 0 8px rgba(100, 255, 218, 0.3);
+}
+
+@keyframes neon-note-pulse {
+
+    0%,
+    100% {
+        background-color: rgba(255, 0, 110, 0.7);
+        box-shadow: 0 0 8px rgba(255, 0, 110, 0.5);
+    }
+
+    25% {
+        background-color: rgba(0, 229, 255, 0.7);
+        box-shadow: 0 0 8px rgba(0, 229, 255, 0.5);
+    }
+
+    50% {
+        background-color: rgba(174, 0, 255, 0.7);
+        box-shadow: 0 0 8px rgba(174, 0, 255, 0.5);
+    }
+
+    75% {
+        background-color: rgba(255, 221, 0, 0.7);
+        box-shadow: 0 0 8px rgba(255, 221, 0, 0.5);
+    }
 }
 
 .current-notes {
@@ -181,6 +482,37 @@ body.disco-mode .music-toggle {
     overflow: hidden;
 }
 
+/* Disco mode tuner */
+body.disco-mode .tuner {
+    background-color: rgba(20, 20, 30, 0.5);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.25);
+    animation: disco-timeline-bg 5.8s ease-in-out infinite;
+}
+
+@keyframes disco-timeline-bg {
+
+    0%,
+    100% {
+        background-color: rgba(20, 20, 30, 0.5);
+        box-shadow: 0 0 12px rgba(255, 0, 110, 0.15);
+    }
+
+    25% {
+        background-color: rgba(20, 25, 35, 0.5);
+        box-shadow: 0 0 12px rgba(0, 229, 255, 0.15);
+    }
+
+    50% {
+        background-color: rgba(20, 20, 35, 0.5);
+        box-shadow: 0 0 12px rgba(174, 0, 255, 0.15);
+    }
+
+    75% {
+        background-color: rgba(25, 20, 30, 0.5);
+        box-shadow: 0 0 12px rgba(255, 221, 0, 0.15);
+    }
+}
+
 .tuner-needle {
     position: absolute;
     width: 2px;
@@ -190,6 +522,35 @@ body.disco-mode .music-toggle {
     left: 50%;
     transform-origin: bottom center;
     transition: transform 0.3s ease;
+}
+
+/* Disco mode needle */
+body.disco-mode .tuner-needle {
+    animation: neon-needle-glow 5.8s steps(1, end) infinite;
+}
+
+@keyframes neon-needle-glow {
+
+    0%,
+    100% {
+        background-color: rgba(255, 0, 110, 0.9);
+        box-shadow: 0 0 5px rgba(255, 0, 110, 0.7);
+    }
+
+    25% {
+        background-color: rgba(0, 229, 255, 0.9);
+        box-shadow: 0 0 5px rgba(0, 229, 255, 0.7);
+    }
+
+    50% {
+        background-color: rgba(174, 0, 255, 0.9);
+        box-shadow: 0 0 5px rgba(174, 0, 255, 0.7);
+    }
+
+    75% {
+        background-color: rgba(255, 221, 0, 0.9);
+        box-shadow: 0 0 5px rgba(255, 221, 0, 0.7);
+    }
 }
 
 .tuning-direction {
@@ -206,6 +567,7 @@ body.disco-mode .music-toggle {
     animation: pulse-glow 1.5s infinite;
 }
 
+/* Guitar strings */
 .guitar-strings {
     display: flex;
     justify-content: space-between;
@@ -221,21 +583,50 @@ body.disco-mode .music-toggle {
     transition: all 0.2s ease;
 }
 
+/* Disco mode strings */
+body.disco-mode .guitar-strings .string {
+    background-color: rgba(30, 30, 40, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
 .guitar-strings .string.active {
     background-color: var(--accent-color);
     color: #222;
+}
+
+/* Disco mode string highlight */
+body.disco-mode .guitar-strings .string.active {
+    animation: neon-string-active 5.8s steps(1, end) infinite;
+}
+
+@keyframes neon-string-active {
+
+    0%,
+    100% {
+        background-color: rgba(255, 0, 110, 0.8);
+        box-shadow: 0 0 8px rgba(255, 0, 110, 0.5);
+    }
+
+    25% {
+        background-color: rgba(0, 229, 255, 0.8);
+        box-shadow: 0 0 8px rgba(0, 229, 255, 0.5);
+    }
+
+    50% {
+        background-color: rgba(174, 0, 255, 0.8);
+        box-shadow: 0 0 8px rgba(174, 0, 255, 0.5);
+    }
+
+    75% {
+        background-color: rgba(255, 221, 0, 0.8);
+        box-shadow: 0 0 8px rgba(255, 221, 0, 0.5);
+    }
 }
 
 .guitar-strings .string.in-tune {
     box-shadow: 0 0 10px var(--accent-color);
 }
 
-/* Controls */
-.music-controls {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 15px;
-}
 
 .start-analysis,
 .stop-analysis {
@@ -248,6 +639,21 @@ body.disco-mode .music-toggle {
     font-family: 'Courier New', monospace;
     cursor: pointer;
     transition: all 0.2s ease;
+}
+
+/* Disco mode buttons */
+body.disco-mode .start-analysis,
+body.disco-mode .stop-analysis {
+    background-color: rgba(25, 25, 35, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+body.disco-mode .start-analysis:hover,
+body.disco-mode .stop-analysis:hover {
+    animation: neon-text-pulse 2s ease infinite;
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
 }
 
 .start-analysis:hover:not(:disabled) {
@@ -268,10 +674,19 @@ body.disco-mode .music-toggle {
 .music-info {
     font-size: 12px;
     color: #888;
+    margin-top: 15px;
 }
 
 .music-info p {
     margin: 5px 0;
+}
+
+/* Info box in disco mode */
+body.disco-mode .music-info {
+    background-color: rgba(15, 15, 20, 0.6);
+    border-radius: 6px;
+    padding: 8px;
+    margin-top: 15px;
 }
 
 @media (max-width: 360px) {

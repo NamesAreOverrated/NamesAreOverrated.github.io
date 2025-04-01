@@ -136,6 +136,12 @@ class AudioAnalyzer {
         this.currentFrequencies = [];
         this.currentNotes = [];
         this.lastDetectedKey = null;
+
+        // Notify that analysis has stopped
+        console.log('Audio analysis stopped');
+
+        // Dispatch an event that analysis has stopped in case any components need to know
+        document.dispatchEvent(new CustomEvent('audio-analysis-stopped'));
     }
 
     analyze() {
@@ -389,6 +395,11 @@ class AudioAnalyzer {
         }
 
         this.active = false;
+
+        // Also stop any ongoing analysis when visualization is stopped
+        if (this.isAnalyzing) {
+            this.stopAnalysis();
+        }
     }
 
     nextVisualization() {

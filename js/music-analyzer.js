@@ -9,9 +9,32 @@
 class MusicAnalyzer {
     constructor() {
         this.analyzing = false;
+        this.paused = false;
         this.container = null;
         this.createUI();
         this.bindEvents();
+        // Initialize the mode property to 'singing' to match the default UI state
+        this.mode = 'singing';
+
+        // Hide the music analyzer button initially
+        this.hideToggleButton();
+
+        // Listen for visualizer state changes
+        document.addEventListener('visualizer-state-changed', (event) => {
+            if (event.detail && event.detail.active) {
+                this.showToggleButton();
+            } else {
+                this.hideToggleButton();
+                // Also hide panel if visualizer is turned off
+                if (this.panel.style.display !== 'none') {
+                    this.panel.style.display = 'none';
+                }
+                // Stop analysis if it's running when visualizer is disabled
+                if (this.analyzing) {
+                    this.stopAnalysis();
+                }
+            }
+        });
     }
 
     createUI() {
@@ -27,11 +50,16 @@ class MusicAnalyzer {
             <div class="music-analyzer-panel">
                 <div class="music-analyzer-header">
                     <h3>Music Analysis</h3>
-                    <button class="close-analyzer">×</button>
+                    <div class="analyzer-controls">
+                        <button class="pause-analysis" title="Pause/Resume Analysis">
+                            <span class="pause-icon">⏸️</span>
+                        </button>
+                        <button class="close-analyzer">×</button>
+                    </div>
                 </div>
                 <div class="music-analyzer-body">
                     <div class="music-status">
-                        <p>Click "Start Analysis" and play or sing into your microphone.</p>
+                        <p>Analysis will start automatically. Play or sing into your microphone.</p>
                     </div>
                     <div class="music-mode-selector">
                         <label class="mode-label">
@@ -70,14 +98,6 @@ class MusicAnalyzer {
                             </div>
                         </div>
                     </div>
-                    <div class="music-controls">
-                        <button class="start-analysis">Start Analysis</button>
-                        <button class="stop-analysis" disabled>Stop Analysis</button>
-                    </div>
-                    <div class="music-info">
-                        <p>This tool analyzes your music to detect pitch, key, and tuning information.</p>
-                        <p>Play or sing into your microphone for best results.</p>
-                    </div>
                 </div>
             </div>
         `;
@@ -89,8 +109,7 @@ class MusicAnalyzer {
         this.toggleBtn = this.container.querySelector('.music-toggle');
         this.panel = this.container.querySelector('.music-analyzer-panel');
         this.closeBtn = this.container.querySelector('.close-analyzer');
-        this.startBtn = this.container.querySelector('.start-analysis');
-        this.stopBtn = this.container.querySelector('.stop-analysis');
+        this.pauseBtn = this.container.querySelector('.pause-analysis');
         this.statusElement = this.container.querySelector('.music-status');
         this.resultElement = this.container.querySelector('.music-result');
         this.detectedKeyElement = this.container.querySelector('.detected-key');
@@ -113,8 +132,34 @@ class MusicAnalyzer {
         this.toggleBtn.addEventListener('click', () => {
             if (this.panel.style.display === 'none') {
                 this.panel.style.display = 'block';
+
+                // Hide the button immediately when panel is shown
+                this.toggleBtn.style.transition = 'none'; // Disable transition
+                this.toggleBtn.style.opacity = '0';
+                this.toggleBtn.style.pointerEvents = 'none';
+
+                // Re-enable transition after a brief timeout
+                setTimeout(() => {
+                    this.toggleBtn.style.transition = 'all 0.3s ease';
+                }, 50);
+
+                // Auto-start analysis when opening the panel
+                if (!this.analyzing && !this.paused) {
+                    this.startAnalysis();
+                } else if (this.paused) {
+                    // If we were paused, just show the correct button state
+                    this.updatePauseButtonState();
+                }
             } else {
                 this.panel.style.display = 'none';
+                // Show the button when panel is closed
+                this.toggleBtn.style.opacity = '1';
+                this.toggleBtn.style.pointerEvents = 'auto';
+
+                // If analyzing, stop
+                if (this.analyzing) {
+                    this.stopAnalysis();
+                }
             }
         });
 
@@ -122,20 +167,35 @@ class MusicAnalyzer {
         this.closeBtn.addEventListener('click', () => {
             this.panel.style.display = 'none';
 
+            // Show the button again when panel is closed
+            this.toggleBtn.style.opacity = '1';
+            this.toggleBtn.style.pointerEvents = 'auto';
+
             // If analyzing, stop
             if (this.analyzing) {
                 this.stopAnalysis();
             }
+
+            // Reset paused state
+            this.paused = false;
+            this.updatePauseButtonState();
         });
 
-        // Start analysis
-        this.startBtn.addEventListener('click', () => {
-            this.startAnalysis();
-        });
+        // Pause/resume analysis
+        this.pauseBtn.addEventListener('click', () => {
+            if (!this.analyzing) return;
 
-        // Stop analysis
-        this.stopBtn.addEventListener('click', () => {
-            this.stopAnalysis();
+            if (this.paused) {
+                // Resume analysis
+                this.paused = false;
+                this.updatePauseButtonState();
+                this.resumeAnalysis();
+            } else {
+                // Pause analysis
+                this.paused = true;
+                this.updatePauseButtonState();
+                this.pauseAnalysis();
+            }
         });
 
         // Mode selector
@@ -144,6 +204,24 @@ class MusicAnalyzer {
                 this.updateMode(radio.value);
             });
         });
+    }
+
+    updatePauseButtonState() {
+        if (!this.pauseBtn) return;
+
+        const pauseIcon = this.pauseBtn.querySelector('.pause-icon');
+        if (this.paused) {
+            pauseIcon.textContent = '▶️'; // Play icon
+            this.pauseBtn.title = 'Resume Analysis';
+            this.pauseBtn.classList.add('paused');
+        } else {
+            pauseIcon.textContent = '⏸️'; // Pause icon
+            this.pauseBtn.title = 'Pause Analysis';
+            this.pauseBtn.classList.remove('paused');
+        }
+
+        // Only enable the pause button if we're analyzing
+        this.pauseBtn.disabled = !this.analyzing;
     }
 
     startAnalysis() {
@@ -194,40 +272,81 @@ class MusicAnalyzer {
         }
 
         // Start music analysis
+        this.startActualAnalysis();
+    }
+
+    startActualAnalysis() {
         console.log("[MUSIC UI] Starting music analysis");
         const analysisStarted = window.AudioAnalyzer.startAnalysis(data => this.updateMusicData(data));
 
         if (analysisStarted) {
             this.analyzing = true;
+            this.paused = false;
             console.log("[MUSIC UI] Music analysis started successfully");
             this.showStatus('Listening... Play or sing into your microphone. You should see results after a few seconds.', 'active');
-            this.startBtn.disabled = true;
-            this.stopBtn.disabled = false;
 
             // Display an immediate analyzing state to provide feedback
             this.resultElement.style.display = 'block';
 
-            // No longer forcing redraw of visualizer
+            // Make sure UI is in the right mode based on the selected radio button
+            const activeRadio = this.container.querySelector('input[name="music-mode"]:checked');
+            if (activeRadio) {
+                this.updateMode(activeRadio.value);
+            } else {
+                // Fallback to singing mode if no radio is checked
+                this.updateMode('singing');
+            }
+
+            // Add active class to the toggle button to match visualization buttons
+            this.toggleBtn.classList.add('active');
+
+            // Update the pause button state
+            this.updatePauseButtonState();
         } else {
             console.log("[MUSIC UI] Failed to start music analysis");
             this.showStatus('Failed to start music analysis.', 'error');
         }
     }
 
+    pauseAnalysis() {
+        console.log("[MUSIC UI] Pausing music analysis");
+        // We're not stopping analysis completely, just ignoring updates temporarily
+
+        this.showStatus('Analysis paused. Click the play button to resume.', 'info');
+
+        // Update UI
+        this.updatePauseButtonState();
+    }
+
+    resumeAnalysis() {
+        console.log("[MUSIC UI] Resuming music analysis");
+
+        this.showStatus('Listening... Play or sing into your microphone.', 'active');
+
+        // Update UI
+        this.updatePauseButtonState();
+    }
+
     stopAnalysis() {
         if (window.AudioAnalyzer) {
             window.AudioAnalyzer.stopAnalysis();
-
-            // Don't update visualizer since we're not using it for music analysis
         }
 
         this.analyzing = false;
-        this.showStatus('Analysis stopped. Click "Start Analysis" to try again.', 'info');
-        this.startBtn.disabled = false;
-        this.stopBtn.disabled = true;
+        this.paused = false;
+        this.showStatus('Analysis stopped. Open the panel again to restart.', 'info');
+
+        // Remove active class from toggle button
+        this.toggleBtn.classList.remove('active');
+
+        // Update pause button
+        this.updatePauseButtonState();
     }
 
     updateMusicData(data) {
+        // Don't update UI if paused
+        if (this.paused) return;
+
         console.log("[MUSIC UI] Received music data update:", data);
 
         if (!data) {
@@ -235,6 +354,12 @@ class MusicAnalyzer {
             console.log("[MUSIC UI] Analysis stopped (null data)");
             this.resultElement.style.display = 'none';
             return;
+        }
+
+        // Update based on mode
+        if (!this.mode) {
+            // If mode is not set for some reason, default to singing
+            this.mode = 'singing';
         }
 
         // Update based on mode
@@ -334,6 +459,8 @@ class MusicAnalyzer {
 
     updateMode(mode) {
         this.mode = mode;
+        console.log("[MUSIC UI] Mode updated to:", mode);
+
         if (mode === 'singing') {
             this.container.querySelector('.singing-analysis').style.display = 'block';
             this.container.querySelector('.guitar-analysis').style.display = 'none';
@@ -341,10 +468,48 @@ class MusicAnalyzer {
             this.container.querySelector('.singing-analysis').style.display = 'none';
             this.container.querySelector('.guitar-analysis').style.display = 'block';
         }
+
+        // If we have data and are analyzing, update the UI immediately with the new mode
+        if (this.analyzing && !this.paused && window.AudioAnalyzer && window.AudioAnalyzer.currentNotes) {
+            const data = {
+                notes: window.AudioAnalyzer.currentNotes,
+                key: window.AudioAnalyzer.lastDetectedKey
+            };
+            this.updateMusicData(data);
+        }
     }
 
     showStatus(message, type = 'info') {
         this.statusElement.innerHTML = `<p class="${type}">${message}</p>`;
+    }
+
+    showToggleButton() {
+        if (this.toggleBtn) {
+            // Only show the button if the panel is not currently displayed
+            if (this.panel.style.display === 'none') {
+                // Restore normal transition for showing
+                this.toggleBtn.style.transition = 'all 0.3s ease';
+                this.toggleBtn.style.opacity = '1';
+                this.toggleBtn.style.pointerEvents = 'auto';
+            }
+        }
+    }
+
+    hideToggleButton() {
+        if (this.toggleBtn) {
+            // Hide immediately without animation
+            this.toggleBtn.style.transition = 'none';
+            this.toggleBtn.style.opacity = '0';
+            this.toggleBtn.style.pointerEvents = 'none';
+
+            // Re-enable transition after a brief timeout
+            setTimeout(() => {
+                this.toggleBtn.style.transition = 'all 0.3s ease';
+            }, 50);
+
+            // Also remove active class when hiding
+            this.toggleBtn.classList.remove('active');
+        }
     }
 }
 

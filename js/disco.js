@@ -206,6 +206,28 @@ function initDiscoMode() {
                 micButton.innerHTML = '🎙️';
                 micButton.title = 'Enable Audio Visualization';
             }
+
+            // Also make sure music analyzer is stopped and hidden when disco mode is turned off
+            if (window.musicAnalyzer) {
+                // Hide the music toggle button
+                const musicToggle = document.querySelector('.music-toggle');
+                if (musicToggle) {
+                    musicToggle.style.opacity = '0';
+                    musicToggle.style.pointerEvents = 'none';
+                    musicToggle.classList.remove('active');
+                }
+
+                // Hide the music analyzer panel
+                const musicPanel = document.querySelector('.music-analyzer-panel');
+                if (musicPanel) {
+                    musicPanel.style.display = 'none';
+                }
+
+                // Stop the analyzer if it's running
+                if (window.musicAnalyzer.analyzing) {
+                    window.musicAnalyzer.stopAnalysis();
+                }
+            }
         } else if (isDiscoMode && wasVisualizerActive && window.AudioVisualizer && window.AudioVisualizer.microphone) {
             // Restart visualizer if it was active before and we have microphone permissions
             window.AudioVisualizer.start();
@@ -244,6 +266,11 @@ function initDiscoMode() {
 
                 // Start visualization
                 window.AudioVisualizer.start();
+
+                // Dispatch event for visualizer state change
+                document.dispatchEvent(new CustomEvent('visualizer-state-changed', {
+                    detail: { active: true }
+                }));
             } else {
                 // Toggle visualization state
                 if (window.AudioVisualizer.active) {
@@ -251,11 +278,21 @@ function initDiscoMode() {
                     micButton.classList.remove('active');
                     micButton.innerHTML = '🎙️';
                     micButton.title = 'Enable Audio Visualization';
+
+                    // Dispatch event for visualizer state change
+                    document.dispatchEvent(new CustomEvent('visualizer-state-changed', {
+                        detail: { active: false }
+                    }));
                 } else {
                     window.AudioVisualizer.start();
                     micButton.classList.add('active');
                     micButton.innerHTML = '🔊';
                     micButton.title = 'Disable Audio Visualization';
+
+                    // Dispatch event for visualizer state change
+                    document.dispatchEvent(new CustomEvent('visualizer-state-changed', {
+                        detail: { active: true }
+                    }));
                 }
             }
 
@@ -369,6 +406,13 @@ document.addEventListener('hashchange', () => {
                 visualizerTypeButton.innerHTML = icons[window.AudioVisualizer.getCurrentVisualizationName()] || '📊';
             }
         }
+
+        // Update the visualizer state for any components that need to know
+        if (window.AudioVisualizer) {
+            document.dispatchEvent(new CustomEvent('visualizer-state-changed', {
+                detail: { active: window.AudioVisualizer.active }
+            }));
+        }
     } else {
         document.body.classList.remove('disco-mode');
         const discoToggle = document.querySelector('.disco-toggle');
@@ -397,6 +441,33 @@ document.addEventListener('hashchange', () => {
         // Stop audio visualizer
         if (window.AudioVisualizer && window.AudioVisualizer.active) {
             window.AudioVisualizer.stop();
+
+            // Notify any components that the visualizer is now inactive
+            document.dispatchEvent(new CustomEvent('visualizer-state-changed', {
+                detail: { active: false }
+            }));
+        }
+
+        // Make sure music analyzer is also hidden and stopped
+        if (window.musicAnalyzer) {
+            // Hide music toggle button
+            const musicToggle = document.querySelector('.music-toggle');
+            if (musicToggle) {
+                musicToggle.style.opacity = '0';
+                musicToggle.style.pointerEvents = 'none';
+                musicToggle.classList.remove('active');
+            }
+
+            // Hide music analyzer panel
+            const musicPanel = document.querySelector('.music-analyzer-panel');
+            if (musicPanel) {
+                musicPanel.style.display = 'none';
+            }
+
+            // Stop music analysis if running
+            if (window.musicAnalyzer.analyzing) {
+                window.musicAnalyzer.stopAnalysis();
+            }
         }
     }
 });
