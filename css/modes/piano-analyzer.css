@@ -1,0 +1,425 @@
+/* Piano Analyzer Mode Styles */
+
+/* Piano analysis panel in the music analyzer */
+.piano-analysis {
+    padding: 15px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.piano-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+.open-musicxml {
+    background-color: var(--accent-color);
+    color: #111;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 15px;
+    cursor: pointer;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    transition: all 0.2s ease;
+}
+
+.open-musicxml:hover {
+    background-color: #b3ffed;
+    transform: translateY(-2px);
+}
+
+.piano-status {
+    font-size: 14px;
+    color: #ccc;
+    margin-top: 5px;
+}
+
+.piano-playback-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.piano-play-pause {
+    background-color: #444;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.piano-play-pause:hover {
+    background-color: #555;
+}
+
+.piano-speed {
+    width: 80px;
+    cursor: pointer;
+}
+
+.speed-value {
+    font-size: 12px;
+    color: #ccc;
+    min-width: 40px;
+}
+
+/* Piano Visualization Container - fixed at bottom of the page */
+.piano-visualization-container {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 400px;
+    background-color: #111;
+    border-top: 1px solid #333;
+    z-index: 999;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.5);
+    display: none;
+    /* Hidden by default */
+}
+
+/* Remove piano-visualization-header styles as it's removed from HTML */
+
+/* New piano keyboard container (replaced piano-roll-container) */
+.piano-keyboard-container {
+    height: 80px;
+    width: 100%;
+    border-bottom: 1px solid #333;
+    background-color: #222;
+    overflow-x: auto;
+}
+
+.piano-keyboard {
+    width: 100%;
+    /* Full width */
+    height: 100%;
+    /* Full height */
+    overflow-x: auto;
+    /* Allow horizontal scrolling */
+    background-color: #222;
+    display: flex;
+    flex-direction: row;
+    /* Horizontal layout */
+    flex-shrink: 0;
+}
+
+/* Notation container takes remaining space */
+.notation-container {
+    flex: 1;
+    overflow-x: auto;
+    background-color: #1a1a1a;
+    padding: 10px;
+    width: 100%;
+    cursor: pointer;
+    position: relative;
+}
+
+.notation-container.dragging {
+    cursor: grabbing;
+}
+
+/* Remove notation-instructions styles as it's removed from HTML */
+
+/* Piano keyboard styling */
+.piano-key {
+    position: relative;
+    border-right: 1px solid #444;
+    box-sizing: border-box;
+}
+
+.white-key {
+    width: 24px;
+    height: 100%;
+    background-color: #f0f0f0;
+}
+
+.black-key {
+    width: 16px;
+    height: 60%;
+    background-color: #222;
+    z-index: 2;
+    margin-left: -8px;
+    margin-right: -8px;
+}
+
+.key-label {
+    position: absolute;
+    bottom: 5px;
+    left: 0;
+    right: 0;
+    font-size: 9px;
+    color: #333;
+    text-align: center;
+}
+
+/* Active key highlighting */
+.piano-key.active {
+    background-color: var(--accent-color);
+}
+
+.black-key.active {
+    background-color: #00ccaa;
+}
+
+/* Notation SVG styling */
+.notation-svg-container {
+    width: 100%;
+    height: 100%;
+    /* Adjusted to take full height now that instructions are gone */
+    overflow-x: auto;
+    background-color: #fff;
+    position: relative;
+    border-radius: 4px;
+}
+
+/* Notation position indicator */
+.notation-position-indicator {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    width: 2px;
+    background-color: #FF5722;
+    z-index: 10;
+    pointer-events: none;
+}
+
+/* Info panel styling */
+.notation-info-panel {
+    background-color: rgba(0, 0, 0, 0.6);
+    padding: 8px 12px;
+    border-radius: 4px;
+    color: #fff;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.position-info,
+.speed-info,
+.playback-status {
+    margin-bottom: 4px;
+}
+
+.playback-status {
+    color: var(--accent-color);
+}
+
+/* Simple notation fallback styling */
+.simple-notation {
+    background-color: rgba(0, 0, 0, 0.3);
+    padding: 15px;
+    border-radius: 4px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.simple-notation ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 10px 0;
+}
+
+.simple-notation li {
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Enhanced simple notation fallback styling */
+.simple-notation {
+    background-color: rgba(40, 40, 50, 0.8);
+    padding: 15px;
+    border-radius: 4px;
+    max-height: 300px;
+    overflow-y: auto;
+    font-family: 'Courier New', monospace;
+    color: #ddd;
+    margin-top: 10px;
+    border: 1px solid rgba(80, 80, 100, 0.4);
+}
+
+.simple-notation h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: var(--accent-color);
+    font-size: 14px;
+}
+
+.simple-notation ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 10px 0;
+}
+
+.simple-notation li {
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    justify-content: space-between;
+}
+
+.simple-notation .playing-note {
+    color: var(--accent-color);
+    font-weight: bold;
+    position: relative;
+}
+
+.simple-notation .playing-note::before {
+    content: "►";
+    position: absolute;
+    left: -15px;
+    font-size: 10px;
+}
+
+.simple-notation .note-timing {
+    color: #888;
+    font-size: 12px;
+}
+
+.simple-notation .position-info,
+.simple-notation .speed-info,
+.simple-notation .playback-status {
+    margin-bottom: 5px;
+    font-size: 12px;
+}
+
+.simple-notation .playback-status {
+    color: var(--accent-color);
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+/* Responsive adjustments */
+@media (max-height: 700px) {
+    .piano-visualization-container {
+        height: 300px;
+    }
+
+    .piano-keyboard-container {
+        height: 60px;
+    }
+}
+
+@media (max-width: 600px) {
+    .piano-keyboard-container {
+        height: 60px;
+    }
+
+    .white-key {
+        width: 20px;
+    }
+
+    .black-key {
+        width: 14px;
+        margin-left: -7px;
+        margin-right: -7px;
+    }
+}
+
+/* Add new responsive styles to ensure proper layout on different screen sizes */
+@media (max-width: 768px) {
+    .piano-visualization-container {
+        height: 350px;
+    }
+
+    .piano-roll-container {
+        height: 55%;
+    }
+
+    .notation-container {
+        height: 45%;
+    }
+}
+
+/* Adjust for very small screens */
+@media (max-width: 480px) {
+    .piano-keyboard {
+        width: 40px;
+    }
+
+    .piano-roll {
+        width: calc(100% - 40px);
+    }
+}
+
+/* Tooltip hints for interactive controls */
+.piano-roll:after,
+.notation-container:after {
+    content: "";
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 16px;
+    height: 16px;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" opacity="0.5"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>');
+    background-repeat: no-repeat;
+    background-size: contain;
+    opacity: 0.5;
+    transition: opacity 0.3s ease;
+}
+
+.piano-roll:hover:after,
+.notation-container:hover:after {
+    opacity: 0.8;
+}
+
+/* Adjust hover hint for notation container without the header */
+.notation-container::after {
+    content: "Press ESC to close";
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.5);
+    background-color: rgba(0, 0, 0, 0.5);
+    padding: 3px 6px;
+    border-radius: 3px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+.notation-container:hover::after {
+    opacity: 1;
+}
+
+/* Disco mode styles */
+body.disco-mode .piano-visualization-container {
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    animation: panel-pulse 5.8s ease-in-out infinite;
+}
+
+body.disco-mode .piano-visualization-header {
+    background-color: rgba(25, 25, 35, 0.8);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+body.disco-mode .piano-keyboard-container {
+    background-color: rgba(25, 25, 35, 0.9);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+body.disco-mode .notation-container {
+    background-color: rgba(20, 20, 30, 0.8);
+}
+
+/* Pulsing animation for active keys in disco mode */
+body.disco-mode .piano-key.active {
+    animation: piano-key-pulse 1s infinite alternate;
+}
+
+@keyframes piano-key-pulse {
+    0% {
+        box-shadow: 0 0 5px var(--accent-color);
+    }
+
+    100% {
+        box-shadow: 0 0 15px var(--accent-color), 0 0 5px #fff;
+    }
+}

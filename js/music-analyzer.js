@@ -54,7 +54,8 @@ class MusicAnalyzer {
         this.modes = {
             key: new KeyAnalyzerMode(this),
             guitar: new GuitarAnalyzerMode(this),
-            voice: new VoiceTrainingMode(this)
+            voice: new VoiceTrainingMode(this),
+            piano: new PianoAnalyzerMode(this)
         };
 
         // Set initial mode
@@ -105,6 +106,13 @@ class MusicAnalyzer {
                                 <input type="radio" name="music-mode" value="voice">
                                 <span class="mode-icon">🗣️</span>
                                 <span class="mode-name">Voice Training</span>
+                            </label>
+                        </div>
+                        <div class="mode-option" data-mode="piano">
+                            <label class="mode-label">
+                                <input type="radio" name="music-mode" value="piano">
+                                <span class="mode-icon">🎼</span>
+                                <span class="mode-name">Piano</span>
                             </label>
                         </div>
                     </div>
@@ -176,6 +184,18 @@ class MusicAnalyzer {
                                     <div class="value matches-value">0</div>
                                 </div>
                             </div>
+                        </div>
+                        <div class="piano-analysis" style="display: none;">
+                            <div class="piano-controls">
+                                <input type="file" id="musicxml-input" accept=".xml,.musicxml" style="display:none;">
+                                <button class="open-musicxml">Open MusicXML</button>
+                                <div class="piano-playback-controls" style="display:none;">
+                                    <button class="piano-play-pause">Play</button>
+                                    <input type="range" class="piano-speed" min="0.5" max="2" step="0.1" value="1">
+                                    <span class="speed-value">1.0x</span>
+                                </div>
+                            </div>
+                            <div class="piano-status">Select a MusicXML file to visualize</div>
                         </div>
                     </div>
                 </div>
@@ -486,6 +506,7 @@ class MusicAnalyzer {
         this.container.querySelector('.key-analysis').style.display = mode === 'key' ? 'block' : 'none';
         this.container.querySelector('.guitar-analysis').style.display = mode === 'guitar' ? 'block' : 'none';
         this.container.querySelector('.voice-training').style.display = mode === 'voice' ? 'block' : 'none';
+        this.container.querySelector('.piano-analysis').style.display = mode === 'piano' ? 'block' : 'none';
 
         // Initialize the mode
         if (typeof this.currentModeInstance.initialize === 'function') {

@@ -4,6 +4,7 @@
 @import url('modes/key-analyzer.css');
 @import url('modes/guitar-analyzer.css');
 @import url('modes/voice-training.css');
+@import url('modes/piano-analyzer.css');
 
 .music-analyzer {
     position: fixed;

@@ -54,5 +54,5 @@ class MusicAnalyzerMode {
     }
 }
 
-// Make base class available globally
+// Make MusicAnalyzerMode available globally
 window.MusicAnalyzerMode = MusicAnalyzerMode;
