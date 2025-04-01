@@ -95,11 +95,14 @@
     border-bottom: 1px solid #333;
     background-color: #222;
     overflow-x: auto;
+    /* Center the piano keyboard */
+    display: flex;
+    justify-content: center;
 }
 
 .piano-keyboard {
-    width: 100%;
-    /* Full width */
+    width: auto;
+    /* Changed from 100% to auto */
     height: 100%;
     /* Full height */
     overflow-x: auto;
@@ -109,6 +112,10 @@
     flex-direction: row;
     /* Horizontal layout */
     flex-shrink: 0;
+    /* Center indicators */
+    position: relative;
+    min-width: min-content;
+    /* Ensures keyboard is at least as wide as its content */
 }
 
 /* Notation container takes remaining space */
@@ -334,6 +341,11 @@
 
     .notation-container {
         height: 45%;
+    }
+
+    /* Ensure keyboard remains centered on mobile */
+    .piano-keyboard {
+        margin: 0 auto;
     }
 }
 
