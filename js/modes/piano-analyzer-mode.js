@@ -9,7 +9,10 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         this.musicXML = null;
         this.isPlaying = false;
         this.currentPosition = 0;
-        this.playbackSpeed = 1.0;
+
+        // Simplify BPM handling - just use a single BPM value
+        this.bpm = 120; // Current BPM, the only tempo value we need
+
         this.pianoRollContainer = null;
         this.notationContainer = null;
         this.lastRenderTime = 0;
@@ -29,6 +32,14 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         this.isDragging = false;
         this.dragStartX = 0;
         this.dragStartPosition = 0;
+
+        // Add time signature and division information
+        this.divisions = 24; // Default divisions per quarter note (will be updated from file)
+        this.timeSignatureNumerator = 4;   // Default 4/4 time
+        this.timeSignatureDenominator = 4; // Default 4/4 time
+
+        // Add a reference tempo to handle timing correctly
+        this.referenceBPM = 60; // At 60 BPM, musical time = real time
     }
 
     initialize() {
@@ -76,10 +87,20 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
                 const newSpeedControl = speedControl.cloneNode(true);
                 speedControl.parentNode.replaceChild(newSpeedControl, speedControl);
 
+                // Update the range input attributes for BPM
+                newSpeedControl.min = "40";  // Minimum BPM
+                newSpeedControl.max = "240"; // Maximum BPM
+                newSpeedControl.step = "1";  // BPM increments by 1
+                newSpeedControl.value = this.bpm; // Set initial value
+
                 newSpeedControl.addEventListener('input', (e) => {
-                    this.playbackSpeed = parseFloat(e.target.value);
-                    speedValue.textContent = `${this.playbackSpeed.toFixed(1)}x`;
+                    this.bpm = parseFloat(e.target.value);
+                    speedValue.textContent = `${this.bpm} BPM`;
+                    console.log(`BPM changed to ${this.bpm}`);
                 });
+
+                // Initialize the speed display
+                speedValue.textContent = `${this.bpm} BPM`;
             }
         }
 
@@ -205,7 +226,37 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             const movementTitle = this.musicXML.querySelector('movement-title');
             const title = workTitle?.textContent || movementTitle?.textContent || 'Untitled Score';
 
-            // Process the MusicXML into a usable format
+            // *** Order matters: First extract ALL timing information ***
+
+            // Reset timing properties to defaults before extraction
+            this.divisions = 24;
+            this.timeSignatureNumerator = 4;
+            this.timeSignatureDenominator = 4;
+            this.bpm = 120;
+
+            // Extract divisions (ticks per quarter note) from the MusicXML
+            this.extractDivisionsFromMusicXML(this.musicXML);
+
+            // Extract time signature
+            this.extractTimeSignatureFromMusicXML(this.musicXML);
+
+            // Extract tempo information if available
+            const tempo = this.extractTempoFromMusicXML(this.musicXML);
+            if (tempo) {
+                this.bpm = tempo;
+
+                // Update UI controls
+                const speedControl = this.analyzer.container.querySelector('.piano-speed');
+                const speedValue = this.analyzer.container.querySelector('.speed-value');
+                if (speedControl && speedValue) {
+                    speedControl.value = this.bpm;
+                    speedValue.textContent = `${this.bpm} BPM`;
+                }
+
+                console.log(`File tempo set to ${this.bpm} BPM with time signature ${this.timeSignatureNumerator}/${this.timeSignatureDenominator}, divisions: ${this.divisions}`);
+            }
+
+            // Now parse notes with correct timing information
             this.parseMusicXML();
 
             // Show success message with song title
@@ -231,6 +282,68 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         }
     }
 
+    // Add a new method to extract tempo from MusicXML
+    extractTempoFromMusicXML(musicXML) {
+        try {
+            // Look for tempo markings in the MusicXML
+            const tempoElements = musicXML.querySelectorAll('sound[tempo]');
+            if (tempoElements && tempoElements.length > 0) {
+                // Use the first tempo marking found
+                const tempo = parseInt(tempoElements[0].getAttribute('tempo'));
+                if (!isNaN(tempo) && tempo > 0) {
+                    return tempo;
+                }
+            }
+
+            // If no tempo found, return default
+            return this.bpm;
+        } catch (error) {
+            console.error('Error extracting tempo:', error);
+            return this.bpm;
+        }
+    }
+
+    // Extract divisions value from MusicXML
+    extractDivisionsFromMusicXML(musicXML) {
+        try {
+            const divisionsElements = musicXML.querySelectorAll('divisions');
+            if (divisionsElements && divisionsElements.length > 0) {
+                const divisionsValue = parseInt(divisionsElements[0].textContent);
+                if (!isNaN(divisionsValue) && divisionsValue > 0) {
+                    this.divisions = divisionsValue;
+                    console.log(`Extracted divisions: ${this.divisions} ticks per quarter note`);
+                    return;
+                }
+            }
+            // If not found, keep default value
+            console.log(`Using default divisions: ${this.divisions} ticks per quarter note`);
+        } catch (error) {
+            console.error('Error extracting divisions:', error);
+        }
+    }
+
+    // Extract time signature from MusicXML
+    extractTimeSignatureFromMusicXML(musicXML) {
+        try {
+            const timeElements = musicXML.querySelectorAll('time');
+            if (timeElements && timeElements.length > 0) {
+                const beats = parseInt(timeElements[0].querySelector('beats')?.textContent);
+                const beatType = parseInt(timeElements[0].querySelector('beat-type')?.textContent);
+
+                if (!isNaN(beats) && beats > 0 && !isNaN(beatType) && beatType > 0) {
+                    this.timeSignatureNumerator = beats;
+                    this.timeSignatureDenominator = beatType;
+                    console.log(`Extracted time signature: ${beats}/${beatType}`);
+                    return;
+                }
+            }
+            // If not found, keep default values
+            console.log(`Using default time signature: ${this.timeSignatureNumerator}/${this.timeSignatureDenominator}`);
+        } catch (error) {
+            console.error('Error extracting time signature:', error);
+        }
+    }
+
     parseMusicXML() {
         // Reset any existing parsed data
         this.parsedNotes = [];
@@ -238,6 +351,10 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         if (!this.musicXML) return;
 
         try {
+            console.log("Parsing MusicXML with divisions:", this.divisions,
+                "time signature:", this.timeSignatureNumerator + "/" + this.timeSignatureDenominator,
+                "BPM:", this.bpm);
+
             // Basic parsing of notes from MusicXML
             const parts = this.musicXML.getElementsByTagName('part');
 
@@ -246,54 +363,164 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
                 const part = parts[partIndex];
                 const measures = part.getElementsByTagName('measure');
 
+                // Stores notes by ID to handle ties
+                const tiedNoteMap = new Map();
                 let currentTime = 0;
 
                 // Process each measure
                 for (let measureIndex = 0; measureIndex < measures.length; measureIndex++) {
                     const measure = measures[measureIndex];
-                    const notes = measure.getElementsByTagName('note');
 
-                    // Process each note in the measure
+                    // Check for mid-measure time/tempo changes
+                    const timeChanges = Array.from(measure.querySelectorAll('time'));
+                    if (timeChanges.length > 0) {
+                        // Get the new time signature if present
+                        const beats = parseInt(timeChanges[0].querySelector('beats')?.textContent);
+                        const beatType = parseInt(timeChanges[0].querySelector('beat-type')?.textContent);
+                        if (!isNaN(beats) && beats > 0 && !isNaN(beatType) && beatType > 0) {
+                            this.timeSignatureNumerator = beats;
+                            this.timeSignatureDenominator = beatType;
+                            console.log(`Mid-measure time signature change: ${beats}/${beatType}`);
+                        }
+                    }
+
+                    // Check for tempo changes
+                    const tempoChanges = Array.from(measure.querySelectorAll('sound[tempo]'));
+                    if (tempoChanges.length > 0) {
+                        const tempo = parseInt(tempoChanges[0].getAttribute('tempo'));
+                        if (!isNaN(tempo) && tempo > 0) {
+                            this.bpm = tempo;
+                            console.log(`Mid-measure tempo change: ${tempo} BPM`);
+                        }
+                    }
+
+                    // Check for divisions changes
+                    const divisionChanges = Array.from(measure.querySelectorAll('divisions'));
+                    if (divisionChanges.length > 0) {
+                        const divisions = parseInt(divisionChanges[0].textContent);
+                        if (!isNaN(divisions) && divisions > 0) {
+                            this.divisions = divisions;
+                            console.log(`Mid-measure divisions change: ${divisions}`);
+                        }
+                    }
+
+                    // Group notes by sequence for simultaneous events (chords)
+                    let currentChordNotes = [];
+                    let inChord = false;
+                    const notes = measure.querySelectorAll('note');
+
                     for (let noteIndex = 0; noteIndex < notes.length; noteIndex++) {
                         const note = notes[noteIndex];
 
-                        // Skip note if it's a rest
-                        if (note.getElementsByTagName('rest').length > 0) {
-                            // Get the duration of the rest
-                            const duration = parseInt(note.getElementsByTagName('duration')[0]?.textContent || '0');
-                            currentTime += duration / 24; // Assuming quarter note = 24 divisions
+                        // Is this note part of a chord?
+                        const isChordNote = note.querySelector('chord') !== null;
+
+                        // Handle closing previous chord if needed
+                        if (inChord && !isChordNote) {
+                            // Apply chord note timings and add to parsed notes
+                            this.processChordNotes(currentChordNotes, currentTime);
+                            currentChordNotes = [];
+                            inChord = false;
+                        }
+
+                        // Get duration info - needed even for rests
+                        const durationElement = note.querySelector('duration');
+                        if (!durationElement) continue; // Skip if no duration
+
+                        const duration = parseInt(durationElement.textContent);
+                        if (isNaN(duration)) continue; // Skip if invalid duration
+
+                        // Handle rests - just advance time and continue
+                        if (note.querySelector('rest')) {
+                            if (!isChordNote) { // Only advance time on non-chord rests
+                                currentTime += this.ticksToSeconds(duration);
+                            }
                             continue;
                         }
 
-                        // Get pitch information
-                        const pitch = note.getElementsByTagName('pitch')[0];
+                        // Parse pitch information
+                        const pitch = note.querySelector('pitch');
                         if (!pitch) continue;
 
-                        const step = pitch.getElementsByTagName('step')[0]?.textContent;
-                        const octave = parseInt(pitch.getElementsByTagName('octave')[0]?.textContent);
-                        const alter = parseInt(pitch.getElementsByTagName('alter')[0]?.textContent || '0');
+                        const step = pitch.querySelector('step')?.textContent;
+                        const octave = parseInt(pitch.querySelector('octave')?.textContent);
+                        const alter = parseInt(pitch.querySelector('alter')?.textContent || '0');
 
-                        // Get duration
-                        const duration = parseInt(note.getElementsByTagName('duration')[0]?.textContent || '0');
-                        const durationInSeconds = duration / 24; // Simplified timing
+                        if (!step || isNaN(octave)) continue;
 
-                        // Convert pitch to MIDI note number
+                        // Note start time depends on whether it's a chord note
+                        const noteStart = inChord ? currentTime : currentTime;
+
+                        // Convert to seconds for playback
+                        const durationSeconds = this.ticksToSeconds(duration);
+
+                        // Convert to MIDI note number
                         const noteNumber = this.stepOctaveToMidiNote(step, octave, alter);
 
-                        // Add the note to our parsed collection
-                        this.parsedNotes.push({
+                        // Check if this note is tied
+                        const tie = note.querySelectorAll('tie');
+                        const tieStart = Array.from(tie).some(t => t.getAttribute('type') === 'start');
+                        const tieEnd = Array.from(tie).some(t => t.getAttribute('type') === 'stop');
+
+                        // Get note ID if available
+                        const noteId = note.id || `${noteNumber}-${noteStart}`;
+
+                        // Create note object
+                        const noteObj = {
                             noteNumber,
-                            start: currentTime,
-                            duration: durationInSeconds,
+                            start: noteStart,
+                            duration: durationSeconds,
                             step,
                             octave,
-                            alter
-                        });
+                            alter,
+                            tickDuration: duration,
+                            isChordNote: isChordNote,
+                            isTieStart: tieStart,
+                            isTieEnd: tieEnd,
+                            id: noteId
+                        };
 
-                        // If the note isn't a chord, advance the time
-                        if (!note.getElementsByTagName('chord').length) {
-                            currentTime += durationInSeconds;
+                        // Handle tied notes
+                        if (tieEnd) {
+                            // Find the matching start note
+                            const tieKey = `${noteNumber}`;
+                            if (tiedNoteMap.has(tieKey)) {
+                                const startNote = tiedNoteMap.get(tieKey);
+                                // Extend duration of the start note
+                                startNote.duration += durationSeconds;
+                                // Not adding this note separately since it's just an extension
+                                console.log(`Extended tied note: ${noteNumber} with ${durationSeconds}s`);
+                            } else {
+                                // If we couldn't find the tie start, add this note anyway
+                                this.parsedNotes.push(noteObj);
+                            }
                         }
+                        // Store tie start note or regular note
+                        else {
+                            if (tieStart) {
+                                // Store for potential later tie
+                                const tieKey = `${noteNumber}`;
+                                tiedNoteMap.set(tieKey, noteObj);
+                            }
+
+                            // Add to chord notes or directly to parsed notes
+                            if (isChordNote) {
+                                currentChordNotes.push(noteObj);
+                                inChord = true;
+                            } else {
+                                this.parsedNotes.push(noteObj);
+                            }
+                        }
+
+                        // If not a chord note, advance time
+                        if (!isChordNote && !inChord) {
+                            currentTime += durationSeconds;
+                        }
+                    }
+
+                    // Handle any remaining chord notes at the end of the measure
+                    if (currentChordNotes.length > 0) {
+                        this.processChordNotes(currentChordNotes, currentTime);
                     }
                 }
             }
@@ -301,17 +528,47 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             // Sort notes by start time
             this.parsedNotes.sort((a, b) => a.start - b.start);
 
-            console.log('Parsed notes:', this.parsedNotes);
+            // Validate and debug output the first few notes
+            if (this.parsedNotes.length > 0) {
+                console.log('First 5 parsed notes:', this.parsedNotes.slice(0, 5));
+                console.log('Last 5 parsed notes:', this.parsedNotes.slice(-5));
+                console.log(`Total parsed notes: ${this.parsedNotes.length}`);
+            } else {
+                console.warn('No notes were parsed from the MusicXML');
+            }
         } catch (error) {
             console.error('Error parsing MusicXML:', error);
             throw error;
         }
     }
 
-    // Utility function to convert note step and octave to MIDI note number
-    stepOctaveToMidiNote(step, octave, alter = 0) {
-        const stepValues = { 'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11 };
-        return (octave + 1) * 12 + stepValues[step] + alter;
+    // Helper method to process chord notes as a group
+    processChordNotes(chordNotes, startTime) {
+        if (chordNotes.length === 0) return;
+
+        // All notes in the chord share the same start time
+        chordNotes.forEach(note => {
+            note.start = startTime;
+            this.parsedNotes.push(note);
+        });
+    }
+
+    // Convert ticks to seconds based on REFERENCE tempo and TIME SIGNATURE
+    ticksToSeconds(ticks) {
+        if (!ticks || ticks <= 0) return 0;
+
+        // Quarter note duration in seconds at the current tempo
+        const quarterNoteSeconds = 60 / this.bpm;
+
+        // Convert ticks to quarter note fraction
+        const quarterNoteFraction = ticks / this.divisions;
+
+        // Apply time signature adjustment
+        // For example, in 6/8, an eighth note is counted as one beat, not a quarter note
+        const beatUnitFactor = 4 / this.timeSignatureDenominator;
+
+        // Final duration calculation with all factors considered
+        return quarterNoteFraction * quarterNoteSeconds * beatUnitFactor;
     }
 
     createPianoVisualizationContainer() {
@@ -434,12 +691,12 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
     updatePlayback(timestamp) {
         if (!this.isPlaying) return;
 
-        // Calculate time delta and adjust position
-        const deltaTime = (timestamp - this.lastRenderTime) / 1000; // Convert to seconds
+        // Calculate elapsed time in seconds (real clock time)
+        const deltaTime = (timestamp - this.lastRenderTime) / 1000;
         this.lastRenderTime = timestamp;
 
-        // Advance current position based on playback speed
-        this.currentPosition += deltaTime * this.playbackSpeed;
+        // Just advance by real time - the note durations are already scaled by BPM
+        this.currentPosition += deltaTime;
 
         // Re-render notation periodically (not every frame)
         if (Math.floor(this.currentPosition * 2) > Math.floor((this.currentPosition - deltaTime) * 2)) {
@@ -619,7 +876,7 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             simpleNotation.innerHTML = `
                 <h3>Current Notes</h3>
                 <div class="position-info">Position: ${this.currentPosition.toFixed(1)}s</div>
-                <div class="speed-info">Speed: ${this.playbackSpeed.toFixed(1)}x</div>
+                <div class="speed-info">Tempo: ${this.bpm} BPM</div>
                 <div class="playback-status">${this.isPlaying ? 'Playing' : 'Paused'}</div>
             `;
 
@@ -642,7 +899,7 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         infoPanel.className = 'notation-info-panel';
         infoPanel.innerHTML = `
             <div class="position-info">Position: ${this.currentPosition.toFixed(1)}s</div>
-            <div class="speed-info">Speed: ${this.playbackSpeed.toFixed(1)}x</div>
+            <div class="speed-info">Tempo: ${this.bpm} BPM</div>
             <div class="playback-status">${this.isPlaying ? 'Playing' : 'Paused'}</div>
         `;
         infoPanel.style.position = 'absolute';
@@ -721,22 +978,24 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
     // Mouse wheel controls playback speed
     adjustPlaybackSpeed(event) {
         // Determine direction of scroll
-        const delta = Math.sign(event.deltaY) * -0.1;
+        const delta = Math.sign(event.deltaY) * -5; // Change by 5 BPM increments
 
-        // Calculate new playback speed (between 0.5 and 3.0)
-        this.playbackSpeed = Math.max(0.5, Math.min(3.0, this.playbackSpeed + delta));
+        // Calculate new BPM (between 40 and 240)
+        this.bpm = Math.max(40, Math.min(240, this.bpm + delta));
 
         // Update UI
         const speedValue = this.analyzer.container.querySelector('.speed-value');
         if (speedValue) {
-            speedValue.textContent = `${this.playbackSpeed.toFixed(1)}x`;
+            speedValue.textContent = `${this.bpm} BPM`;
         }
 
         // Update speed slider if it exists
         const speedControl = this.analyzer.container.querySelector('.piano-speed');
         if (speedControl) {
-            speedControl.value = this.playbackSpeed;
+            speedControl.value = this.bpm;
         }
+
+        console.log(`BPM adjusted to ${this.bpm} via scroll`);
     }
 
     // Start dragging to scrub through music
@@ -909,6 +1168,10 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         const noteBar = document.createElement('div');
         noteBar.className = 'note-bar';
 
+        // Make sure no transition or animation is applied initially
+        noteBar.style.transition = 'none';
+        noteBar.style.animation = 'none';
+
         // Add class for black keys
         const isBlackKey = [1, 3, 6, 8, 10].includes(note.noteNumber % 12);
         if (isBlackKey) {
@@ -1003,25 +1266,21 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
                     topPosition = containerHeight - (noteHeight * (1 - percentPlayed));
                 } else {
                     // For upcoming notes, position them based on when they will be played
-                    // Map the time to note to a position from top of container
                     const percentOfLookahead = timeToNote / lookAheadTime;
                     topPosition = containerHeight * (1 - percentOfLookahead) - noteHeight;
                 }
 
-                // Position the note bar
+                // Position the note bar - REMOVE ANIMATION, use pure JS positioning
                 bar.element.style.left = `${left - (width / 2)}px`;
                 bar.element.style.top = `${topPosition}px`;
                 bar.element.style.width = `${width}px`;
                 bar.element.style.height = `${noteHeight}px`;
 
+                // Remove any animations that might be interfering with positioning
+                bar.element.style.animation = 'none';
+
                 // Highlight currently playing notes
                 bar.element.classList.toggle('playing', isPlaying);
-
-                // Apply animation only when the note first appears within our window
-                if (timeToNote <= lookAheadTime && timeToNote > lookAheadTime - 0.1) {
-                    // Only animate if the note is just appearing at the top
-                    bar.element.style.animation = `note-fall ${this.fallDuration / this.playbackSpeed}s linear`;
-                }
             } else {
                 // Hide notes outside our window
                 bar.element.style.display = 'none';
@@ -1059,5 +1318,58 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
 
     processData(data) {
         // This mode doesn't use the real-time analysis data
+    }
+
+    // Replace setPlaybackSpeed utility with direct BPM setting
+    setBPM(bpm) {
+        // Store old BPM for recalculation
+        const oldBPM = this.bpm;
+
+        // Ensure BPM is within valid range
+        this.bpm = Math.max(40, Math.min(240, bpm));
+
+        // If we have notes already parsed and there's a significant BPM change
+        if (this.parsedNotes.length > 0 && Math.abs(oldBPM - this.bpm) > 1) {
+            // Recalculate all note durations with the new tempo
+            const tempoRatio = oldBPM / this.bpm;
+
+            this.parsedNotes.forEach(note => {
+                // Scale the start times and durations by the tempo ratio
+                note.start *= tempoRatio;
+                note.duration *= tempoRatio;
+            });
+
+            // Also update current position to maintain musical position
+            this.currentPosition *= tempoRatio;
+
+            console.log(`Recalculated timing for ${this.parsedNotes.length} notes after tempo change`);
+        }
+
+        // Update UI
+        const speedControl = this.analyzer.container.querySelector('.piano-speed');
+        const speedValue = this.analyzer.container.querySelector('.speed-value');
+
+        if (speedControl) speedControl.value = this.bpm;
+        if (speedValue) speedValue.textContent = `${this.bpm} BPM`;
+
+        console.log(`BPM set to ${this.bpm}`);
+    }
+
+    // Add this improved function to convert note step/octave to MIDI note number
+    stepOctaveToMidiNote(step, octave, alter = 0) {
+        const stepValues = { 'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11 };
+
+        // Validate inputs to prevent NaN results
+        if (typeof step !== 'string' || !stepValues.hasOwnProperty(step)) {
+            console.warn(`Invalid note step: ${step}, defaulting to C`);
+            step = 'C';
+        }
+
+        if (isNaN(octave)) {
+            console.warn(`Invalid octave: ${octave}, defaulting to 4`);
+            octave = 4;
+        }
+
+        return (octave + 1) * 12 + stepValues[step] + alter;
     }
 }
