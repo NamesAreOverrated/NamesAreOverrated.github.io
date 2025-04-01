@@ -1751,10 +1751,13 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
                         duration: vfDuration
                     });
 
-                    // Add accidentals
+                    // Add accidentals - FIX: Use addModifier instead of addAccidental for VexFlow 4.x
                     noteGroup.forEach((note, i) => {
-                        if (note.alter === 1) vfNote.addAccidental(i, new VF.Accidental("#"));
-                        else if (note.alter === -1) vfNote.addAccidental(i, new VF.Accidental("b"));
+                        if (note.alter === 1) {
+                            vfNote.addModifier(new VF.Accidental("#"), i);
+                        } else if (note.alter === -1) {
+                            vfNote.addModifier(new VF.Accidental("b"), i);
+                        }
                     });
 
                     // Add articulations to the first note in the group
