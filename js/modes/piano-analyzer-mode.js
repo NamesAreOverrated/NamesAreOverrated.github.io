@@ -37,6 +37,11 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
 
         // Set up event listeners for the score model
         this.setupScoreModelListeners();
+
+        // Add page navigation state
+        this.currentPage = 0;
+        this.measuresPerPage = 2;
+        this.totalPages = 1;
     }
 
     initialize() {
@@ -119,7 +124,19 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             // Get current position from score model
             this.currentPosition = data.position;
 
-            // Update notebars and notation with improved timing
+            // Find current measure
+            const currentMeasureIndex = this.findCurrentMeasureIndex();
+
+            // Check if we need to change page
+            const expectedPage = Math.floor(currentMeasureIndex / this.measuresPerPage);
+            if (expectedPage !== this.currentPage) {
+                this.currentPage = expectedPage;
+                // Force notation redraw on page change
+                this.renderNotation();
+                return; // Early return as renderNotation will handle everything
+            }
+
+            // Normal updates if page didn't change
             requestAnimationFrame(() => {
                 this.updateNoteBars();
 
@@ -171,13 +188,7 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             }
         });
 
-        // Listen for loaded event to update UI
         this.scoreModel.addEventListener('loaded', () => {
-            // Don't automatically create visualizations here, as this event might be triggered
-            // before containers are ready. Instead, we'll call updateScoreUI() explicitly
-            // after setting score data in processMusicXMLString.
-
-            // We can still use this for non-UI updates if needed
             console.log("Score model loaded data successfully");
         });
     }
@@ -191,9 +202,7 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
-                // Check if this is a compressed MusicXML file (.mxl)
                 if (file.name.toLowerCase().endsWith('.mxl')) {
-                    // For compressed MXL files, we need to extract the XML content
                     this.processMXLData(e.target.result).then(xmlString => {
                         this.processMusicXMLString(xmlString, statusElement);
                     }).catch(error => {
@@ -201,7 +210,6 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
                         statusElement.textContent = 'Error processing MXL file. Please try another file.';
                     });
                 } else {
-                    // Regular uncompressed XML
                     this.processMusicXMLString(e.target.result, statusElement);
                 }
             } catch (error) {
@@ -215,15 +223,13 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         };
 
         if (file.name.toLowerCase().endsWith('.mxl')) {
-            reader.readAsArrayBuffer(file); // Read as binary for ZIP files
+            reader.readAsArrayBuffer(file);
         } else {
-            reader.readAsText(file); // Read as text for XML files
+            reader.readAsText(file);
         }
     }
 
-    // Process compressed MusicXML (.mxl) files
     async processMXLData(arrayBuffer) {
-        // Load JSZip library if not available
         if (typeof JSZip === 'undefined') {
             await this.loadJSZip();
         }
@@ -232,8 +238,6 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             const zip = new JSZip();
             const contents = await zip.loadAsync(arrayBuffer);
 
-            // Find the main MusicXML file (typically named 'score.xml' or similar)
-            // First check container.xml to find the main score file
             let mainScoreFile = null;
 
             if (contents.files['META-INF/container.xml']) {
@@ -247,7 +251,6 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
                 }
             }
 
-            // If we couldn't find it in container.xml, look for .xml files
             if (!mainScoreFile || !contents.files[mainScoreFile]) {
                 for (const filename in contents.files) {
                     if (filename.endsWith('.xml') && !filename.includes('META-INF')) {
@@ -268,7 +271,6 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         }
     }
 
-    // Load JSZip library for MXL files
     loadJSZip() {
         return new Promise((resolve, reject) => {
             const script = document.createElement('script');
@@ -279,37 +281,28 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         });
     }
 
-    // Process MusicXML data with enhanced parsing for complex structures
     processMusicXMLString(xmlString, statusElement) {
         try {
-            // Parse the MusicXML string into a DOM
             const parser = new DOMParser();
             this.musicXML = parser.parseFromString(xmlString, 'text/xml');
 
-            // Check if the parsing was successful
             const parsererror = this.musicXML.getElementsByTagName('parsererror');
             if (parsererror.length > 0) {
                 throw new Error('XML parsing error: ' + parsererror[0].textContent);
             }
 
-            // Extract the song metadata
             const title = this.extractScoreMetadata(this.musicXML);
 
             console.log(`Processing score: ${title}`);
 
-            // Reset all musical state and timing information
             this.resetMusicalState();
 
-            // Extract global divisions, time signatures and tempo markings
             this.extractScoreTimingInformation(this.musicXML);
 
-            // Parse parts and measures with enhanced accuracy
             this.parseScoreContent();
 
-            // Final post-processing of parsed notes
             this.processNoteRelationships();
 
-            // Create a data object to pass to the score model
             const scoreData = {
                 title: title,
                 composer: this.composer || '',
@@ -322,14 +315,10 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
                 timeSignatureDenominator: this.timeSignatureDenominator
             };
 
-            // Update the score model - but DON'T rely on the 'loaded' event for UI updates
-            // as it may trigger visualization code before containers are created
             this.scoreModel.setScoreData(scoreData);
 
-            // Show success message
             statusElement.textContent = `Loaded: ${title}`;
 
-            // Explicitly update UI after data is loaded
             this.updateScoreUI();
 
         } catch (error) {
@@ -338,35 +327,29 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         }
     }
 
-    // Extract score title and additional metadata
     extractScoreMetadata(musicXML) {
         const workTitle = musicXML.querySelector('work-title');
         const movementTitle = musicXML.querySelector('movement-title');
         const scorePartName = musicXML.querySelector('part-name');
         const creator = musicXML.querySelector('creator[type="composer"]');
 
-        // Store composer info if available
         if (creator) {
             this.composer = creator.textContent;
         }
 
-        // Return the most specific title available
         return workTitle?.textContent ||
             movementTitle?.textContent ||
             scorePartName?.textContent ||
             'Untitled Score';
     }
 
-    // Reset all musical state information before parsing
     resetMusicalState() {
-        // Reset timing properties
-        this.divisions = 24; // Default divisions per quarter note
+        this.divisions = 24;
         this.timeSignatureNumerator = 4;
         this.timeSignatureDenominator = 4;
         this.bpm = 120;
         this.currentPosition = 0;
 
-        // Store tempo and time signature changes throughout the piece
         this.tempoChanges = [{ position: 0, tempo: this.bpm }];
         this.timeSignatureChanges = [{
             position: 0,
@@ -374,15 +357,12 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             denominator: this.timeSignatureDenominator
         }];
 
-        // Reset note data
         this.parsedNotes = [];
         this.measureData = [];
         this.noteBars = [];
     }
 
-    // Extract comprehensive timing information from the score
     extractScoreTimingInformation(musicXML) {
-        // Extract global divisions value (ticks per quarter note)
         const divisionsElements = musicXML.querySelectorAll('divisions');
         if (divisionsElements.length > 0) {
             const divisionsValue = parseInt(divisionsElements[0].textContent);
@@ -392,7 +372,6 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             }
         }
 
-        // Extract initial time signature
         const timeElements = musicXML.querySelectorAll('time');
         if (timeElements.length > 0) {
             const beats = parseInt(timeElements[0].querySelector('beats')?.textContent);
@@ -405,7 +384,6 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             }
         }
 
-        // Extract initial tempo
         const tempoElements = musicXML.querySelectorAll('sound[tempo]');
         if (tempoElements.length > 0) {
             const tempo = parseFloat(tempoElements[0].getAttribute('tempo'));
@@ -415,32 +393,26 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             }
         }
 
-        // Scan through all parts and measures for timing changes
         this.scanTimingChanges(musicXML);
 
-        // Update UI controls to match extracted tempo
         this.updateTempoControls();
     }
 
-    // Scan through all measures for timing changes (tempo, time signature)
     scanTimingChanges(musicXML) {
         const parts = musicXML.getElementsByTagName('part');
         if (parts.length === 0) return;
 
-        // Use first part to extract timing changes
         const firstPart = parts[0];
         const measures = firstPart.getElementsByTagName('measure');
 
-        let currentMeasurePosition = 0; // Position in seconds
-        let currentTickPosition = 0;    // Position in ticks
-        let currentDivisions = this.divisions; // Track current divisions value
+        let currentMeasurePosition = 0;
+        let currentTickPosition = 0;
+        let currentDivisions = this.divisions;
 
-        // Scan through all measures
         for (let measureIndex = 0; measureIndex < measures.length; measureIndex++) {
             const measure = measures[measureIndex];
             const measureNumber = parseInt(measure.getAttribute('number')) || (measureIndex + 1);
 
-            // Store information about this measure
             const measureInfo = {
                 index: measureIndex,
                 number: measureNumber,
@@ -451,7 +423,6 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
                 hasTempoChange: false
             };
 
-            // Check for divisions change
             const divisionsElements = measure.getElementsByTagName('divisions');
             if (divisionsElements.length > 0) {
                 const newDivisions = parseInt(divisionsElements[0].textContent);
@@ -462,7 +433,6 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
                 }
             }
 
-            // Check for time signature change
             const timeElements = measure.getElementsByTagName('time');
             if (timeElements.length > 0) {
                 const beats = parseInt(timeElements[0].querySelector('beats')?.textContent);
@@ -472,7 +442,6 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
                     this.timeSignatureNumerator = beats;
                     this.timeSignatureDenominator = beatType;
 
-                    // Record the time signature change
                     this.timeSignatureChanges.push({
                         position: currentMeasurePosition,
                         numerator: beats,
@@ -487,14 +456,12 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
                 }
             }
 
-            // Check for tempo changes - examine each one in the measure
             const soundElements = measure.querySelectorAll('sound[tempo]');
             if (soundElements.length > 0) {
                 let measureHasTempo = false;
                 for (const sound of soundElements) {
                     const tempo = parseFloat(sound.getAttribute('tempo'));
                     if (!isNaN(tempo) && tempo > 0) {
-                        // Store the tempo change
                         this.tempoChanges.push({
                             position: currentMeasurePosition,
                             tempo: tempo,
@@ -506,7 +473,6 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
 
                         console.log(`Measure ${measureNumber}: Tempo change to ${tempo} BPM`);
 
-                        // Update current tempo for duration calculations
                         this.bpm = tempo;
                     }
                 }
@@ -516,16 +482,13 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
                 }
             }
 
-            // Calculate measure duration in ticks using current time signature and divisions
             const measureDurationTicks = this.calculateMeasureDurationInTicks(
                 this.timeSignatureNumerator,
                 this.timeSignatureDenominator,
                 currentDivisions
             );
 
-            // Fix timing calculation: calculate seconds based on active tempo at measure start
             let currentTempo = this.bpm;
-            // Find the most recent tempo change that applies to this measure
             for (const tempoChange of this.tempoChanges) {
                 if (tempoChange.position <= currentMeasurePosition) {
                     currentTempo = tempoChange.tempo;
@@ -534,35 +497,29 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
                 }
             }
 
-            // Calculate duration using the tempo at the START of the measure
             const measureDurationSeconds = this.ticksToSeconds(
                 measureDurationTicks,
                 currentDivisions,
                 currentTempo
             );
 
-            // Store measure duration and timing information
             measureInfo.durationTicks = measureDurationTicks;
             measureInfo.durationSeconds = measureDurationSeconds;
             measureInfo.divisions = currentDivisions;
 
-            // Store measure info in our measure data array
             this.measureData.push(measureInfo);
 
-            // Update positions for next measure - accumulate the timing
             currentMeasurePosition += measureDurationSeconds;
             currentTickPosition += measureDurationTicks;
         }
 
         console.log(`Scanned ${measures.length} measures with ${this.timeSignatureChanges.length} time signature changes and ${this.tempoChanges.length} tempo changes`);
 
-        // Validate measure data with debug output
         if (this.measureData.length > 0) {
             const lastMeasure = this.measureData[this.measureData.length - 1];
             const totalDuration = lastMeasure.startPosition + lastMeasure.durationSeconds;
             console.log(`Total score duration: ${totalDuration.toFixed(2)} seconds`);
 
-            // Log sample measure data for debugging
             if (this.measureData.length > 2) {
                 console.log('Sample measure data:', {
                     first: this.measureData[0],
@@ -573,19 +530,14 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         }
     }
 
-    // Calculate measure duration in ticks based on time signature
     calculateMeasureDurationInTicks(numerator, denominator, divisions) {
-        // Calculate ticks per whole note
         const ticksPerWholeNote = divisions * 4;
 
-        // Calculate ticks per beat based on denominator (beat unit)
         const ticksPerBeat = ticksPerWholeNote / denominator;
 
-        // Total ticks for the measure - simple formula that works for all time signatures
         return ticksPerBeat * numerator;
     }
 
-    // Parse the complete score with enhanced handling of parts, voices, and articulations
     parseScoreContent() {
         if (!this.musicXML) return;
 
@@ -593,29 +545,23 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
 
         const parts = this.musicXML.getElementsByTagName('part');
 
-        // Process each part
         for (let partIndex = 0; partIndex < parts.length; partIndex++) {
             const part = parts[partIndex];
             const partId = part.getAttribute('id') || `part-${partIndex + 1}`;
 
             console.log(`Parsing part ${partId} (${partIndex + 1}/${parts.length})`);
 
-            // Get part name if available
             const scorePart = this.musicXML.querySelector(`score-part[id="${partId}"]`);
             const partName = scorePart?.querySelector('part-name')?.textContent || `Part ${partIndex + 1}`;
 
-            // Parse this part
             this.parsePart(part, partId, partName, partIndex);
         }
 
-        // Sort all notes by start time for consistent playback
         this.parsedNotes.sort((a, b) => a.start - b.start);
 
-        // Log parsing results
         console.log(`Parsed ${this.parsedNotes.length} total notes`);
 
         if (this.parsedNotes.length > 0) {
-            // Calculate score duration and other statistics
             const lastNote = this.parsedNotes[this.parsedNotes.length - 1];
             const scoreDuration = lastNote.start + lastNote.duration;
 
@@ -627,32 +573,25 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         }
     }
 
-    // Parse an individual part
     parsePart(part, partId, partName, partIndex) {
         const measures = part.getElementsByTagName('measure');
         if (!measures.length) return;
 
-        // State for tracking notes that need to be connected
         const tiedNotes = new Map();
 
-        // Current position in seconds from start of piece
         let currentTime = 0;
 
-        // Process each measure in this part
         for (let measureIndex = 0; measureIndex < measures.length; measureIndex++) {
             const measure = measures[measureIndex];
             const measureNumber = parseInt(measure.getAttribute('number')) || (measureIndex + 1);
 
-            // Use measure data we've already calculated
             const measureData = this.measureData[measureIndex];
             if (measureData) {
                 currentTime = measureData.startPosition;
             }
 
-            // Get the current divisions value - might have changed
             const currentDivisions = measureData?.divisions || this.divisions;
 
-            // Parse contents of this measure
             currentTime = this.parseMeasure(
                 measure,
                 currentTime,
@@ -666,55 +605,41 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         }
     }
 
-    // Parse a single measure with enhanced handling of complex musical elements
     parseMeasure(measure, startTime, divisions, partId, partName, partIndex, measureNumber, tiedNotes) {
-        // Current position within the measure, in seconds
         let currentTime = startTime;
 
-        // Multiple voice handling
-        const voicePositions = new Map(); // Track position for each voice
+        const voicePositions = new Map();
 
-        // Get all elements in measure that affect timing
         const elements = Array.from(measure.children);
 
-        // Process attributes like time, key, etc.
         const attributes = measure.querySelector('attributes');
         if (attributes) {
-            // Handle attributes that affect timing
             this.processAttributes(attributes, divisions);
         }
 
-        // First scan for backup/forward elements to understand voice structure
         elements.forEach(element => {
             if (element.tagName === 'backup' || element.tagName === 'forward') {
-                // Handle these later
             }
         });
 
-        // Now process notes, rests, etc. - handle chord structure properly
         let currentVoice = 1;
         let currentStaff = 1;
         let inChord = false;
         let chordStartTime = currentTime;
         let currentChordNotes = [];
 
-        // Process each note and other elements in sequence
         for (const element of elements) {
-            // Handle different element types
             switch (element.tagName) {
                 case 'note':
                     const note = element;
 
-                    // Check for voice changes
                     const voiceElement = note.querySelector('voice');
                     if (voiceElement) {
                         const voice = parseInt(voiceElement.textContent);
                         if (!isNaN(voice)) {
-                            // If changing voices, store current voice position
                             if (voice !== currentVoice) {
                                 voicePositions.set(currentVoice, currentTime);
 
-                                // If we've seen this voice before, restore its position
                                 if (voicePositions.has(voice)) {
                                     currentTime = voicePositions.get(voice);
                                 }
@@ -724,7 +649,6 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
                         }
                     }
 
-                    // Check for staff changes
                     const staffElement = note.querySelector('staff');
                     if (staffElement) {
                         const staff = parseInt(staffElement.textContent);
@@ -733,39 +657,32 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
                         }
                     }
 
-                    // Check if this is part of a chord
                     const isChordNote = !!note.querySelector('chord');
 
-                    // If we were in a chord and this isn't a chord note, process the chord
                     if (inChord && !isChordNote) {
                         this.processChordGroup(currentChordNotes, chordStartTime, partId, partName, partIndex, currentVoice, currentStaff);
                         currentChordNotes = [];
                         inChord = false;
                     }
 
-                    // Get note duration
                     const durationElement = note.querySelector('duration');
-                    if (!durationElement) continue; // Skip notes without duration
+                    if (!durationElement) continue;
 
                     const durationTicks = parseInt(durationElement.textContent);
                     if (isNaN(durationTicks)) continue;
 
-                    // Convert to seconds
                     const durationSeconds = this.ticksToSeconds(durationTicks, divisions, this.bpm);
 
-                    // If it's a rest, just advance the time
                     if (note.querySelector('rest')) {
-                        if (!isChordNote) { // only advance time for non-chord rests
+                        if (!isChordNote) {
                             currentTime += durationSeconds;
                         }
                         continue;
                     }
 
-                    // Parse pitch information with enhanced accuracy
                     const noteObj = this.parseNotePitch(note, currentTime, durationSeconds, durationTicks);
                     if (!noteObj) continue;
 
-                    // Add additional properties
                     noteObj.partId = partId;
                     noteObj.partName = partName;
                     noteObj.partIndex = partIndex;
@@ -774,31 +691,24 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
                     noteObj.measure = measureNumber;
                     noteObj.isChordNote = isChordNote;
 
-                    // Process note articulations, dynamics, etc.
                     this.processNoteProperties(noteObj, note);
 
-                    // Handle chord structure
                     if (isChordNote) {
-                        noteObj.start = chordStartTime; // All chord notes start together
+                        noteObj.start = chordStartTime;
                         currentChordNotes.push(noteObj);
                         inChord = true;
                     } else {
-                        // Regular note - add to parsed notes
                         this.parsedNotes.push(noteObj);
 
-                        // If this starts a chord, remember the start time
                         chordStartTime = currentTime;
 
-                        // Advance time for non-chord notes
                         currentTime += durationSeconds;
                     }
 
-                    // Process ties
                     this.processNoteTies(noteObj, note, tiedNotes);
                     break;
 
                 case 'backup':
-                    // Move backward in time (for multiple voices)
                     const backupDuration = parseInt(element.querySelector('duration')?.textContent);
                     if (!isNaN(backupDuration)) {
                         currentTime -= this.ticksToSeconds(backupDuration, divisions, this.bpm);
@@ -806,7 +716,6 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
                     break;
 
                 case 'forward':
-                    // Move forward in time (for skipping)
                     const forwardDuration = parseInt(element.querySelector('duration')?.textContent);
                     if (!isNaN(forwardDuration)) {
                         currentTime += this.ticksToSeconds(forwardDuration, divisions, this.bpm);
@@ -814,7 +723,6 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
                     break;
 
                 case 'direction':
-                    // Handle tempo changes and other directions
                     const sound = element.querySelector('sound[tempo]');
                     if (sound) {
                         const newTempo = parseFloat(sound.getAttribute('tempo'));
@@ -826,7 +734,6 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             }
         }
 
-        // Process any remaining chord notes
         if (currentChordNotes.length > 0) {
             this.processChordGroup(currentChordNotes, chordStartTime, partId, partName, partIndex, currentVoice, currentStaff);
         }
@@ -834,7 +741,6 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         return currentTime;
     }
 
-    // Parse pitch information from a note element
     parseNotePitch(noteElement, startTime, durationSeconds, durationTicks) {
         const pitch = noteElement.querySelector('pitch');
         if (!pitch) return null;
@@ -845,10 +751,8 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
 
         if (!step || isNaN(octave)) return null;
 
-        // Convert to MIDI note number
         const noteNumber = this.stepOctaveToMidiNote(step, octave, alter);
 
-        // Create note object with enhanced properties
         const noteObj = {
             noteNumber,
             start: startTime,
@@ -863,29 +767,23 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         return noteObj;
     }
 
-    // Process additional note properties like articulations
     processNoteProperties(noteObj, noteElement) {
-        // Get notations element
         const notations = noteElement.querySelector('notations');
         if (!notations) return;
 
-        // Articulations
         const articulations = notations.querySelector('articulations');
         if (articulations) {
-            // Check for specific articulations
             noteObj.staccato = !!articulations.querySelector('staccato');
             noteObj.accent = !!articulations.querySelector('accent');
             noteObj.tenuto = !!articulations.querySelector('tenuto');
             noteObj.marcato = !!articulations.querySelector('strong-accent');
         }
 
-        // Technical markings
         const technical = notations.querySelector('technical');
         if (technical) {
             noteObj.fingering = technical.querySelector('fingering')?.textContent;
         }
 
-        // Ornaments
         const ornaments = notations.querySelector('ornaments');
         if (ornaments) {
             noteObj.trill = !!ornaments.querySelector('trill-mark');
@@ -893,24 +791,19 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             noteObj.turn = !!ornaments.querySelector('turn');
         }
 
-        // Slurs
         const slurStart = notations.querySelector('slur[type="start"]');
         const slurStop = notations.querySelector('slur[type="stop"]');
         if (slurStart) noteObj.slurStart = true;
         if (slurStop) noteObj.slurStop = true;
 
-        // Fermata
         noteObj.fermata = !!notations.querySelector('fermata');
     }
 
-    // Process tied notes
     processNoteTies(noteObj, noteElement, tiedNotes) {
-        // Check for tie elements
         const tieElements = noteElement.querySelectorAll('tie');
         let tieStart = Array.from(tieElements).some(t => t.getAttribute('type') === 'start');
         let tieStop = Array.from(tieElements).some(t => t.getAttribute('type') === 'stop');
 
-        // Also check notation/tied elements (MusicXML sometimes uses this instead)
         const notations = noteElement.querySelector('notations');
         if (notations) {
             const tiedElements = notations.querySelectorAll('tied');
@@ -923,36 +816,28 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             }
         }
 
-        // Store tie status on note
         noteObj.isTieStart = tieStart;
         noteObj.isTieEnd = tieStop;
 
-        // Handle tie connections (will connect in postprocessing)
         if (tieStart) {
-            // This note starts a tie, store it for later connection
             const tieKey = `${noteObj.partId}-${noteObj.voice}-${noteObj.noteNumber}`;
             tiedNotes.set(tieKey, noteObj);
         }
 
         if (tieStop) {
-            // This note ends a tie, look for starting note
             const tieKey = `${noteObj.partId}-${noteObj.voice}-${noteObj.noteNumber}`;
             const startNote = tiedNotes.get(tieKey);
 
             if (startNote) {
-                // Mark both notes as connected
                 startNote.tiedToId = noteObj.id;
                 noteObj.tiedFromId = startNote.id;
 
-                // Clear the tie start reference (one start can only tie to one end)
                 tiedNotes.delete(tieKey);
             }
         }
     }
 
-    // Process attributes like time signature, key, etc.
     processAttributes(attributesElement, divisions) {
-        // Handle divisions (ppq)
         const divisionsElement = attributesElement.querySelector('divisions');
         if (divisionsElement) {
             const divisionsValue = parseInt(divisionsElement.textContent);
@@ -961,7 +846,6 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             }
         }
 
-        // Handle time signature
         const timeElement = attributesElement.querySelector('time');
         if (timeElement) {
             const beats = parseInt(timeElement.querySelector('beats')?.textContent);
@@ -973,24 +857,19 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             }
         }
 
-        // Handle key signature
         const keyElement = attributesElement.querySelector('key');
         if (keyElement) {
             const fifths = parseInt(keyElement.querySelector('fifths')?.textContent);
             if (!isNaN(fifths)) {
-                // Store key signature info (useful for notation)
                 this.keySignature = fifths;
             }
         }
     }
 
-    // Process a group of chord notes together
     processChordGroup(chordNotes, startTime, partId, partName, partIndex, voice, staff) {
         if (!chordNotes.length) return;
 
-        // Ensure all chord notes have the same start time
         chordNotes.forEach(note => {
-            // Set common properties
             note.start = startTime;
             note.isChordNote = true;
             note.partId = partId;
@@ -999,38 +878,28 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             note.voice = voice;
             note.staff = staff;
 
-            // Add to parsed notes collection
             this.parsedNotes.push(note);
         });
     }
 
-    // Final post-processing of notes to handle ties, etc.
     processNoteRelationships() {
-        // Step 1: Process tied notes - extend durations
         this.processTiedNotes();
 
-        // Step 2: Apply articulation effects
         this.applyArticulationEffects();
     }
 
-    // Process tied notes into single sustained notes
     processTiedNotes() {
-        // Map all notes by ID for quick lookups
         const noteById = new Map();
         this.parsedNotes.forEach(note => noteById.set(note.id, note));
 
-        // First pass - identify all tie chains
-        const tieChains = new Map(); // Map of starting note ID to array of tied notes
+        const tieChains = new Map();
 
-        // Identify starting notes of each tie chain
         for (const note of this.parsedNotes) {
             if (note.isTieStart && !note.isTiedFromPrevious) {
-                // This is the start of a tie chain
                 tieChains.set(note.id, [note]);
             }
         }
 
-        // Build tie chains by following the tiedToId links
         for (const [startId, chain] of tieChains.entries()) {
             let currentNote = chain[0];
             while (currentNote.tiedToId && noteById.has(currentNote.tiedToId)) {
@@ -1038,33 +907,27 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
                 chain.push(nextNote);
                 currentNote = nextNote;
 
-                // Break if we've reached the end of the chain
                 if (!currentNote.isTieStart) break;
             }
         }
 
-        // Process each tie chain to calculate total duration
         for (const chain of tieChains.values()) {
             if (chain.length <= 1) continue;
 
-            // Calculate total duration of the tie chain
             let totalDuration = 0;
             for (const note of chain) {
                 totalDuration += note.duration;
             }
 
-            // Set extended duration on first note
             const firstNote = chain[0];
             firstNote.visualDuration = totalDuration;
             firstNote.hasTie = true;
 
-            // Mark all subsequent notes in the chain
             for (let i = 1; i < chain.length; i++) {
                 chain[i].isTiedFromPrevious = true;
             }
         }
 
-        // Ensure all notes have a visualDuration property
         for (const note of this.parsedNotes) {
             if (!note.visualDuration) {
                 note.visualDuration = note.duration;
@@ -1074,148 +937,109 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         console.log("Processed tied notes with improved accuracy");
     }
 
-    // Apply effects of articulations to note durations and rendering
     applyArticulationEffects() {
         for (const note of this.parsedNotes) {
-            // Staccato shortens notes but keeps their visual length
             if (note.staccato) {
                 const originalDuration = note.duration;
-                note.playbackDuration = originalDuration * 0.5; // Half the duration for playback
+                note.playbackDuration = originalDuration * 0.5;
                 note.staccatoEffect = true;
             }
 
-            // Other articulations might affect velocity or other properties
             if (note.accent) {
                 note.accentEffect = true;
-                note.velocity = 100; // Higher velocity for accented notes
+                note.velocity = 100;
             } else {
-                note.velocity = 80; // Default velocity
+                note.velocity = 80;
             }
         }
     }
 
-    // Convert ticks to seconds with more accurate BPM consideration
     ticksToSeconds(ticks, divisions, tempo) {
         if (!ticks || ticks <= 0) return 0;
 
-        // Quarter note duration in seconds at the given tempo
         const quarterNoteSeconds = 60 / tempo;
 
-        // Convert ticks to quarter note fraction
         const quarterNoteFraction = ticks / divisions;
 
-        // Apply time signature adjustment if necessary
-        // For compound meters (6/8, 9/8, 12/8), we need to adjust the duration correctly
-        // This does NOT need a factor as MusicXML already accounts for this in duration values
-        // We need to remove the beatUnitFactor to prevent incorrect timing
-
-        // Final duration calculation without an unnecessary time signature factor
         return quarterNoteFraction * quarterNoteSeconds;
     }
 
-    // Update the note bar visualization with greatly improved timing accuracy
     updateNoteBars() {
         if (!this.noteBarContainer || !this.scoreModel.notes.length) return;
 
-        // Clear existing note bars if playback has restarted
         if (this.scoreModel.currentPosition < 0.1 && this.noteBars.length > 0) {
             this.noteBarContainer.innerHTML = '';
             this.noteBars = [];
         }
 
-        // Calculate visible time window with ahead and behind margins
-        const startTime = this.scoreModel.currentPosition - 0.5; // Allow some margin for notes that just passed
+        const startTime = this.scoreModel.currentPosition - 0.5;
         const endTime = this.scoreModel.currentPosition + this.noteBarLookAhead;
 
-        // Find which notes should be visible with enhanced filtering
         const visibleNotes = this.scoreModel.getVisibleNotes(startTime, endTime);
 
-        // Create missing note bars
         this.createMissingNoteBars(visibleNotes);
 
-        // Update positions of all note bars with improved accuracy
         this.updateNoteBarsPosition();
 
-        // Clean up notes that are no longer visible
         this.cleanupInvisibleNoteBars(startTime);
     }
 
-    // Get notes visible in the current time window
     getVisibleNotes(startTime, endTime) {
         return this.parsedNotes.filter(note => {
-            // Use visual duration for tied notes
             const noteDuration = note.visualDuration || note.duration;
             const noteEnd = note.start + noteDuration;
 
-            // Include notes:
             return (
-                // Notes starting within window
                 (note.start >= startTime && note.start <= endTime) ||
 
-                // Notes currently playing (started before window but still active)
                 (note.start < startTime && noteEnd > startTime) ||
 
-                // Notes that begin before window but end within window
                 (note.start < startTime && noteEnd > startTime && noteEnd <= endTime)
             );
         });
     }
 
-    // Create note bars for notes that don't have them yet
     createMissingNoteBars(visibleNotes) {
         visibleNotes.forEach(note => {
-            // Generate a precise unique ID for each note
             const noteId = `${note.id}-${note.start.toFixed(6)}`;
 
-            // Check if this note already has a bar
             if (!this.noteBars.some(bar => bar.noteId === noteId)) {
                 this.createEnhancedNoteBar(note, noteId);
             }
         });
     }
 
-    // Create a note bar with enhanced properties
     createEnhancedNoteBar(note, noteId) {
-        // Find the corresponding piano key
         const keyElement = this.pianoVisualizationContainer.querySelector(`.piano-key[data-note="${note.noteNumber}"]`);
         if (!keyElement) return;
 
-        // Create the note bar element with improved styling
         const noteBar = document.createElement('div');
         noteBar.className = 'note-bar';
 
-        // Prevent transitions for precise control
         noteBar.style.transition = 'none';
 
-        // Add classes based on note properties
         const isBlackKey = [1, 3, 6, 8, 10].includes(note.noteNumber % 12);
         if (isBlackKey) noteBar.classList.add('black-note');
 
-        // Add hand indication based on staff or note number
         const isRightHand = note.staff === 1 || note.noteNumber >= 60;
         noteBar.classList.add(isRightHand ? 'right-hand' : 'left-hand');
 
-        // Add articulation classes
         if (note.staccato) noteBar.classList.add('staccato');
         if (note.accent) noteBar.classList.add('accent');
         if (note.tenuto) noteBar.classList.add('tenuto');
         if (note.fermata) noteBar.classList.add('fermata');
 
-        // Add tie visualization
         if (note.hasTie) noteBar.classList.add('tied');
         if (note.isTiedFromPrevious) noteBar.classList.add('tied-continuation');
 
-        // Set note data attributes
         noteBar.dataset.noteId = noteId;
         noteBar.dataset.duration = note.visualDuration || note.duration;
         noteBar.dataset.start = note.start;
         noteBar.dataset.part = note.partId;
         noteBar.dataset.voice = note.voice;
 
-        // Add to container
         this.noteBarContainer.appendChild(noteBar);
 
-        // Store reference to bar
         this.noteBars.push({
             noteId,
             element: noteBar,
@@ -1224,38 +1048,30 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         });
     }
 
-    // Update positions of all note bars with improved timing accuracy
     updateNoteBarsPosition() {
         if (!this.noteBarContainer || !this.noteBars.length) return;
 
         const containerHeight = this.noteBarContainer.clientHeight;
         const lookAheadTime = this.noteBarLookAhead;
 
-        // Performance optimization: Cache DOM measurements
         const containerRect = this.keyboardContainer.getBoundingClientRect();
         const keyPositions = new Map();
 
-        // Time-to-pixel ratio for consistent visual scaling
         const timeToPixelRatio = containerHeight / lookAheadTime;
 
-        // Minimum size for very short notes
         const MIN_NOTE_HEIGHT = 8;
 
-        // Get current playback position from score model (single source of truth)
         const currentTime = this.scoreModel.currentPosition;
 
-        // Process each note bar with improved timing accuracy
         this.noteBars.forEach(bar => {
             const note = bar.note;
             const element = bar.element;
 
             if (!element) return;
 
-            // Get piano key position, using cached measurements when possible
             const keyElement = bar.keyElement;
             if (!keyElement) return;
 
-            // Get or calculate key position
             let keyPosition;
             if (keyPositions.has(note.noteNumber)) {
                 keyPosition = keyPositions.get(note.noteNumber);
@@ -1268,85 +1084,66 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
                 keyPositions.set(note.noteNumber, keyPosition);
             }
 
-            // Calculate timing and position
             const noteStart = note.start;
             const noteDuration = note.visualDuration || note.duration;
             const noteEnd = noteStart + noteDuration;
 
-            // Status checks with precise timing
             const isPlaying = noteStart <= currentTime && noteEnd > currentTime;
             const isUpcoming = noteStart > currentTime && noteStart <= currentTime + lookAheadTime;
             const isPartiallyVisible = noteStart < currentTime && noteEnd > currentTime;
-            const isPassed = noteEnd <= currentTime && noteEnd > currentTime - 0.5; // Recently passed notes
+            const isPassed = noteEnd <= currentTime && noteEnd > currentTime - 0.5;
 
-            // Determine visibility
             const isVisible = isPlaying || isUpcoming || isPartiallyVisible || isPassed;
 
             if (isVisible) {
                 element.style.display = 'block';
 
-                // Calculate height based on visual duration
                 const noteHeight = Math.max(MIN_NOTE_HEIGHT, noteDuration * timeToPixelRatio);
 
-                // Calculate vertical position based on timing
                 let topPosition;
 
                 if (isPlaying) {
-                    // Currently playing notes - show the remaining portion
                     const elapsedTime = currentTime - noteStart;
                     const remainingDuration = Math.max(0, noteDuration - elapsedTime);
                     const remainingHeight = remainingDuration * timeToPixelRatio;
 
-                    // Position bottom of note at container bottom, with remaining height
                     topPosition = containerHeight - remainingHeight;
                 }
                 else if (isUpcoming) {
-                    // Upcoming notes - calculate based on time until they play
                     const timeToStart = noteStart - currentTime;
                     const distanceFromBottom = timeToStart * timeToPixelRatio;
 
-                    // Position note at correct distance from bottom
                     topPosition = containerHeight - distanceFromBottom - noteHeight;
                 }
                 else if (isPartiallyVisible) {
-                    // Notes that started before but aren't finished
                     const elapsedTime = currentTime - noteStart;
                     const remainingDuration = Math.max(0, noteDuration - elapsedTime);
                     const remainingHeight = remainingDuration * timeToPixelRatio;
 
-                    // Position at bottom with remaining height
                     topPosition = containerHeight - remainingHeight;
                 }
                 else if (isPassed) {
-                    // Recently finished notes - fade them out
                     const timeSinceEnd = currentTime - noteEnd;
                     const opacity = Math.max(0, 0.5 - timeSinceEnd);
                     element.style.opacity = opacity.toString();
 
-                    // Position fully beneath container
                     topPosition = containerHeight;
                 }
 
-                // Use hardware-accelerated transforms for better performance
                 element.style.transform = `translate3d(${keyPosition.left - (keyPosition.width / 2)}px, ${topPosition}px, 0)`;
                 element.style.width = `${keyPosition.width}px`;
                 element.style.height = `${noteHeight}px`;
 
-                // Mark currently playing notes
                 element.classList.toggle('playing', isPlaying);
 
-                // Apply articulation styling
                 if (note.staccato) {
-                    // Make staccato notes visually shorter but keep timing accurate
                     element.style.height = `${noteHeight * 0.7}px`;
                 }
 
                 if (note.accent) {
-                    // Make accented notes more prominent
                     element.style.opacity = '0.95';
                 }
 
-                // Apply dynamic styling if available
                 if (note.dynamic) {
                     element.classList.add(`dynamic-${note.dynamic}`);
                 }
@@ -1356,10 +1153,8 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         });
     }
 
-    // Remove note bars that are no longer needed
     cleanupInvisibleNoteBars(startTime) {
-        // Use a threshold to keep recently played notes
-        const cleanupThreshold = startTime - 1.0; // Keep notes for 1 second after they finish
+        const cleanupThreshold = startTime - 1.0;
 
         this.noteBars = this.noteBars.filter(bar => {
             const note = bar.note;
@@ -1377,7 +1172,6 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         });
     }
 
-    // Update UI controls to match tempo
     updateTempoControls() {
         const speedControl = this.analyzer.container.querySelector('.piano-speed');
         const speedValue = this.analyzer.container.querySelector('.speed-value');
@@ -1388,7 +1182,6 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         }
     }
 
-    // Update song title in UI
     updateScoreTitle(title) {
         const songNameElement = document.querySelector('.piano-song-name');
         if (songNameElement) {
@@ -1396,7 +1189,6 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         }
     }
 
-    // Show playback controls
     showPlaybackControls() {
         const playbackControls = this.analyzer.container.querySelector('.piano-playback-controls');
         if (playbackControls) {
@@ -1405,28 +1197,22 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
     }
 
     createPianoVisualizationContainer() {
-        // Remove existing container if it exists
         const existingContainer = document.getElementById('piano-visualization-container');
         if (existingContainer) {
             existingContainer.remove();
         }
 
-        // Create a new container that covers the entire screen
         this.pianoVisualizationContainer = document.createElement('div');
         this.pianoVisualizationContainer.id = 'piano-visualization-container';
         this.pianoVisualizationContainer.className = 'piano-visualization-container';
 
-        // Create layout with piano keyboard at bottom, notation at top, and falling notes in between
         this.pianoVisualizationContainer.innerHTML = `
             <div class="notation-container">
-                <!-- Musical notation will be rendered here -->
             </div>
             <div class="note-bar-container">
-                <!-- Falling note bars will be rendered here -->
             </div>
             <div class="piano-keyboard-container">
                 <div class="piano-keyboard">
-                    <!-- Piano keys will be generated here -->
                 </div>
             </div>
             <button class="piano-close-btn" title="Close Visualization">×</button>
@@ -1434,27 +1220,20 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
 
         document.body.appendChild(this.pianoVisualizationContainer);
 
-        // Store references to containers
         this.notationContainer = this.pianoVisualizationContainer.querySelector('.notation-container');
         this.keyboardContainer = this.pianoVisualizationContainer.querySelector('.piano-keyboard-container');
         this.noteBarContainer = this.pianoVisualizationContainer.querySelector('.note-bar-container');
         this.closeButton = this.pianoVisualizationContainer.querySelector('.piano-close-btn');
 
-        // Generate piano keyboard
         this.generatePianoKeyboard();
 
-        // Add close button listener
         this.closeButton.addEventListener('click', () => {
             this.closePianoVisualization();
         });
 
-        // Click to toggle playback on notation
         this.notationContainer.addEventListener('click', (e) => {
-            // We'll handle the click in the mouseup handler instead
-            // to better distinguish between clicks and drags
         });
 
-        // Add drag events to scrub through music with improved click detection
         this.notationContainer.addEventListener('mousedown', (e) => {
             this.startDragging(e);
         });
@@ -1467,33 +1246,27 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             this.stopDragging();
         });
 
-        // Add keyboard shortcut to close visualization
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && this.pianoVisualizationContainer.style.display !== 'none') {
                 this.closePianoVisualization();
             }
         });
 
-        // Handle resize events to ensure proper notation rendering
         window.addEventListener('resize', () => {
             if (this.pianoVisualizationContainer.style.display !== 'none') {
                 this.renderNotation();
-                this.updateNoteBarsPosition(); // Re-position note bars on resize
+                this.updateNoteBarsPosition();
             }
         });
     }
 
     createVisualization() {
-        // Close the music analyzer panel
         this.analyzer.panel.style.display = 'none';
 
-        // Create or get the piano visualization container
         this.createPianoVisualizationContainer();
 
-        // Initial render of notation
         this.renderNotation();
 
-        // Show the visualization container
         this.pianoVisualizationContainer.style.display = 'block';
     }
 
@@ -1501,15 +1274,13 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         const keyboard = this.pianoVisualizationContainer.querySelector('.piano-keyboard');
         keyboard.innerHTML = '';
 
-        // Generate 88 keys (standard piano) - now horizontal layout
         for (let i = 21; i <= 108; i++) {
             const isBlackKey = [1, 3, 6, 8, 10].includes(i % 12);
             const keyElement = document.createElement('div');
             keyElement.className = `piano-key ${isBlackKey ? 'black-key' : 'white-key'}`;
             keyElement.dataset.note = i;
 
-            // Add note name (C4, etc.)
-            if (!isBlackKey && i % 12 === 0) { // C notes
+            if (!isBlackKey && i % 12 === 0) {
                 const octave = Math.floor(i / 12) - 1;
                 const label = document.createElement('div');
                 label.className = 'key-label';
@@ -1524,63 +1295,49 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
     updatePlayback(timestamp) {
         if (!this.isPlaying) return;
 
-        // Calculate elapsed time in seconds (real clock time)
         const deltaTime = (timestamp - this.lastRenderTime) / 1000;
         this.lastRenderTime = timestamp;
 
-        // Just advance by real time - the note durations are already scaled by BPM
         this.currentPosition += deltaTime;
 
-        // Check for tempo changes at the current position
         this.updateTempoAtPosition();
 
-        // Re-render notation periodically (not every frame)
         if (Math.floor(this.currentPosition * 2) > Math.floor((this.currentPosition - deltaTime) * 2)) {
             this.renderNotation();
         }
 
-        // Update note bars
         this.updateNoteBars();
 
-        // Find notes that should be triggered at current position - FIX: use visualDuration for tied notes
         const notesToPlay = this.parsedNotes.filter(
             note => note.start <= this.currentPosition &&
                 note.start + (note.visualDuration || note.duration) > this.currentPosition &&
-                !note.isTiedFromPrevious // Don't highlight tied continuation notes
+                !note.isTiedFromPrevious
         );
 
-        // Highlight keys for notes currently playing
         this.highlightPianoKeys(notesToPlay);
 
-        // Check if we've reached the end of the song
         const lastNote = this.parsedNotes[this.parsedNotes.length - 1];
         if (lastNote && this.currentPosition > lastNote.start + (lastNote.visualDuration || lastNote.duration) + 2) {
-            // End of song, reset to beginning
             this.currentPosition = 0;
         }
 
-        // Continue animation loop
         this.animationFrameId = requestAnimationFrame(this.updatePlayback.bind(this));
     }
 
-    // Add method to track and update tempo at the current playback position
     updateTempoAtPosition() {
         if (!this.tempoChanges || this.tempoChanges.length <= 1) return;
 
-        // Find the latest tempo change that's before or at the current position
-        let currentTempo = this.tempoChanges[0].tempo; // Start with initial tempo
+        let currentTempo = this.tempoChanges[0].tempo;
 
         for (let i = 1; i < this.tempoChanges.length; i++) {
             const tempoChange = this.tempoChanges[i];
             if (tempoChange.position <= this.currentPosition) {
                 currentTempo = tempoChange.tempo;
             } else {
-                // We've gone past the current position
                 break;
             }
         }
 
-        // If tempo has changed, update UI
         if (Math.abs(this.bpm - currentTempo) > 0.01) {
             this.bpm = currentTempo;
             this.updateTempoControls();
@@ -1590,9 +1347,7 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
     renderNotation() {
         if (!this.parsedNotes.length || !this.notationContainer) return;
 
-        // Check if we have Vexflow available for notation
         if (typeof Vex === 'undefined') {
-            // Load Vexflow if not available
             this.loadVexFlow().then(() => {
                 this.renderNotationWithVexFlow();
             }).catch(error => {
@@ -1607,13 +1362,13 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
     loadVexFlow() {
         return new Promise((resolve, reject) => {
             const script = document.createElement('script');
-            // Use CDN VexFlow library instead of local
             script.src = 'https://cdn.jsdelivr.net/npm/vexflow@4.2.2/build/cjs/vexflow.js';
             script.onload = resolve;
             script.onerror = reject;
             document.head.appendChild(script);
         });
     }
+
     renderNotationWithVexFlow() {
         if (!this.parsedNotes.length || !this.notationContainer) return;
 
@@ -1627,6 +1382,35 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             svgContainer.style.width = '100%';
             svgContainer.style.height = '100%';
             this.notationContainer.appendChild(svgContainer);
+
+            // Create page navigation controls
+            const pageControls = document.createElement('div');
+            pageControls.className = 'notation-page-controls';
+
+            const prevButton = document.createElement('button');
+            prevButton.className = 'page-nav prev-page';
+            prevButton.innerHTML = '&laquo; Prev';
+            prevButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.goToPreviousPage();
+            });
+
+            const pageDisplay = document.createElement('span');
+            pageDisplay.className = 'page-display';
+
+            const nextButton = document.createElement('button');
+            nextButton.className = 'page-nav next-page';
+            nextButton.innerHTML = 'Next &raquo;';
+            nextButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.goToNextPage();
+            });
+
+            pageControls.appendChild(prevButton);
+            pageControls.appendChild(pageDisplay);
+            pageControls.appendChild(nextButton);
+
+            this.notationContainer.appendChild(pageControls);
 
             // Initialize VexFlow
             const VF = Vex.Flow;
@@ -1653,446 +1437,635 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
                 svgElement.style.display = 'block';
             }
 
-            // Calculate visible window to show a musically-relevant portion
-            // Find current measure based on playback position with improved accuracy
-            let currentMeasureIndex = 0;
-            for (let i = 0; i < this.measureData.length; i++) {
-                if (this.scoreModel.currentPosition >= this.measureData[i].startPosition) {
-                    currentMeasureIndex = i;
-                } else {
-                    break;
-                }
+            // Calculate current playback measure
+            let currentMeasureIndex = this.findCurrentMeasureIndex();
+
+            // Calculate optimal measures per page based on tempo and note density
+            this.calculateOptimalMeasuresPerPage(currentMeasureIndex);
+
+            // Calculate total pages
+            this.totalPages = Math.ceil(this.measureData.length / this.measuresPerPage);
+
+            // Determine the correct page based on current position
+            const targetPage = Math.floor(currentMeasureIndex / this.measuresPerPage);
+            if (this.currentPage !== targetPage) {
+                this.currentPage = targetPage;
             }
 
-            // Dynamic calculation of visible measures based on screen size and time signature
-            const visibleMeasures = Math.max(2, Math.min(4, Math.floor(containerWidth / 300)));
-            const measuresPerSystem = Math.min(visibleMeasures, 2); // At most 2 measures per line
+            // Calculate start and end measure indices for current page
+            const startMeasureIndex = this.currentPage * this.measuresPerPage;
+            const endMeasureIndex = Math.min(
+                this.measureData.length - 1,
+                startMeasureIndex + this.measuresPerPage - 1
+            );
 
-            // Calculate start and end measure indices with better centering on current position
-            const startMeasureIndex = Math.max(0, currentMeasureIndex - Math.floor(visibleMeasures / 2));
-            const endMeasureIndex = Math.min(this.measureData.length - 1, startMeasureIndex + visibleMeasures - 1);
+            // Update page display
+            pageDisplay.textContent = `Page ${this.currentPage + 1} of ${this.totalPages}`;
+            prevButton.disabled = this.currentPage === 0;
+            nextButton.disabled = this.currentPage >= this.totalPages - 1;
 
-            // Get time bounds from measure data with precise boundary handling
+            // Get time bounds from measure data
             const startPosition = this.measureData[startMeasureIndex].startPosition;
             const endPosition = endMeasureIndex < this.measureData.length - 1
                 ? this.measureData[endMeasureIndex + 1].startPosition
-                : startPosition + this.measureData[endMeasureIndex].durationSeconds + 0.01; // Add a tiny buffer
+                : startPosition + this.measureData[endMeasureIndex].durationSeconds;
 
-            console.log(`Showing measures ${startMeasureIndex} to ${endMeasureIndex}, time: ${startPosition.toFixed(2)}-${endPosition.toFixed(2)}`);
+            // Layout settings for a single staff system
+            const staffHeight = 80;
+            const staffDistance = 120; // Distance between treble and bass staves
+            const measureWidth = (width - 60) / this.measuresPerPage;
 
-            // Calculate staff height and spacing based on container size
-            const staffHeight = Math.min(65, Math.floor(containerHeight / 6));
-            const staffSpacing = Math.min(100, Math.floor(containerHeight / 3));
-            const measureWidth = (width - 80) / measuresPerSystem;
+            // Y position for the single system
+            const systemY = 20;
+            const staves = { treble: [], bass: [], measureIndices: [] };
 
-            // Create staves for each system with improved layout calculation
-            const systems = Math.ceil((endMeasureIndex - startMeasureIndex + 1) / measuresPerSystem);
-            const staves = [];
+            // Create a single system with treble and bass staves for each measure
+            for (let measurePos = 0; measurePos < this.measuresPerPage; measurePos++) {
+                const measureIndex = startMeasureIndex + measurePos;
+                if (measureIndex > endMeasureIndex) break;
 
-            for (let systemIndex = 0; systemIndex < Math.min(systems, 3); systemIndex++) { // Limit to 3 systems max
-                const systemY = 20 + systemIndex * staffSpacing * 2;
+                const xPosition = 20 + measurePos * measureWidth;
 
-                // Create treble and bass staves for this system
-                for (let measurePos = 0; measurePos < measuresPerSystem; measurePos++) {
-                    const measureIndex = startMeasureIndex + (systemIndex * measuresPerSystem) + measurePos;
-                    if (measureIndex > endMeasureIndex) continue;
+                // Create treble and bass staves for this measure
+                const trebleStave = new VF.Stave(xPosition, systemY, measureWidth);
+                const bassStave = new VF.Stave(xPosition, systemY + staffDistance, measureWidth);
 
-                    const xPosition = 20 + measurePos * measureWidth;
+                // Add clefs and time signature only to first measure on the page
+                if (measurePos === 0) {
+                    trebleStave.addClef("treble");
+                    bassStave.addClef("bass");
 
-                    // Create the staves at the correct positions
-                    if (measurePos === 0 || systemIndex === 0) {
-                        // Create a new system of staves
-                        const trebleStave = new VF.Stave(xPosition, systemY, measureWidth);
-                        const bassStave = new VF.Stave(xPosition, systemY + staffHeight, measureWidth);
-
-                        // Add clefs and time signature only to first measure of each system
-                        if (measurePos === 0) {
-                            trebleStave.addClef("treble");
-                            bassStave.addClef("bass");
-
-                            // Add time signature if it changed at this measure or it's the first measure
-                            if (measureIndex === 0 || this.measureData[measureIndex].hasTimeChange) {
-                                trebleStave.addTimeSignature(`${this.timeSignatureNumerator}/${this.timeSignatureDenominator}`);
-                                bassStave.addTimeSignature(`${this.timeSignatureNumerator}/${this.timeSignatureDenominator}`);
-                            }
-                        }
-
-                        trebleStave.setContext(context).draw();
-                        bassStave.setContext(context).draw();
-
-                        // If this is a new system, create the array structure
-                        if (measurePos === 0) {
-                            staves.push({
-                                treble: [trebleStave],
-                                bass: [bassStave],
-                                measureIndices: [measureIndex]
-                            });
-                        } else {
-                            // Add to existing system
-                            staves[systemIndex].treble.push(trebleStave);
-                            staves[systemIndex].bass.push(bassStave);
-                            staves[systemIndex].measureIndices.push(measureIndex);
-                        }
-                    } else {
-                        // Add to the current system
-                        const trebleStave = new VF.Stave(xPosition, systemY, measureWidth);
-                        const bassStave = new VF.Stave(xPosition, systemY + staffHeight, measureWidth);
-
-                        // Add time signature if it changed at this measure
-                        if (this.measureData[measureIndex].hasTimeChange) {
-                            trebleStave.addTimeSignature(`${this.timeSignatureNumerator}/${this.timeSignatureDenominator}`);
-                            bassStave.addTimeSignature(`${this.timeSignatureNumerator}/${this.timeSignatureDenominator}`);
-                        }
-
-                        trebleStave.setContext(context).draw();
-                        bassStave.setContext(context).draw();
-
-                        staves[systemIndex].treble.push(trebleStave);
-                        staves[systemIndex].bass.push(bassStave);
-                        staves[systemIndex].measureIndices.push(measureIndex);
+                    // Add time signature if it changed at this measure or it's the first measure
+                    if (measureIndex === 0 || this.measureData[measureIndex].hasTimeChange) {
+                        trebleStave.addTimeSignature(
+                            `${this.timeSignatureNumerator}/${this.timeSignatureDenominator}`
+                        );
+                        bassStave.addTimeSignature(
+                            `${this.timeSignatureNumerator}/${this.timeSignatureDenominator}`
+                        );
+                    }
+                } else {
+                    // For internal measures, check if time signature changed
+                    if (this.measureData[measureIndex].hasTimeChange) {
+                        trebleStave.addTimeSignature(
+                            `${this.timeSignatureNumerator}/${this.timeSignatureDenominator}`
+                        );
+                        bassStave.addTimeSignature(
+                            `${this.timeSignatureNumerator}/${this.timeSignatureDenominator}`
+                        );
                     }
                 }
+
+                // Connect staves with a brace and line at the beginning of the system
+                if (measurePos === 0) {
+                    const lineLeft = new VF.StaveConnector(trebleStave, bassStave).setType(1);
+                    const braceLeft = new VF.StaveConnector(trebleStave, bassStave).setType(3);
+                    lineLeft.setContext(context).draw();
+                    braceLeft.setContext(context).draw();
+                }
+
+                // Draw the staves
+                trebleStave.setContext(context).draw();
+                bassStave.setContext(context).draw();
+
+                // Store stave references
+                staves.treble.push(trebleStave);
+                staves.bass.push(bassStave);
+                staves.measureIndices.push(measureIndex);
             }
 
-            // Filter notes within current view window with improved boundary handling
+            // FIX: Improved filtering of notes within the current page's view window
+            // Make sure we get all notes for measures on this page
             const visibleNotes = this.parsedNotes.filter(note => {
-                // Use visual duration for tied notes
+                // Get note duration (consider visual duration for tied notes)
                 const noteDuration = note.visualDuration || note.duration;
                 const noteEnd = note.start + noteDuration;
 
-                // Include notes that:
+                // Include a note if:
                 return (
-                    // 1. Start within visible window
+                    // 1. The note starts within our page's time window
                     (note.start >= startPosition && note.start < endPosition) ||
-                    // 2. Are currently playing (started before current window but still active)
+
+                    // 2. The note started before but extends into our window
                     (note.start < startPosition && noteEnd > startPosition) ||
-                    // 3. End within visible window (span across boundaries)
-                    (note.start < endPosition && noteEnd > startPosition && noteEnd <= endPosition)
+
+                    // 3. The note spans across our window
+                    (note.start < endPosition && noteEnd > startPosition)
                 );
             });
 
+            console.log(`Found ${visibleNotes.length} notes for the current page (from ${startPosition.toFixed(2)}s to ${endPosition.toFixed(2)}s)`);
+
             // Group notes by measure for more accurate positioning
             const measureVisibleNotes = [];
-
-            // Initialize array for each measure in our view
             for (let i = 0; i <= endMeasureIndex - startMeasureIndex; i++) {
                 measureVisibleNotes[i] = [];
             }
 
-            // Sort notes into their respective measures with improved boundary handling
+            // FIX: Sort notes into measures with better boundary handling
             visibleNotes.forEach(note => {
-                // Find which measure this note belongs to
-                let measureIndex = startMeasureIndex;
-                for (let i = startMeasureIndex; i <= endMeasureIndex; i++) {
-                    const measureStartTime = this.measureData[i].startPosition;
-                    const measureEndTime = i < this.measureData.length - 1
-                        ? this.measureData[i + 1].startPosition
-                        : measureStartTime + this.measureData[i].durationSeconds;
+                // FIX: More robust method to assign notes to measures
+                let assignedToMeasure = false;
 
-                    // Note belongs to this measure if:
-                    // 1. It starts within the measure boundaries
-                    // 2. It starts before the measure but ends within it
-                    // 3. It's the first measure and the note starts before all measures
-                    if ((note.start >= measureStartTime && note.start < measureEndTime) ||
-                        (note.start < measureStartTime &&
-                            note.start + (note.visualDuration || note.duration) > measureStartTime &&
-                            note.start + (note.visualDuration || note.duration) <= measureEndTime) ||
-                        (i === startMeasureIndex && note.start < measureStartTime)) {
-                        measureIndex = i;
-                        break;
-                    }
-                }
-
-                if (measureIndex >= startMeasureIndex && measureIndex <= endMeasureIndex) {
-                    measureVisibleNotes[measureIndex - startMeasureIndex].push(note);
-                }
-            });
-
-            // For each system, create separate treble and bass voices with accurate timing
-            staves.forEach((system, systemIndex) => {
-                system.measureIndices.forEach((measureIndex, measurePosition) => {
-                    // Skip if we're past our visible range
-                    if (measureIndex > endMeasureIndex) return;
-
-                    // Get notes for this measure
-                    const measureNotesIndex = measureIndex - startMeasureIndex;
-                    if (!measureVisibleNotes[measureNotesIndex]) return;
-
-                    // Separate into treble and bass
-                    const measureNotes = measureVisibleNotes[measureNotesIndex];
-
-                    // Skip if no notes in this measure
-                    if (!measureNotes.length) return;
-
-                    const trebleNotes = measureNotes.filter(note => note.noteNumber >= 60 || note.staff === 1);
-                    const bassNotes = measureNotes.filter(note => note.noteNumber < 60 || note.staff === 2);
-
-                    // Get measure start and end time with precise boundary handling
+                // First, try to find the exact measure this note belongs to
+                for (let i = 0; i <= endMeasureIndex - startMeasureIndex; i++) {
+                    const measureIndex = startMeasureIndex + i;
                     const measureStartTime = this.measureData[measureIndex].startPosition;
                     const measureEndTime = measureIndex < this.measureData.length - 1
                         ? this.measureData[measureIndex + 1].startPosition
                         : measureStartTime + this.measureData[measureIndex].durationSeconds;
 
-                    // Get correct stave for this measure position
-                    const trebleStave = system.treble[measurePosition];
-                    const bassStave = system.bass[measurePosition];
+                    // Note starts in this measure
+                    if (note.start >= measureStartTime && note.start < measureEndTime) {
+                        measureVisibleNotes[i].push(note);
+                        assignedToMeasure = true;
+                        break;
+                    }
 
-                    // Group notes by time (for chord formation)
-                    const trebleNotesByTime = this.groupNotesByTime(trebleNotes);
-                    const bassNotesByTime = this.groupNotesByTime(bassNotes);
+                    // Note started before but extends into this measure
+                    const noteDuration = note.visualDuration || note.duration;
+                    const noteEnd = note.start + noteDuration;
 
-                    // Create VexFlow notes for this measure with accurate timing
-                    const trebleStaveNotes = this.createVexFlowNotes(
-                        trebleNotesByTime, "treble", measureStartTime, measureEndTime
-                    );
-                    const bassStaveNotes = this.createVexFlowNotes(
-                        bassNotesByTime, "bass", measureStartTime, measureEndTime
-                    );
+                    if (note.start < measureStartTime && noteEnd > measureStartTime) {
+                        measureVisibleNotes[i].push(note);
+                        assignedToMeasure = true;
+                        break;
+                    }
+                }
 
-                    // Format and draw voices for each stave
-                    if (trebleStaveNotes.length > 0) {
+                // Fallback: if note wasn't assigned to any measure but is within our time range,
+                // put it in the first measure (this prevents notes from disappearing)
+                if (!assignedToMeasure && note.start >= startPosition && note.start < endPosition) {
+                    measureVisibleNotes[0].push(note);
+                }
+            });
+
+            // Process each measure and draw the notes
+            staves.measureIndices.forEach((measureIndex, measurePosition) => {
+                // Get notes for this measure
+                const measureNotesIndex = measureIndex - startMeasureIndex;
+                if (measureNotesIndex < 0 || measureNotesIndex >= measureVisibleNotes.length) return;
+
+                const measureNotes = measureVisibleNotes[measureNotesIndex];
+                console.log(`Measure ${measureIndex}: ${measureNotes.length} notes`);
+
+                // Skip if no notes in this measure
+                if (!measureNotes || !measureNotes.length) return;
+
+                // Separate notes into treble and bass
+                const trebleNotes = measureNotes.filter(note => note.noteNumber >= 60 || note.staff === 1);
+                const bassNotes = measureNotes.filter(note => note.noteNumber < 60 || note.staff === 2);
+
+                // Get measure start and end time
+                const measureStartTime = this.measureData[measureIndex].startPosition;
+                const measureEndTime = measureIndex < this.measureData.length - 1
+                    ? this.measureData[measureIndex + 1].startPosition
+                    : measureStartTime + this.measureData[measureIndex].durationSeconds;
+
+                // Get the staves for this measure position
+                const trebleStave = staves.treble[measurePosition];
+                const bassStave = staves.bass[measurePosition];
+
+                if (!trebleStave || !bassStave) {
+                    console.warn(`Missing stave for measure ${measureIndex} at position ${measurePosition}`);
+                    return;
+                }
+
+                // Group notes by time for chord formation
+                const trebleNotesByTime = this.groupNotesByTime(trebleNotes);
+                const bassNotesByTime = this.groupNotesByTime(bassNotes);
+
+                // FIX: Debug chord grouping
+                console.log(`Treble chord groups: ${trebleNotesByTime.length}, Bass chord groups: ${bassNotesByTime.length}`);
+
+                // Create VexFlow notes with improved error handling
+                const trebleStaveNotes = this.createVexFlowNotes(
+                    trebleNotesByTime, "treble", measureStartTime, measureEndTime
+                );
+
+                const bassStaveNotes = this.createVexFlowNotes(
+                    bassNotesByTime, "bass", measureStartTime, measureEndTime
+                );
+
+                // Format and draw voices for treble stave if we have notes
+                if (trebleStaveNotes.length > 0) {
+                    try {
                         const trebleVoice = new VF.Voice({
                             num_beats: this.timeSignatureNumerator,
-                            beat_value: this.timeSignatureDenominator
+                            beat_value: this.timeSignatureDenominator,
+                            resolution: VF.RESOLUTION
                         }).setMode(VF.Voice.Mode.SOFT);
 
                         trebleVoice.addTickables(trebleStaveNotes);
-                        new VF.Formatter().joinVoices([trebleVoice]).format([trebleVoice], measureWidth - 30);
-                        trebleVoice.draw(context, trebleStave);
-                    }
 
-                    if (bassStaveNotes.length > 0) {
+                        new VF.Formatter()
+                            .joinVoices([trebleVoice])
+                            .format([trebleVoice], measureWidth - 30);
+
+                        trebleVoice.draw(context, trebleStave);
+                    } catch (e) {
+                        console.error("Error rendering treble notes:", e);
+                    }
+                }
+
+                // Format and draw voices for bass stave if we have notes
+                if (bassStaveNotes.length > 0) {
+                    try {
                         const bassVoice = new VF.Voice({
                             num_beats: this.timeSignatureNumerator,
-                            beat_value: this.timeSignatureDenominator
+                            beat_value: this.timeSignatureDenominator,
+                            resolution: VF.RESOLUTION
                         }).setMode(VF.Voice.Mode.SOFT);
 
                         bassVoice.addTickables(bassStaveNotes);
-                        new VF.Formatter().joinVoices([bassVoice]).format([bassVoice], measureWidth - 30);
+
+                        new VF.Formatter()
+                            .joinVoices([bassVoice])
+                            .format([bassVoice], measureWidth - 30);
+
                         bassVoice.draw(context, bassStave);
+                    } catch (e) {
+                        console.error("Error rendering bass notes:", e);
                     }
-                });
+                }
             });
 
-            // Draw playhead line at current position with enhanced accuracy
+            // Draw playhead at current position
             this.drawPlayheadAtCurrentPosition(context, staves, startMeasureIndex, endMeasureIndex);
 
-            // Add position and info overlay with enhanced details
+            // Add position and info overlay
             this.addNotationOverlays(svgContainer, startPosition, endPosition);
 
         } catch (error) {
             console.error('Error rendering notation:', error);
-            // Fallback to simpler notation if VexFlow rendering fails
+            // Fallback to simpler notation
             this.renderSimpleNotation();
         }
     }
 
-    // Improved method to create VexFlow notes from grouped notes
+    // FIX: Improved method to create VexFlow notes from grouped notes with better error handling
     createVexFlowNotes(groupedNotes, clef, measureStartTime, measureEndTime) {
+        if (!groupedNotes || groupedNotes.length === 0) return [];
+
         const vfNotes = [];
         const VF = Vex.Flow;
 
         // Calculate measure duration in seconds
         const measureDuration = measureEndTime - measureStartTime;
+        if (measureDuration <= 0) {
+            console.warn("Invalid measure duration", { measureStartTime, measureEndTime });
+            return [];
+        }
 
         // Calculate beats per measure from time signature
-        const beatsPerMeasure = this.timeSignatureNumerator;
+        const beatsPerMeasure = this.timeSignatureNumerator || 4;
 
-        // Helper to convert time position to beats
+        // Helper to convert time position to beats with bounds checking
         const timeToBeats = (timePosition) => {
             // Position within measure (0-1)
-            const posInMeasure = (timePosition - measureStartTime) / measureDuration;
+            const posInMeasure = Math.max(0, Math.min(1, (timePosition - measureStartTime) / measureDuration));
             // Convert to beat position
             return beatsPerMeasure * posInMeasure;
         };
 
-        groupedNotes.forEach(noteGroup => {
-            if (noteGroup.length === 0) return;
-
-            // Use the first note's properties for the group
-            const firstNote = noteGroup[0];
-
-            // Skip notes completely outside our measure
-            if (firstNote.start >= measureEndTime ||
-                firstNote.start + (firstNote.visualDuration || firstNote.duration) <= measureStartTime) {
-                return;
-            }
-
-            // Adjust start time if note started before measure
-            let effectiveStartTime = Math.max(firstNote.start, measureStartTime);
-
-            // Get note positions in beats within the measure
-            const beatPosition = timeToBeats(effectiveStartTime);
-
-            // Calculate how much of the note is visible in this measure
-            let noteDuration = firstNote.visualDuration || firstNote.duration;
-
-            // If note extends beyond measure end, clip it
-            if (effectiveStartTime + noteDuration > measureEndTime) {
-                noteDuration = measureEndTime - effectiveStartTime;
-            }
-
-            // Convert note duration from seconds to beats
-            const beatDuration = timeToBeats(effectiveStartTime + noteDuration) - beatPosition;
-
-            // Skip notes that would render too small
-            if (beatDuration < 0.01) return;
-
-            // Get all note names for this chord
-            const noteKeys = noteGroup.map(note => {
-                // Format note name with accidentals
-                let noteName = note.step.toLowerCase();
-                if (note.alter === 1) noteName += "#";
-                else if (note.alter === -1) noteName += "b";
-                return `${noteName}/${note.octave}`;
-            });
-
-            // Determine best duration (quarter, eighth, etc.) to display
-            // This mapping is approximate since we're adapting from continuous time to discrete notation
-            let vfDuration;
-            if (beatDuration >= 4) vfDuration = "w"; // whole note
-            else if (beatDuration >= 3) vfDuration = "hd"; // dotted half
-            else if (beatDuration >= 2) vfDuration = "h"; // half note
-            else if (beatDuration >= 1.5) vfDuration = "qd"; // dotted quarter
-            else if (beatDuration >= 1) vfDuration = "q"; // quarter
-            else if (beatDuration >= 0.75) vfDuration = "8d"; // dotted eighth
-            else if (beatDuration >= 0.5) vfDuration = "8"; // eighth
-            else if (beatDuration >= 0.25) vfDuration = "16"; // sixteenth
-            else vfDuration = "32"; // thirty-second
+        // Process each note group
+        for (let groupIndex = 0; groupIndex < groupedNotes.length; groupIndex++) {
+            const noteGroup = groupedNotes[groupIndex];
+            if (!noteGroup || noteGroup.length === 0) continue;
 
             try {
-                // Create the note
-                const vfNote = new VF.StaveNote({
-                    clef: clef,
-                    keys: noteKeys,
-                    duration: vfDuration
+                // Use the first note's properties for the group
+                const firstNote = noteGroup[0];
+                if (!firstNote) continue;
+
+                // Skip notes completely outside our measure
+                if (firstNote.start >= measureEndTime) continue;
+
+                const noteDuration = firstNote.visualDuration || firstNote.duration;
+                const noteEnd = firstNote.start + noteDuration;
+                if (noteEnd <= measureStartTime) continue;
+
+                // Adjust start time if note started before measure
+                let effectiveStartTime = Math.max(firstNote.start, measureStartTime);
+
+                // Get note positions in beats within the measure
+                const beatPosition = timeToBeats(effectiveStartTime);
+
+                // Calculate how much of the note is visible in this measure
+                let visibleDuration = Math.min(
+                    noteEnd,
+                    measureEndTime
+                ) - effectiveStartTime;
+
+                // Convert note duration from seconds to beats
+                const beatDuration = timeToBeats(effectiveStartTime + visibleDuration) - beatPosition;
+
+                // Skip notes that would render too small
+                if (beatDuration < 0.01) continue;
+
+                // Get all note names for this chord
+                const noteKeys = noteGroup.map(note => {
+                    // Format note name with accidentals
+                    let noteName = note.step.toLowerCase();
+                    if (note.alter === 1) noteName += "#";
+                    else if (note.alter === -1) noteName += "b";
+                    return `${noteName}/${note.octave}`;
                 });
 
-                // Add accidentals
-                noteGroup.forEach((note, i) => {
-                    if (note.alter === 1) vfNote.addAccidental(i, new VF.Accidental("#"));
-                    else if (note.alter === -1) vfNote.addAccidental(i, new VF.Accidental("b"));
-                });
+                // Determine best duration (quarter, eighth, etc.)
+                let vfDuration;
+                if (beatDuration >= 4) vfDuration = "w"; // whole note
+                else if (beatDuration >= 3) vfDuration = "hd"; // dotted half
+                else if (beatDuration >= 2) vfDuration = "h"; // half note
+                else if (beatDuration >= 1.5) vfDuration = "qd"; // dotted quarter
+                else if (beatDuration >= 1) vfDuration = "q"; // quarter
+                else if (beatDuration >= 0.75) vfDuration = "8d"; // dotted eighth
+                else if (beatDuration >= 0.5) vfDuration = "8"; // eighth
+                else if (beatDuration >= 0.25) vfDuration = "16"; // sixteenth
+                else vfDuration = "32"; // thirty-second
 
-                // Add articulations to the first note in the group
-                if (firstNote.staccato) vfNote.addArticulation(0, new VF.Articulation('a.').setPosition(3));
-                if (firstNote.accent) vfNote.addArticulation(0, new VF.Articulation('a>').setPosition(3));
-                if (firstNote.tenuto) vfNote.addArticulation(0, new VF.Articulation('a-').setPosition(3));
+                try {
+                    // Create the note
+                    const vfNote = new VF.StaveNote({
+                        clef: clef,
+                        keys: noteKeys,
+                        duration: vfDuration
+                    });
 
-                // Highlight currently playing notes
-                const isNowPlaying = noteGroup.some(note => {
-                    const noteDuration = note.visualDuration || note.duration;
-                    return note.start <= this.currentPosition &&
-                        (note.start + noteDuration) > this.currentPosition;
-                });
+                    // Add accidentals
+                    noteGroup.forEach((note, i) => {
+                        if (note.alter === 1) vfNote.addAccidental(i, new VF.Accidental("#"));
+                        else if (note.alter === -1) vfNote.addAccidental(i, new VF.Accidental("b"));
+                    });
 
-                if (isNowPlaying) {
-                    vfNote.setStyle({
-                        fillStyle: 'rgba(0, 150, 215, 0.8)',
-                        strokeStyle: 'rgba(0, 150, 215, 0.9)'
+                    // Add articulations to the first note in the group
+                    if (firstNote.staccato) vfNote.addArticulation(0, new VF.Articulation('a.').setPosition(3));
+                    if (firstNote.accent) vfNote.addArticulation(0, new VF.Articulation('a>').setPosition(3));
+                    if (firstNote.tenuto) vfNote.addArticulation(0, new VF.Articulation('a-').setPosition(3));
+
+                    // Highlight currently playing notes
+                    const isNowPlaying = noteGroup.some(note => {
+                        const duration = note.visualDuration || note.duration;
+                        return note.start <= this.currentPosition &&
+                            (note.start + duration) > this.currentPosition;
+                    });
+
+                    if (isNowPlaying) {
+                        vfNote.setStyle({
+                            fillStyle: 'rgba(0, 150, 215, 0.8)',
+                            strokeStyle: 'rgba(0, 150, 215, 0.9)'
+                        });
+                    }
+
+                    vfNotes.push(vfNote);
+                } catch (e) {
+                    console.warn('Error creating note:', e, {
+                        keys: noteKeys,
+                        duration: vfDuration,
+                        beatDuration
                     });
                 }
-
-                vfNotes.push(vfNote);
-            } catch (e) {
-                console.warn('Error creating note:', e, {
-                    keys: noteKeys,
-                    duration: vfDuration,
-                    beatDuration
-                });
+            } catch (err) {
+                console.error("Error processing note group:", err);
             }
-        });
+        }
 
         return vfNotes;
     }
 
-    // Improved helper to add information overlays
-    addNotationOverlays(svgContainer, startPosition, endPosition) {
-        // Find current measure
-        let currentMeasure = 1;
-        let currentBeat = 1;
+    // FIX: Improved helper method to group notes by start time for chord creation
+    groupNotesByTime(notes) {
+        if (!notes || notes.length === 0) return [];
 
-        // Get beatmap from measure data
-        for (const measure of this.measureData) {
-            if (this.currentPosition >= measure.startPosition) {
-                currentMeasure = measure.number;
+        const notesByTime = new Map();
 
-                // Calculate current beat within measure
-                if (measure.startPosition <= this.currentPosition) {
-                    const nextMeasureStart = measure.index < this.measureData.length - 1
-                        ? this.measureData[measure.index + 1].startPosition
-                        : measure.startPosition + measure.durationSeconds;
+        // Group notes by similar start times
+        notes.forEach(note => {
+            if (!note) return;
 
-                    const posInMeasure = (this.currentPosition - measure.startPosition) /
-                        (nextMeasureStart - measure.startPosition);
+            // Round to 3 decimal places for better grouping of simultaneous notes
+            const timeKey = note.start.toFixed(3);
+            if (!notesByTime.has(timeKey)) {
+                notesByTime.set(timeKey, []);
+            }
+            notesByTime.get(timeKey).push(note);
+        });
 
-                    currentBeat = Math.floor(posInMeasure * this.timeSignatureNumerator) + 1;
-                    if (currentBeat > this.timeSignatureNumerator) currentBeat = this.timeSignatureNumerator;
-                }
+        // Convert map to sorted array of note groups
+        return Array.from(notesByTime.entries())
+            .sort((a, b) => parseFloat(a[0]) - parseFloat(b[0]))
+            .map(entry => entry[1]);
+    }
+
+    // FIX: Render a simple notation view as fallback if VexFlow fails
+    renderSimpleNotation() {
+        if (!this.notationContainer || !this.parsedNotes.length) return;
+
+        // Clean container
+        this.notationContainer.innerHTML = '';
+
+        // Create simple notation display
+        const simpleNotation = document.createElement('div');
+        simpleNotation.className = 'simple-notation';
+
+        // Calculate current page bounds
+        const startMeasureIndex = this.currentPage * this.measuresPerPage;
+        const endMeasureIndex = Math.min(
+            this.measureData.length - 1,
+            startMeasureIndex + this.measuresPerPage - 1
+        );
+
+        const startPosition = this.measureData[startMeasureIndex].startPosition;
+        const endPosition = endMeasureIndex < this.measureData.length - 1
+            ? this.measureData[endMeasureIndex + 1].startPosition
+            : startPosition + this.measureData[endMeasureIndex].durationSeconds;
+
+        // Add page controls
+        const pageControls = document.createElement('div');
+        pageControls.className = 'simple-page-controls';
+        pageControls.innerHTML = `
+            <button class="page-nav prev-page">&laquo; Previous</button>
+            <span>Page ${this.currentPage + 1} of ${this.totalPages}</span>
+            <button class="page-nav next-page">Next &raquo;</button>
+        `;
+
+        // Add event listeners
+        pageControls.querySelector('.prev-page').addEventListener('click', () => this.goToPreviousPage());
+        pageControls.querySelector('.next-page').addEventListener('click', () => this.goToNextPage());
+
+        // Add header with position info
+        simpleNotation.innerHTML = `
+            <h3>Notes for Measures ${startMeasureIndex + 1}-${endMeasureIndex + 1}</h3>
+            <div class="position-info">Position: ${this.currentPosition.toFixed(2)}s</div>
+            <div class="playback-status">${this.isPlaying ? 'Playing' : 'Paused'}</div>
+        `;
+
+        // Add the page controls
+        simpleNotation.appendChild(pageControls);
+
+        // Filter notes for this page
+        const visibleNotes = this.parsedNotes.filter(note => {
+            const noteDuration = note.visualDuration || note.duration;
+            return (note.start >= startPosition && note.start < endPosition) ||
+                (note.start < startPosition && note.start + noteDuration > startPosition);
+        }).sort((a, b) => a.start - b.start);
+
+        // Create list of notes
+        const notesList = document.createElement('ul');
+
+        visibleNotes.forEach(note => {
+            const noteName = `${note.step}${note.alter === 1 ? '#' : note.alter === -1 ? 'b' : ''}${note.octave}`;
+            const isPlaying = note.start <= this.currentPosition &&
+                (note.start + (note.visualDuration || note.duration) > this.currentPosition);
+
+            const item = document.createElement('li');
+            item.className = isPlaying ? 'playing-note' : '';
+            item.innerHTML = `
+                <span>${noteName} (${note.staff === 1 ? 'Treble' : 'Bass'})</span>
+                <span class="note-timing">${note.start.toFixed(2)}s - ${(note.start + (note.visualDuration || note.duration)).toFixed(2)}s</span>
+            `;
+
+            notesList.appendChild(item);
+        });
+
+        simpleNotation.appendChild(notesList);
+        this.notationContainer.appendChild(simpleNotation);
+    }
+
+    findCurrentMeasureIndex() {
+        let currentMeasureIndex = 0;
+        const currentPosition = this.scoreModel.currentPosition;
+
+        for (let i = 0; i < this.measureData.length; i++) {
+            if (currentPosition >= this.measureData[i].startPosition) {
+                currentMeasureIndex = i;
             } else {
                 break;
             }
         }
 
-        // Add position and playback info panel with more details
-        const infoPanel = document.createElement('div');
-        infoPanel.className = 'notation-info-panel';
-        infoPanel.innerHTML = `
-            <div class="position-info">Position: ${this.currentPosition.toFixed(1)}s</div>
-            <div class="measure-info">Measure: ${currentMeasure}, Beat: ${currentBeat}</div>
-            <div class="speed-info">Tempo: ${this.bpm} BPM</div>
-            <div class="playback-status">${this.isPlaying ? 'Playing' : 'Paused'}</div>
-            <div class="view-info">Viewing: ${startPosition.toFixed(1)}s - ${endPosition.toFixed(1)}s</div>
-        `;
-
-        svgContainer.appendChild(infoPanel);
+        return currentMeasureIndex;
     }
 
-    // New method to accurately draw the playhead at the current position
+    calculateOptimalMeasuresPerPage(currentMeasureIndex) {
+        let optimalMeasures = 2;
+
+        const containerWidth = this.notationContainer?.clientWidth || 800;
+
+        const basePerPage = Math.max(1, Math.floor(containerWidth / 300));
+
+        try {
+            const startMeasure = currentMeasureIndex;
+            const endMeasure = Math.min(this.measureData.length - 1, startMeasure + 4);
+
+            let totalNotes = 0;
+            let totalMeasures = 0;
+
+            for (let i = startMeasure; i <= endMeasure; i++) {
+                const measureStart = this.measureData[i].startPosition;
+                const measureEnd = i < this.measureData.length - 1
+                    ? this.measureData[i + 1].startPosition
+                    : measureStart + this.measureData[i].durationSeconds;
+
+                const notesInMeasure = this.parsedNotes.filter(note =>
+                    (note.start >= measureStart && note.start < measureEnd) ||
+                    (note.start < measureStart && note.start + (note.visualDuration || note.duration) > measureStart)
+                ).length;
+
+                totalNotes += notesInMeasure;
+                totalMeasures++;
+            }
+
+            const averageNotesPerMeasure = totalMeasures > 0 ? totalNotes / totalMeasures : 0;
+
+            if (averageNotesPerMeasure > 16) {
+                optimalMeasures = Math.max(1, basePerPage - 1);
+            } else if (averageNotesPerMeasure > 8) {
+                optimalMeasures = basePerPage;
+            } else {
+                optimalMeasures = basePerPage + 1;
+            }
+
+            const currentTempo = this.bpm;
+            if (currentTempo > 160) {
+                optimalMeasures = Math.max(1, optimalMeasures - 1);
+            } else if (currentTempo < 80) {
+                optimalMeasures = optimalMeasures + 1;
+            }
+
+            optimalMeasures = Math.min(6, Math.max(1, optimalMeasures));
+
+        } catch (error) {
+            console.warn('Error calculating optimal measures per page', error);
+        }
+
+        this.measuresPerPage = optimalMeasures;
+        return optimalMeasures;
+    }
+
+    goToPreviousPage() {
+        if (this.currentPage > 0) {
+            this.currentPage--;
+            this.renderNotation();
+
+            const measureIndex = this.currentPage * this.measuresPerPage;
+            if (measureIndex < this.measureData.length) {
+                this.scoreModel.seekTo(this.measureData[measureIndex].startPosition);
+            }
+        }
+    }
+
+    goToNextPage() {
+        if (this.currentPage < this.totalPages - 1) {
+            this.currentPage++;
+            this.renderNotation();
+
+            const measureIndex = this.currentPage * this.measuresPerPage;
+            if (measureIndex < this.measureData.length) {
+                this.scoreModel.seekTo(this.measureData[measureIndex].startPosition);
+            }
+        }
+    }
+
     drawPlayheadAtCurrentPosition(context, staves, startMeasureIndex, endMeasureIndex) {
-        // Find which system and measure contains the current position
-        for (const system of staves) {
-            for (let i = 0; i < system.measureIndices.length; i++) {
-                const measureIndex = system.measureIndices[i];
-                if (measureIndex < this.measureData.length) {
-                    const measureStartTime = this.measureData[measureIndex].startPosition;
-                    const measureEndTime = measureIndex < this.measureData.length - 1
-                        ? this.measureData[measureIndex + 1].startPosition
-                        : measureStartTime + this.measureData[measureIndex].durationSeconds;
+        const currentPosition = this.scoreModel.currentPosition;
 
-                    // Check if current position is within this measure
-                    if (this.scoreModel.currentPosition >= measureStartTime && this.scoreModel.currentPosition < measureEndTime) {
-                        // Calculate relative position within measure (0-1)
-                        const measurePos = (this.scoreModel.currentPosition - measureStartTime) /
-                            (measureEndTime - measureStartTime);
+        for (let i = 0; i < staves.measureIndices.length; i++) {
+            const measureIndex = staves.measureIndices[i];
 
-                        // Get the stave to determine x position
-                        const trebleStave = system.treble[i];
-                        if (!trebleStave) continue;
+            if (measureIndex < this.measureData.length) {
+                const measureStartTime = this.measureData[measureIndex].startPosition;
+                const measureEndTime = measureIndex < this.measureData.length - 1
+                    ? this.measureData[measureIndex + 1].startPosition
+                    : measureStartTime + this.measureData[measureIndex].durationSeconds;
 
-                        const staveX = trebleStave.getX();
-                        const staveWidth = trebleStave.getWidth();
+                if (currentPosition >= measureStartTime && currentPosition < measureEndTime) {
+                    const measurePos = (currentPosition - measureStartTime) /
+                        (measureEndTime - measureStartTime);
 
-                        // Calculate playhead x position
-                        const playheadX = staveX + (staveWidth * measurePos);
+                    const trebleStave = staves.treble[i];
+                    const bassStave = staves.bass[i];
 
-                        // Draw vertical line through both staves
-                        context.save();
-                        context.beginPath();
-                        const systemStartY = system.treble[0].getY() - 10;
-                        const systemEndY = system.bass[system.bass.length - 1].getY() +
-                            system.bass[system.bass.length - 1].getHeight() + 10;
+                    if (!trebleStave || !bassStave) continue;
 
-                        context.moveTo(playheadX, systemStartY);
-                        context.lineTo(playheadX, systemEndY);
-                        context.strokeStyle = 'rgba(255, 0, 0, 0.7)';
-                        context.lineWidth = 2;
-                        context.stroke();
-                        context.restore();
+                    const staveX = trebleStave.getX();
+                    const staveWidth = trebleStave.getWidth();
 
-                        // We found and drew the playhead, so we can return
-                        return;
-                    }
+                    const playheadX = staveX + (staveWidth * measurePos);
+
+                    context.save();
+                    context.beginPath();
+                    const systemStartY = trebleStave.getY() - 10;
+                    const systemEndY = bassStave.getY() + bassStave.getHeight() + 10;
+
+                    context.moveTo(playheadX, systemStartY);
+                    context.lineTo(playheadX, systemEndY);
+                    context.strokeStyle = 'rgba(255, 0, 0, 0.7)';
+                    context.lineWidth = 2;
+                    context.stroke();
+                    context.restore();
+
+                    return;
                 }
             }
         }
@@ -2112,39 +2085,32 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         this.isPlaying = true;
         this.lastRenderTime = performance.now();
 
-        // Update play/pause button in the original controls
         const playPauseButton = document.querySelector('.piano-play-pause');
         if (playPauseButton) {
             playPauseButton.textContent = 'Pause';
         }
 
-        // Resume animations in the note bar container
         if (this.noteBarContainer) {
             this.noteBarContainer.classList.remove('paused');
         }
 
-        // Initialize note bars on playback start
         this.updateNoteBars();
 
-        // Start animation loop
         this.animationFrameId = requestAnimationFrame(this.updatePlayback.bind(this));
     }
 
     pausePlayback() {
         this.isPlaying = false;
 
-        // Update play/pause button
         const playPauseButton = document.querySelector('.piano-play-pause');
         if (playPauseButton) {
             playPauseButton.textContent = 'Play';
         }
 
-        // Pause all animations in the note bar container
         if (this.noteBarContainer) {
             this.noteBarContainer.classList.add('paused');
         }
 
-        // Cancel animation frame
         if (this.animationFrameId) {
             cancelAnimationFrame(this.animationFrameId);
             this.animationFrameId = null;
@@ -2152,14 +2118,11 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
     }
 
     highlightPianoKeys(notes) {
-        // Guard against being called before UI is initialized
         if (!this.pianoVisualizationContainer) return;
 
-        // Remove existing highlights
         const keys = this.pianoVisualizationContainer.querySelectorAll('.piano-key');
         keys.forEach(key => key.classList.remove('active'));
 
-        // Add highlights to current notes
         notes.forEach(note => {
             const key = this.pianoVisualizationContainer.querySelector(`.piano-key[data-note="${note.noteNumber}"]`);
             if (key) {
@@ -2168,21 +2131,16 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         });
     }
 
-    // Mouse wheel controls playback speed
     adjustPlaybackSpeed(event) {
-        // Determine direction of scroll
-        const delta = Math.sign(event.deltaY) * -5; // Change by 5 BPM increments
+        const delta = Math.sign(event.deltaY) * -5;
 
-        // Calculate new BPM (between 40 and 240)
         this.bpm = Math.max(40, Math.min(240, this.bpm + delta));
 
-        // Update UI
         const speedValue = this.analyzer.container.querySelector('.speed-value');
         if (speedValue) {
             speedValue.textContent = `${this.bpm} BPM`;
         }
 
-        // Update speed slider if it exists
         const speedControl = this.analyzer.container.querySelector('.piano-speed');
         if (speedControl) {
             speedControl.value = this.bpm;
@@ -2191,84 +2149,65 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         console.log(`BPM adjusted to ${this.bpm} via scroll`);
     }
 
-    // Start dragging to scrub through music
     startDragging(event) {
-        this.isDragging = false; // Start as false until we've moved enough
+        this.isDragging = false;
         this.dragStartX = event.clientX;
-        this.dragStartY = event.clientY; // Track Y position too
+        this.dragStartY = event.clientY;
         this.dragStartPosition = this.scoreModel.currentPosition;
-        this.hasDragged = false; // New flag to track if actual dragging occurred
-        this.mouseDownTime = Date.now(); // Track when the mouse went down
+        this.hasDragged = false;
+        this.mouseDownTime = Date.now();
 
-        // Change cursor to indicate potential dragging
         event.currentTarget.style.cursor = 'grab';
 
-        // Store playing state
         this.wasPlayingBeforeDrag = this.scoreModel.isPlaying;
-        // We'll pause only if we actually start dragging, not on just a click
     }
 
-    // Handle dragging to scrub through music
     handleDragging(event) {
-        if (this.dragStartX === undefined) return; // Not in drag mode
+        if (this.dragStartX === undefined) return;
 
-        // Calculate distance moved
         const dragDistanceX = event.clientX - this.dragStartX;
         const dragDistanceY = event.clientY - this.dragStartY;
         const totalDragDistance = Math.sqrt(dragDistanceX * dragDistanceX + dragDistanceY * dragDistanceY);
 
-        // Only start actual dragging if moved more than a small threshold (5px)
         if (totalDragDistance > 5) {
-            // Now we're officially dragging
             if (!this.isDragging) {
                 this.isDragging = true;
                 event.currentTarget.style.cursor = 'grabbing';
 
-                // Now we pause if was playing
                 if (this.scoreModel.isPlaying) {
                     this.scoreModel.pause();
                 }
             }
 
-            // Convert drag distance to time position
-            // The sensitivity factor controls how fast the scrubbing happens
             const sensitivity = 0.02;
             const newPosition = this.dragStartPosition + (dragDistanceX * sensitivity);
 
-            // Update position (don't allow negative values)
             this.scoreModel.seekTo(Math.max(0, newPosition));
             this.hasDragged = true;
         }
     }
 
-    // Stop dragging
     stopDragging() {
-        if (this.dragStartX === undefined) return; // Not in drag mode
+        if (this.dragStartX === undefined) return;
 
-        // If we didn't actually drag significantly, treat it as a click
         if (!this.hasDragged) {
-            // Check if this was a quick click (not a long press)
             const clickDuration = Date.now() - this.mouseDownTime;
-            if (clickDuration < 300) { // Less than 300ms is considered a click
-                this.togglePlayback(); // Toggle play/pause
+            if (clickDuration < 300) {
+                this.togglePlayback();
             }
         }
         else if (this.hasDragged) {
-            // Handle position change after dragging
             this.handlePositionSeek();
 
-            // Restore playback if it was playing before drag started
             if (this.wasPlayingBeforeDrag) {
                 this.scoreModel.play();
             }
         }
 
-        // Reset cursor
         if (this.notationContainer) {
             this.notationContainer.style.cursor = 'default';
         }
 
-        // Reset drag tracking variables
         this.isDragging = false;
         this.hasDragged = false;
         this.dragStartX = undefined;
@@ -2276,23 +2215,16 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
     }
 
     handlePositionSeek() {
-        // Clear existing note bars
         if (this.noteBarContainer) {
             this.noteBarContainer.innerHTML = '';
             this.noteBars = [];
         }
-
-        // Note: The score model's positionchange event will trigger 
-        // the necessary updates to notation and note bars
     }
 
     closePianoVisualization() {
-        // Stop playback
         this.scoreModel.pause();
 
-        // Make sure all animations are stopped
         if (this.noteBarContainer) {
-            // Remove all animations explicitly
             this.noteBars.forEach(bar => {
                 if (bar.element) {
                     bar.element.style.animation = 'none';
@@ -2300,45 +2232,34 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             });
         }
 
-        // Hide visualization
         if (this.pianoVisualizationContainer) {
             this.pianoVisualizationContainer.style.display = 'none';
         }
 
-        // Show music analyzer panel again
         this.analyzer.panel.style.display = 'block';
     }
 
     processData(data) {
-        // This mode doesn't use the real-time analysis data
     }
 
-    // Replace setPlaybackSpeed utility with direct BPM setting
     setBPM(bpm) {
-        // Store old BPM for recalculation
         const oldBPM = this.bpm;
 
-        // Ensure BPM is within valid range
         this.bpm = Math.max(40, Math.min(240, bpm));
 
-        // If we have notes already parsed and there's a significant BPM change
         if (this.parsedNotes.length > 0 && Math.abs(oldBPM - this.bpm) > 1) {
-            // Recalculate all note durations with the new tempo
             const tempoRatio = oldBPM / this.bpm;
 
             this.parsedNotes.forEach(note => {
-                // Scale the start times and durations by the tempo ratio
                 note.start *= tempoRatio;
                 note.duration *= tempoRatio;
             });
 
-            // Also update current position to maintain musical position
             this.currentPosition *= tempoRatio;
 
             console.log(`Recalculated timing for ${this.parsedNotes.length} notes after tempo change`);
         }
 
-        // Update UI
         const speedControl = this.analyzer.container.querySelector('.piano-speed');
         const speedValue = this.analyzer.container.querySelector('.speed-value');
 
@@ -2348,11 +2269,9 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         console.log(`BPM set to ${this.bpm}`);
     }
 
-    // Add this improved function to convert note step/octave to MIDI note number
     stepOctaveToMidiNote(step, octave, alter = 0) {
         const stepValues = { 'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11 };
 
-        // Validate inputs to prevent NaN results
         if (typeof step !== 'string' || !stepValues.hasOwnProperty(step)) {
             console.warn(`Invalid note step: ${step}, defaulting to C`);
             step = 'C';
@@ -2366,35 +2285,48 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         return (octave + 1) * 12 + stepValues[step] + alter;
     }
 
-    // Helper method to group notes by start time for chord creation
-    groupNotesByTime(notes) {
-        const notesByTime = new Map();
-
-        notes.forEach(note => {
-            const timeKey = note.start.toFixed(4); // Group notes with very close start times
-            if (!notesByTime.has(timeKey)) {
-                notesByTime.set(timeKey, []);
-            }
-            notesByTime.get(timeKey).push(note);
-        });
-
-        // Sort by start time
-        return Array.from(notesByTime.entries())
-            .sort((a, b) => parseFloat(a[0]) - parseFloat(b[0]))
-            .map(entry => entry[1]);
-    }
-
-    /**
-     * Update the UI with the loaded score
-     */
     updateScoreUI() {
-        // Update song title
         this.updateScoreTitle(this.scoreModel.title);
 
-        // Show playback controls
         this.showPlaybackControls();
 
-        // Create visualization
         this.createVisualization();
+    }
+
+    addNotationOverlays(svgContainer, startPosition, endPosition) {
+        let currentMeasure = 1;
+        let currentBeat = 1;
+
+        for (const measure of this.measureData) {
+            if (this.currentPosition >= measure.startPosition) {
+                currentMeasure = measure.number;
+
+                if (measure.startPosition <= this.currentPosition) {
+                    const nextMeasureStart = measure.index < this.measureData.length - 1
+                        ? this.measureData[measure.index + 1].startPosition
+                        : measure.startPosition + measure.durationSeconds;
+
+                    const posInMeasure = (this.currentPosition - measure.startPosition) /
+                        (nextMeasureStart - measure.startPosition);
+
+                    currentBeat = Math.floor(posInMeasure * this.timeSignatureNumerator) + 1;
+                    if (currentBeat > this.timeSignatureNumerator) currentBeat = this.timeSignatureNumerator;
+                }
+            } else {
+                break;
+            }
+        }
+
+        const infoPanel = document.createElement('div');
+        infoPanel.className = 'notation-info-panel';
+        infoPanel.innerHTML = `
+            <div class="position-info">Position: ${this.currentPosition.toFixed(1)}s</div>
+            <div class="measure-info">Measure: ${currentMeasure}, Beat: ${currentBeat}</div>
+            <div class="speed-info">Tempo: ${this.bpm} BPM</div>
+            <div class="playback-status">${this.isPlaying ? 'Playing' : 'Paused'}</div>
+            <div class="view-info">Page: ${this.currentPage + 1}/${this.totalPages}</div>
+        `;
+
+        svgContainer.appendChild(infoPanel);
     }
 }
