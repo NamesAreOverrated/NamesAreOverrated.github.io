@@ -360,19 +360,11 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
 
         // Click to toggle playback on notation
         this.notationContainer.addEventListener('click', (e) => {
-            // Prevent click from also triggering mousedown for drag
-            if (!this.isDragging) {
-                this.togglePlayback();
-            }
+            // We'll handle the click in the mouseup handler instead
+            // to better distinguish between clicks and drags
         });
 
-        // Add mouse wheel to control playback speed
-        this.notationContainer.addEventListener('wheel', (e) => {
-            e.preventDefault();
-            this.adjustPlaybackSpeed(e);
-        });
-
-        // Add drag events to scrub through music
+        // Add drag events to scrub through music with improved click detection
         this.notationContainer.addEventListener('mousedown', (e) => {
             this.startDragging(e);
         });
@@ -679,6 +671,11 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             playPauseButton.textContent = 'Pause';
         }
 
+        // Resume animations in the note bar container
+        if (this.noteBarContainer) {
+            this.noteBarContainer.classList.remove('paused');
+        }
+
         // Initialize note bars on playback start
         this.updateNoteBars();
 
@@ -693,6 +690,11 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         const playPauseButton = document.querySelector('.piano-play-pause');
         if (playPauseButton) {
             playPauseButton.textContent = 'Play';
+        }
+
+        // Pause all animations in the note bar container
+        if (this.noteBarContainer) {
+            this.noteBarContainer.classList.add('paused');
         }
 
         // Cancel animation frame
@@ -739,44 +741,91 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
 
     // Start dragging to scrub through music
     startDragging(event) {
-        this.isDragging = true;
+        this.isDragging = false; // Start as false until we've moved enough
         this.dragStartX = event.clientX;
+        this.dragStartY = event.clientY; // Track Y position too
         this.dragStartPosition = this.currentPosition;
+        this.hasDragged = false; // New flag to track if actual dragging occurred
+        this.mouseDownTime = Date.now(); // Track when the mouse went down
 
-        // Change cursor to indicate dragging
-        event.currentTarget.style.cursor = 'grabbing';
+        // Change cursor to indicate potential dragging
+        event.currentTarget.style.cursor = 'grab';
 
-        // We'll temporarily pause playback while dragging
-        const wasPlaying = this.isPlaying;
-        if (wasPlaying) {
-            // Store the playing state to resume after dragging
-            event.currentTarget.dataset.wasPlaying = 'true';
-            this.pausePlayback();
-        } else {
-            event.currentTarget.dataset.wasPlaying = 'false';
-        }
+        // Store playing state
+        this.wasPlayingBeforeDrag = this.isPlaying;
+        // We'll pause only if we actually start dragging, not on just a click
     }
 
     // Handle dragging to scrub through music
     handleDragging(event) {
-        if (!this.isDragging) return;
+        if (this.dragStartX === undefined) return; // Not in drag mode
 
-        // Calculate drag distance
-        const dragDistance = event.clientX - this.dragStartX;
+        // Calculate distance moved
+        const dragDistanceX = event.clientX - this.dragStartX;
+        const dragDistanceY = event.clientY - this.dragStartY;
+        const totalDragDistance = Math.sqrt(dragDistanceX * dragDistanceX + dragDistanceY * dragDistanceY);
 
-        // Convert drag distance to time position
-        // The sensitivity factor controls how fast the scrubbing happens
-        const sensitivity = 0.02;
-        const newPosition = this.dragStartPosition + (dragDistance * sensitivity);
+        // Only start actual dragging if moved more than a small threshold (5px)
+        if (totalDragDistance > 5) {
+            // Now we're officially dragging
+            if (!this.isDragging) {
+                this.isDragging = true;
+                event.currentTarget.style.cursor = 'grabbing';
 
-        // Update position (don't allow negative values)
-        this.currentPosition = Math.max(0, newPosition);
+                // Now we pause if was playing
+                if (this.isPlaying) {
+                    this.pausePlayback();
+                }
+            }
 
-        // Update visualizations
-        this.renderNotation();
+            // Convert drag distance to time position
+            // The sensitivity factor controls how fast the scrubbing happens
+            const sensitivity = 0.02;
+            const newPosition = this.dragStartPosition + (dragDistanceX * sensitivity);
+
+            // Update position (don't allow negative values)
+            this.currentPosition = Math.max(0, newPosition);
+            this.hasDragged = true;
+
+            // Update visualizations
+            this.renderNotation();
+        }
     }
 
-    // Handle seeking when position changes drastically (after dragging, etc.)
+    // Stop dragging
+    stopDragging() {
+        if (this.dragStartX === undefined) return; // Not in drag mode
+
+        // If we didn't actually drag significantly, treat it as a click
+        if (!this.hasDragged) {
+            // Check if this was a quick click (not a long press)
+            const clickDuration = Date.now() - this.mouseDownTime;
+            if (clickDuration < 300) { // Less than 300ms is considered a click
+                this.togglePlayback(); // Toggle play/pause
+            }
+        }
+        else if (this.hasDragged) {
+            // Handle position change after dragging
+            this.handlePositionSeek();
+
+            // Restore playback if it was playing before drag started
+            if (this.wasPlayingBeforeDrag) {
+                this.startPlayback();
+            }
+        }
+
+        // Reset cursor
+        if (this.notationContainer) {
+            this.notationContainer.style.cursor = 'default';
+        }
+
+        // Reset drag tracking variables
+        this.isDragging = false;
+        this.hasDragged = false;
+        this.dragStartX = undefined;
+        this.dragStartY = undefined;
+    }
+
     handlePositionSeek() {
         // Clear existing note bars
         if (this.noteBarContainer) {
@@ -796,27 +845,6 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             this.updateNoteBars();
             this.renderNotation();
         }
-    }
-
-    // Stop dragging
-    stopDragging() {
-        if (!this.isDragging) return;
-
-        this.isDragging = false;
-
-        // Reset cursor
-        this.notationContainer.style.cursor = 'default';
-
-        // Resume playback if it was playing before dragging started
-        if (this.notationContainer.dataset.wasPlaying === 'true') {
-            this.startPlayback();
-        }
-
-        // Handle position change after dragging
-        this.handlePositionSeek();
-
-        // Clean up
-        this.notationContainer.dataset.wasPlaying = 'false';
     }
 
     updateNoteBars() {
@@ -1009,6 +1037,16 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
     closePianoVisualization() {
         // Stop playback
         this.pausePlayback();
+
+        // Make sure all animations are stopped
+        if (this.noteBarContainer) {
+            // Remove all animations explicitly
+            this.noteBars.forEach(bar => {
+                if (bar.element) {
+                    bar.element.style.animation = 'none';
+                }
+            });
+        }
 
         // Hide visualization
         if (this.pianoVisualizationContainer) {

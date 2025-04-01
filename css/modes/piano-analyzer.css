@@ -139,6 +139,11 @@
     /* Completely transparent */
 }
 
+/* Add animation pause class */
+.note-bar-container.paused .note-bar {
+    animation-play-state: paused !important;
+}
+
 /* Notation container at top of the screen */
 .notation-container {
     position: absolute;
@@ -516,14 +521,14 @@ body.disco-mode .piano-key.active {
     }
 }
 
-/* Disco mode styles for note bars */
+/* Disco mode styles for note bars
 body.disco-mode .note-bar {
     animation: disco-note-color 5.8s steps(1, end) infinite;
 }
 
 body.disco-mode .note-bar.playing {
     animation: disco-note-pulse 1s infinite alternate;
-}
+} */
 
 @keyframes disco-note-color {
 
