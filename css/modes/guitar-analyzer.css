@@ -1,0 +1,148 @@
+/* Guitar Analyzer Mode Styles */
+
+.guitar-analysis {
+    margin-bottom: 15px;
+}
+
+/* Guitar tuner */
+.tuner {
+    height: 60px;
+    position: relative;
+    background-color: #222;
+    border-radius: 30px;
+    margin: 20px 0;
+    overflow: hidden;
+}
+
+/* Disco mode tuner */
+body.disco-mode .tuner {
+    background-color: rgba(20, 20, 30, 0.5);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.25);
+    animation: disco-timeline-bg 5.8s ease-in-out infinite;
+}
+
+.tuner-needle {
+    position: absolute;
+    width: 2px;
+    height: 30px;
+    background-color: var(--accent-color);
+    bottom: 0;
+    left: 50%;
+    transform-origin: bottom center;
+    transition: transform 0.3s ease;
+}
+
+/* Disco mode needle */
+body.disco-mode .tuner-needle {
+    animation: neon-needle-glow 5.8s steps(1, end) infinite;
+}
+
+@keyframes neon-needle-glow {
+
+    0%,
+    100% {
+        background-color: rgba(255, 0, 110, 0.9);
+        box-shadow: 0 0 5px rgba(255, 0, 110, 0.7);
+    }
+
+    25% {
+        background-color: rgba(0, 229, 255, 0.9);
+        box-shadow: 0 0 5px rgba(0, 229, 255, 0.7);
+    }
+
+    50% {
+        background-color: rgba(174, 0, 255, 0.9);
+        box-shadow: 0 0 5px rgba(174, 0, 255, 0.7);
+    }
+
+    75% {
+        background-color: rgba(255, 221, 0, 0.9);
+        box-shadow: 0 0 5px rgba(255, 221, 0, 0.7);
+    }
+}
+
+.tuning-direction {
+    text-align: center;
+    margin-top: -15px;
+    font-size: 14px;
+    color: #ccc;
+    height: 20px;
+}
+
+.tuning-direction.in-tune {
+    color: var(--accent-color);
+    font-weight: bold;
+    animation: pulse-glow 1.5s infinite;
+}
+
+/* Guitar strings */
+.guitar-strings {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+}
+
+.guitar-strings .string {
+    background-color: #444;
+    color: #ccc;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+/* Disco mode strings */
+body.disco-mode .guitar-strings .string {
+    background-color: rgba(30, 30, 40, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.guitar-strings .string.active {
+    background-color: var(--accent-color);
+    color: #222;
+}
+
+/* Disco mode string highlight */
+body.disco-mode .guitar-strings .string.active {
+    animation: neon-string-active 5.8s steps(1, end) infinite;
+}
+
+@keyframes neon-string-active {
+
+    0%,
+    100% {
+        background-color: rgba(255, 0, 110, 0.8);
+        box-shadow: 0 0 8px rgba(255, 0, 110, 0.5);
+    }
+
+    25% {
+        background-color: rgba(0, 229, 255, 0.8);
+        box-shadow: 0 0 8px rgba(0, 229, 255, 0.5);
+    }
+
+    50% {
+        background-color: rgba(174, 0, 255, 0.8);
+        box-shadow: 0 0 8px rgba(174, 0, 255, 0.5);
+    }
+
+    75% {
+        background-color: rgba(255, 221, 0, 0.8);
+        box-shadow: 0 0 8px rgba(255, 221, 0, 0.5);
+    }
+}
+
+.guitar-strings .string.in-tune {
+    box-shadow: 0 0 10px var(--accent-color);
+}
+
+@media (max-width: 360px) {
+    .guitar-strings {
+        flex-wrap: wrap;
+        gap: 5px;
+    }
+
+    .guitar-strings .string {
+        font-size: 12px;
+        padding: 4px 8px;
+    }
+}

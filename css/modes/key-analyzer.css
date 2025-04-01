@@ -1,0 +1,68 @@
+/* Key Analyzer Mode Styles */
+
+.key-analysis {
+    margin-bottom: 15px;
+}
+
+.music-info span {
+    color: #888;
+    margin-right: 5px;
+}
+
+.current-notes {
+    margin-top: 15px;
+}
+
+.notes-display {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 5px;
+}
+
+.note-badge {
+    background-color: var(--accent-color);
+    color: #222;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: bold;
+    min-width: 30px;
+    text-align: center;
+}
+
+.no-notes {
+    color: #666;
+    font-style: italic;
+    font-size: 13px;
+}
+
+/* Note badges in disco mode */
+body.disco-mode .note-badge {
+    animation: neon-note-pulse 5.8s steps(1, end) infinite;
+    box-shadow: 0 0 8px rgba(100, 255, 218, 0.3);
+}
+
+@keyframes neon-note-pulse {
+
+    0%,
+    100% {
+        background-color: rgba(255, 0, 110, 0.7);
+        box-shadow: 0 0 8px rgba(255, 0, 110, 0.5);
+    }
+
+    25% {
+        background-color: rgba(0, 229, 255, 0.7);
+        box-shadow: 0 0 8px rgba(0, 229, 255, 0.5);
+    }
+
+    50% {
+        background-color: rgba(174, 0, 255, 0.7);
+        box-shadow: 0 0 8px rgba(174, 0, 255, 0.5);
+    }
+
+    75% {
+        background-color: rgba(255, 221, 0, 0.7);
+        box-shadow: 0 0 8px rgba(255, 221, 0, 0.5);
+    }
+}

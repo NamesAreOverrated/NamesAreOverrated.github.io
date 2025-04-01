@@ -1,5 +1,10 @@
 /* Music Analyzer Styles */
 
+/* Import mode-specific styles */
+@import url('modes/key-analyzer.css');
+@import url('modes/guitar-analyzer.css');
+@import url('modes/voice-training.css');
+
 .music-analyzer {
     position: fixed;
     bottom: 20px;
@@ -405,17 +410,6 @@ body.disco-mode .mode-option.active {
     }
 }
 
-/* Responsive adjustments for narrow screens */
-@media (max-width: 300px) {
-    .music-mode-selector {
-        flex-direction: column;
-    }
-
-    .mode-option {
-        width: 100%;
-    }
-}
-
 /* Status display */
 .music-status {
     margin-bottom: 15px;
@@ -522,220 +516,7 @@ body.disco-mode .music-result::after {
     margin-right: 5px;
 }
 
-/* Note badges in disco mode */
-body.disco-mode .note-badge {
-    animation: neon-note-pulse 5.8s steps(1, end) infinite;
-    box-shadow: 0 0 8px rgba(100, 255, 218, 0.3);
-}
-
-@keyframes neon-note-pulse {
-
-    0%,
-    100% {
-        background-color: rgba(255, 0, 110, 0.7);
-        box-shadow: 0 0 8px rgba(255, 0, 110, 0.5);
-    }
-
-    25% {
-        background-color: rgba(0, 229, 255, 0.7);
-        box-shadow: 0 0 8px rgba(0, 229, 255, 0.5);
-    }
-
-    50% {
-        background-color: rgba(174, 0, 255, 0.7);
-        box-shadow: 0 0 8px rgba(174, 0, 255, 0.5);
-    }
-
-    75% {
-        background-color: rgba(255, 221, 0, 0.7);
-        box-shadow: 0 0 8px rgba(255, 221, 0, 0.5);
-    }
-}
-
-.current-notes {
-    margin-top: 15px;
-}
-
-.notes-display {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-top: 5px;
-}
-
-.note-badge {
-    background-color: var(--accent-color);
-    color: #222;
-    padding: 3px 8px;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: bold;
-    min-width: 30px;
-    text-align: center;
-}
-
-.no-notes {
-    color: #666;
-    font-style: italic;
-    font-size: 13px;
-}
-
-/* Guitar tuner */
-.tuner {
-    height: 60px;
-    position: relative;
-    background-color: #222;
-    border-radius: 30px;
-    margin: 20px 0;
-    overflow: hidden;
-}
-
-/* Disco mode tuner */
-body.disco-mode .tuner {
-    background-color: rgba(20, 20, 30, 0.5);
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.25);
-    animation: disco-timeline-bg 5.8s ease-in-out infinite;
-}
-
-@keyframes disco-timeline-bg {
-
-    0%,
-    100% {
-        background-color: rgba(20, 20, 30, 0.5);
-        box-shadow: 0 0 12px rgba(255, 0, 110, 0.15);
-    }
-
-    25% {
-        background-color: rgba(20, 25, 35, 0.5);
-        box-shadow: 0 0 12px rgba(0, 229, 255, 0.15);
-    }
-
-    50% {
-        background-color: rgba(20, 20, 35, 0.5);
-        box-shadow: 0 0 12px rgba(174, 0, 255, 0.15);
-    }
-
-    75% {
-        background-color: rgba(25, 20, 30, 0.5);
-        box-shadow: 0 0 12px rgba(255, 221, 0, 0.15);
-    }
-}
-
-.tuner-needle {
-    position: absolute;
-    width: 2px;
-    height: 30px;
-    background-color: var(--accent-color);
-    bottom: 0;
-    left: 50%;
-    transform-origin: bottom center;
-    transition: transform 0.3s ease;
-}
-
-/* Disco mode needle */
-body.disco-mode .tuner-needle {
-    animation: neon-needle-glow 5.8s steps(1, end) infinite;
-}
-
-@keyframes neon-needle-glow {
-
-    0%,
-    100% {
-        background-color: rgba(255, 0, 110, 0.9);
-        box-shadow: 0 0 5px rgba(255, 0, 110, 0.7);
-    }
-
-    25% {
-        background-color: rgba(0, 229, 255, 0.9);
-        box-shadow: 0 0 5px rgba(0, 229, 255, 0.7);
-    }
-
-    50% {
-        background-color: rgba(174, 0, 255, 0.9);
-        box-shadow: 0 0 5px rgba(174, 0, 255, 0.7);
-    }
-
-    75% {
-        background-color: rgba(255, 221, 0, 0.9);
-        box-shadow: 0 0 5px rgba(255, 221, 0, 0.7);
-    }
-}
-
-.tuning-direction {
-    text-align: center;
-    margin-top: -15px;
-    font-size: 14px;
-    color: #ccc;
-    height: 20px;
-}
-
-.tuning-direction.in-tune {
-    color: var(--accent-color);
-    font-weight: bold;
-    animation: pulse-glow 1.5s infinite;
-}
-
-/* Guitar strings */
-.guitar-strings {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 20px;
-}
-
-.guitar-strings .string {
-    background-color: #444;
-    color: #ccc;
-    padding: 5px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-/* Disco mode strings */
-body.disco-mode .guitar-strings .string {
-    background-color: rgba(30, 30, 40, 0.5);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.guitar-strings .string.active {
-    background-color: var(--accent-color);
-    color: #222;
-}
-
-/* Disco mode string highlight */
-body.disco-mode .guitar-strings .string.active {
-    animation: neon-string-active 5.8s steps(1, end) infinite;
-}
-
-@keyframes neon-string-active {
-
-    0%,
-    100% {
-        background-color: rgba(255, 0, 110, 0.8);
-        box-shadow: 0 0 8px rgba(255, 0, 110, 0.5);
-    }
-
-    25% {
-        background-color: rgba(0, 229, 255, 0.8);
-        box-shadow: 0 0 8px rgba(0, 229, 255, 0.5);
-    }
-
-    50% {
-        background-color: rgba(174, 0, 255, 0.8);
-        box-shadow: 0 0 8px rgba(174, 0, 255, 0.5);
-    }
-
-    75% {
-        background-color: rgba(255, 221, 0, 0.8);
-        box-shadow: 0 0 8px rgba(255, 221, 0, 0.5);
-    }
-}
-
-.guitar-strings .string.in-tune {
-    box-shadow: 0 0 10px var(--accent-color);
-}
-
-
+/* Common styles for controls */
 .start-analysis,
 .stop-analysis {
     flex: 1;
@@ -779,6 +560,7 @@ body.disco-mode .stop-analysis:hover {
     cursor: not-allowed;
 }
 
+/* Info box in disco mode */
 .music-info {
     font-size: 12px;
     color: #888;
@@ -789,7 +571,6 @@ body.disco-mode .stop-analysis:hover {
     margin: 5px 0;
 }
 
-/* Info box in disco mode */
 body.disco-mode .music-info {
     background-color: rgba(15, 15, 20, 0.6);
     border-radius: 6px;
@@ -800,16 +581,6 @@ body.disco-mode .music-info {
 @media (max-width: 360px) {
     .music-analyzer-panel {
         width: 280px;
-    }
-
-    .guitar-strings {
-        flex-wrap: wrap;
-        gap: 5px;
-    }
-
-    .guitar-strings .string {
-        font-size: 12px;
-        padding: 4px 8px;
     }
 }
 
@@ -825,192 +596,23 @@ body.disco-mode .music-info {
     }
 }
 
-/* Voice Training Mode Styles */
-.voice-training {
-    display: none;
-}
+/* Animation for text effects in disco mode */
+@keyframes neon-text-pulse {
 
-
-
-/* Voice exercises section */
-.voice-exercises {
-    margin-top: 15px;
-}
-
-.exercise-selector {
-    display: flex;
-    justify-content: space-between;
-    gap: 8px;
-    margin-bottom: 10px;
-}
-
-.exercise-btn {
-    flex: 1;
-    background-color: #333;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    padding: 6px 8px;
-    font-size: 12px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.exercise-btn:hover {
-    background-color: #444;
-}
-
-.exercise-btn.active {
-    background-color: var(--accent-color);
-    color: #222;
-}
-
-/* Pitch visualization */
-.pitch-display {
-    height: 100px;
-    background-color: rgba(30, 30, 40, 0.7);
-    border-radius: 8px;
-    position: relative;
-    margin: 10px 0;
-    padding: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.target-note {
-    position: absolute;
-    height: 4px;
-    background-color: var(--accent-color);
-    left: 0;
-    right: 0;
-    z-index: 1;
-}
-
-.target-note::after {
-    content: attr(data-note);
-    position: absolute;
-    right: 10px;
-    font-size: 12px;
-    color: var(--accent-color);
-    font-weight: bold;
-}
-
-.current-pitch {
-    width: 20px;
-    height: 20px;
-    background-color: #fff;
-    border-radius: 50%;
-    position: absolute;
-    transform: translateX(-50%);
-    transition: top 0.1s ease, left 0.1s ease;
-    z-index: 2;
-}
-
-.pitch-guide {
-    font-size: 24px;
-    color: white;
-    text-align: center;
-    margin: 10px 0;
-}
-
-.pitch-match-indicator {
-    height: 20px;
-    width: 20px;
-    border-radius: 50%;
-    margin: 0 auto;
-    background-color: #666;
-    transition: all 0.3s ease;
-}
-
-.pitch-match-indicator.close {
-    background-color: #ffbe0b;
-    box-shadow: 0 0 10px #ffbe0b;
-}
-
-.pitch-match-indicator.match {
-    background-color: #4ecdc4;
-    box-shadow: 0 0 15px #4ecdc4;
-}
-
-/* Exercise instructions */
-.exercise-instructions {
-    font-size: 14px;
-    color: #ccc;
-    margin: 15px 0;
-    background-color: rgba(50, 50, 60, 0.4);
-    padding: 10px;
-    border-radius: 6px;
-    text-align: center;
-}
-
-/* Disco mode styles for voice elements */
-body.disco-mode .pitch-display {
-    animation: disco-timeline-bg 5.8s ease-in-out infinite;
-}
-
-body.disco-mode .target-note {
-    animation: neon-note-glow 5.8s steps(1, end) infinite;
-}
-
-body.disco-mode .exercise-btn.active {
-    animation: neon-mode-glow 5.8s steps(1, end) infinite;
-}
-
-body.disco-mode .pitch-match-indicator.match {
-    animation: pulse-glow 1.5s infinite;
-}
-
-/* Stats display */
-.voice-stats {
-    margin: 15px 0;
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
-}
-
-.stats-card {
-    flex: 1;
-    background-color: rgba(30, 30, 40, 0.7);
-    border-radius: 6px;
-    padding: 10px;
-    text-align: center;
-}
-
-.stats-card h4 {
-    margin: 0 0 5px 0;
-    font-size: 12px;
-    color: #aaa;
-}
-
-.stats-card .value {
-    font-size: 18px;
-    color: white;
-    font-weight: bold;
-}
-
-/* Remove Voice Range Classification */
-.voice-type {
-    display: none;
-}
-
-/* Responsiveness for small screens */
-@media (max-width: 360px) {
-    .exercise-selector {
-        flex-wrap: wrap;
+    0%,
+    100% {
+        text-shadow:
+            0 0 5px rgba(255, 255, 255, 0.8),
+            0 0 10px rgba(255, 255, 255, 0.5),
+            0 0 15px rgba(255, 0, 110, 0.5),
+            0 0 20px rgba(255, 0, 110, 0.3);
     }
 
-    .exercise-btn {
-        flex-basis: 45%;
-        padding: 5px;
-        font-size: 11px;
-    }
-
-    .voice-stats {
-        flex-wrap: wrap;
-    }
-
-    .stats-card {
-        flex-basis: 45%;
+    50% {
+        text-shadow:
+            0 0 10px rgba(255, 255, 255, 0.9),
+            0 0 20px rgba(255, 255, 255, 0.6),
+            0 0 30px rgba(0, 229, 255, 0.6),
+            0 0 40px rgba(0, 229, 255, 0.4);
     }
 }

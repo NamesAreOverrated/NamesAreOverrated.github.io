@@ -1,0 +1,213 @@
+/* Voice Training Mode Styles */
+
+.voice-training {
+    display: none;
+}
+
+/* Voice exercises section */
+.voice-exercises {
+    margin-top: 15px;
+}
+
+.exercise-selector {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.exercise-btn {
+    flex: 1;
+    background-color: #333;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 8px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.exercise-btn:hover {
+    background-color: #444;
+}
+
+.exercise-btn.active {
+    background-color: var(--accent-color);
+    color: #222;
+}
+
+/* Pitch visualization */
+.pitch-display {
+    height: 100px;
+    background-color: rgba(30, 30, 40, 0.7);
+    border-radius: 8px;
+    position: relative;
+    margin: 10px 0;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.target-note {
+    position: absolute;
+    height: 4px;
+    background-color: var(--accent-color);
+    left: 0;
+    right: 0;
+    z-index: 1;
+}
+
+.target-note::after {
+    content: attr(data-note);
+    position: absolute;
+    right: 10px;
+    font-size: 12px;
+    color: var(--accent-color);
+    font-weight: bold;
+}
+
+.current-pitch {
+    width: 20px;
+    height: 20px;
+    background-color: #fff;
+    border-radius: 50%;
+    position: absolute;
+    transform: translateX(-50%);
+    transition: top 0.1s ease, left 0.1s ease;
+    z-index: 2;
+}
+
+.pitch-guide {
+    font-size: 24px;
+    color: white;
+    text-align: center;
+    margin: 10px 0;
+}
+
+.pitch-match-indicator {
+    height: 20px;
+    width: 20px;
+    border-radius: 50%;
+    margin: 0 auto;
+    background-color: #666;
+    transition: all 0.3s ease;
+}
+
+.pitch-match-indicator.close {
+    background-color: #ffbe0b;
+    box-shadow: 0 0 10px #ffbe0b;
+}
+
+.pitch-match-indicator.match {
+    background-color: #4ecdc4;
+    box-shadow: 0 0 15px #4ecdc4;
+}
+
+/* Exercise instructions */
+.exercise-instructions {
+    font-size: 14px;
+    color: #ccc;
+    margin: 15px 0;
+    background-color: rgba(50, 50, 60, 0.4);
+    padding: 10px;
+    border-radius: 6px;
+    text-align: center;
+}
+
+/* Disco mode styles for voice elements */
+body.disco-mode .pitch-display {
+    animation: disco-timeline-bg 5.8s ease-in-out infinite;
+}
+
+body.disco-mode .target-note {
+    animation: neon-note-glow 5.8s steps(1, end) infinite;
+}
+
+body.disco-mode .exercise-btn.active {
+    animation: neon-mode-glow 5.8s steps(1, end) infinite;
+}
+
+body.disco-mode .pitch-match-indicator.match {
+    animation: pulse-glow 1.5s infinite;
+}
+
+/* Animation for target note glow in disco mode */
+@keyframes neon-note-glow {
+
+    0%,
+    100% {
+        background-color: rgba(255, 0, 110, 0.9);
+        box-shadow: 0 0 8px rgba(255, 0, 110, 0.5);
+    }
+
+    25% {
+        background-color: rgba(0, 229, 255, 0.9);
+        box-shadow: 0 0 8px rgba(0, 229, 255, 0.5);
+    }
+
+    50% {
+        background-color: rgba(174, 0, 255, 0.9);
+        box-shadow: 0 0 8px rgba(174, 0, 255, 0.5);
+    }
+
+    75% {
+        background-color: rgba(255, 221, 0, 0.9);
+        box-shadow: 0 0 8px rgba(255, 221, 0, 0.5);
+    }
+}
+
+/* Stats display */
+.voice-stats {
+    margin: 15px 0;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.stats-card {
+    flex: 1;
+    background-color: rgba(30, 30, 40, 0.7);
+    border-radius: 6px;
+    padding: 10px;
+    text-align: center;
+}
+
+.stats-card h4 {
+    margin: 0 0 5px 0;
+    font-size: 12px;
+    color: #aaa;
+}
+
+.stats-card .value {
+    font-size: 18px;
+    color: white;
+    font-weight: bold;
+}
+
+/* Remove Voice Range Classification */
+.voice-type {
+    display: none;
+}
+
+/* Responsiveness for small screens */
+@media (max-width: 360px) {
+    .exercise-selector {
+        flex-wrap: wrap;
+    }
+
+    .exercise-btn {
+        flex-basis: 45%;
+        padding: 5px;
+        font-size: 11px;
+    }
+
+    .voice-stats {
+        flex-wrap: wrap;
+    }
+
+    .stats-card {
+        flex-basis: 45%;
+    }
+}
