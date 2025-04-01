@@ -713,66 +713,7 @@ body.disco-mode .voice-toggle {
     color: #888;
 }
 
-.range-visualization {
-    margin-top: 12px;
-}
 
-.range-bar {
-    height: 12px;
-    background-color: #444;
-    border-radius: 6px;
-    position: relative;
-    overflow: hidden;
-}
-
-.range-fill {
-    position: absolute;
-    height: 100%;
-    background-color: var(--accent-color);
-    border-radius: 6px;
-    transition: all 0.5s ease;
-}
-
-/* Colors for different voice types */
-.range-fill.bass {
-    background-color: #3a86ff;
-}
-
-.range-fill.baritone {
-    background-color: #4361ee;
-}
-
-.range-fill.tenor {
-    background-color: #4cc9f0;
-}
-
-.range-fill.contraltoalto {
-    background-color: #7209b7;
-}
-
-.range-fill.mezzosoprano {
-    background-color: #f72585;
-}
-
-.range-fill.soprano {
-    background-color: #ff0a54;
-}
-
-.range-fill.verylow {
-    background-color: #184e77;
-}
-
-.range-fill.veryhigh {
-    background-color: #ff5400;
-}
-
-.range-labels {
-    display: flex;
-    justify-content: space-between;
-    font-size: 12px;
-    color: #888;
-    margin-top: 4px;
-}
 
 .voice-controls {
     display: flex;

@@ -4,6 +4,7 @@
  * - Singing analysis
  * - Guitar tuning
  * - General pitch detection
+ * - Voice training
  */
 
 class MusicAnalyzer {
@@ -15,6 +16,15 @@ class MusicAnalyzer {
         this.bindEvents();
         // Initialize the mode property to 'singing' to match the default UI state
         this.mode = 'singing';
+
+        // Voice training properties
+        this.voiceLowestNote = null;
+        this.voiceHighestNote = null;
+        this.currentExercise = 'scale';
+        this.exerciseNotes = [];
+        this.currentExerciseStep = 0;
+        this.pitchAccuracy = [];
+        this.isMatchingPitch = false;
 
         // Hide the music analyzer button initially
         this.hideToggleButton();
@@ -76,6 +86,13 @@ class MusicAnalyzer {
                                 <span class="mode-name">Guitar</span>
                             </label>
                         </div>
+                        <div class="mode-option" data-mode="voice">
+                            <label class="mode-label">
+                                <input type="radio" name="music-mode" value="voice">
+                                <span class="mode-icon">🗣️</span>
+                                <span class="mode-name">Voice Training</span>
+                            </label>
+                        </div>
                     </div>
                     <div class="music-result" style="display: none;">
                         <div class="singing-analysis">
@@ -103,6 +120,49 @@ class MusicAnalyzer {
                                 <div class="string" data-string="E4">E4</div>
                             </div>
                         </div>
+                        <div class="voice-training" style="display: none;">
+                            <div class="voice-range-display">
+                                <p class="music-info"><span>Vocal Range:</span> <strong class="voice-range">--</strong></p>
+                            </div>
+                            
+                            <div class="voice-exercises">
+                                <h4>Practice Exercises</h4>
+                                <div class="exercise-selector">
+                                    <button class="exercise-btn active" data-exercise="scale">Scale</button>
+                                    <button class="exercise-btn" data-exercise="intervals">Intervals</button>
+                                    <button class="exercise-btn" data-exercise="sostenuto">Sostenuto</button>
+                                    <button class="exercise-btn" data-exercise="custom">Custom</button>
+                                </div>
+                                
+                                <div class="exercise-instructions">
+                                    Sing each note displayed. Hold until you match the pitch.
+                                </div>
+                                
+                                <div class="pitch-display">
+                                    <div class="target-note" data-note="C4" style="top: 50%;"></div>
+                                    <div class="current-pitch" style="top: 50%; left: 50%;"></div>
+                                </div>
+                                
+                                <div class="pitch-guide">
+                                    <div class="pitch-match-indicator"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="voice-stats">
+                                <div class="stats-card">
+                                    <h4>Accuracy</h4>
+                                    <div class="value accuracy-value">--</div>
+                                </div>
+                                <div class="stats-card">
+                                    <h4>Notes</h4>
+                                    <div class="value notes-value">0</div>
+                                </div>
+                                <div class="stats-card">
+                                    <h4>Matches</h4>
+                                    <div class="value matches-value">0</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -118,17 +178,34 @@ class MusicAnalyzer {
         this.pauseBtn = this.container.querySelector('.pause-analysis');
         this.statusElement = this.container.querySelector('.music-status');
         this.resultElement = this.container.querySelector('.music-result');
+
+        // Singing analysis elements
         this.detectedKeyElement = this.container.querySelector('.detected-key');
         this.commonNoteElement = this.container.querySelector('.common-note');
         this.notesDisplayElement = this.container.querySelector('.notes-display');
+
+        // Guitar analysis elements
         this.stringNameElement = this.container.querySelector('.string-name');
         this.frequencyValueElement = this.container.querySelector('.frequency-value');
         this.targetFrequencyElement = this.container.querySelector('.target-frequency');
         this.tunerNeedle = this.container.querySelector('.tuner-needle');
         this.tuningDirectionElement = this.container.querySelector('.tuning-direction');
         this.guitarStrings = this.container.querySelectorAll('.guitar-strings .string');
+
+        // Mode selection elements
         this.modeSelectors = this.container.querySelectorAll('input[name="music-mode"]');
         this.modeOptions = this.container.querySelectorAll('.mode-option');
+
+        // Voice training elements
+        this.voiceRangeElement = this.container.querySelector('.voice-range');
+        this.exerciseButtons = this.container.querySelectorAll('.exercise-btn');
+        this.exerciseInstructions = this.container.querySelector('.exercise-instructions');
+        this.targetNoteElement = this.container.querySelector('.target-note');
+        this.currentPitchElement = this.container.querySelector('.current-pitch');
+        this.pitchMatchIndicator = this.container.querySelector('.pitch-match-indicator');
+        this.accuracyValueElement = this.container.querySelector('.accuracy-value');
+        this.notesValueElement = this.container.querySelector('.notes-value');
+        this.matchesValueElement = this.container.querySelector('.matches-value');
 
         // Initially hide the panel
         this.panel.style.display = 'none';
@@ -236,6 +313,19 @@ class MusicAnalyzer {
             if (option.querySelector('input[type="radio"]:checked')) {
                 option.classList.add('active');
             }
+        });
+
+        // Voice training exercise buttons
+        this.exerciseButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const exercise = button.dataset.exercise;
+                this.setVoiceExercise(exercise);
+
+                // Update active state
+                this.exerciseButtons.forEach(btn => {
+                    btn.classList.toggle('active', btn === button);
+                });
+            });
         });
     }
 
@@ -400,6 +490,8 @@ class MusicAnalyzer {
             this.updateSingingAnalysis(data);
         } else if (this.mode === 'guitar') {
             this.updateGuitarAnalysis(data);
+        } else if (this.mode === 'voice') {
+            this.updateVoiceTraining(data);
         }
     }
 
@@ -490,6 +582,237 @@ class MusicAnalyzer {
         }
     }
 
+    updateVoiceTraining(data) {
+        if (!data.notes || data.notes.length === 0) {
+            // No notes detected, but keep the UI visible
+            // Update pitch position to indicate no sound
+            this.updatePitchPosition(null);
+            this.updatePitchMatchIndicator(false);
+            return;
+        }
+
+        // Get the strongest note for voice training
+        const strongestNote = [...data.notes].sort((a, b) => b.magnitude - a.magnitude)[0];
+
+        // Analyze the vocal range
+        this.analyzeVocalRange(strongestNote);
+
+        // Update the pitch position in the display
+        this.updatePitchPosition(strongestNote);
+
+        // Check if the current note matches the target note
+        this.checkPitchMatch(strongestNote);
+    }
+
+    analyzeVocalRange(note) {
+        if (!note) return;
+
+        // Convert note to MIDI number for easy comparison
+        const noteValue = this.noteToPitchValue(note);
+
+        // Update lowest and highest notes if needed
+        if (!this.voiceLowestNote || noteValue < this.voiceLowestNote) {
+            this.voiceLowestNote = noteValue;
+        }
+
+        if (!this.voiceHighestNote || noteValue > this.voiceHighestNote) {
+            this.voiceHighestNote = noteValue;
+        }
+
+        // Update the vocal range display
+        if (this.voiceLowestNote && this.voiceHighestNote) {
+            // Get note names for display
+            const lowestNoteName = this.pitchValueToNoteName(this.voiceLowestNote);
+            const highestNoteName = this.pitchValueToNoteName(this.voiceHighestNote);
+
+            // Update the display
+            this.voiceRangeElement.textContent = `${lowestNoteName} to ${highestNoteName}`;
+
+
+        }
+    }
+
+
+    updatePitchPosition(note) {
+        if (!note) {
+            // No note detected - move indicator to bottom
+            this.currentPitchElement.style.top = '90%';
+            this.currentPitchElement.style.left = '50%';
+            return;
+        }
+
+        // Convert note to a position in the pitch display
+        // The pitch display goes from low (bottom) to high (top)
+        const noteValue = this.noteToPitchValue(note);
+
+        // Get position: from 10% (low) to 90% (high) of the container height
+        // Typical vocal range is about 2 octaves or 24 semitones
+        // Use C3 (MIDI 48) to C5 (MIDI 72) as a common vocal range
+        const minValue = 48; // C3
+        const maxValue = 72; // C5
+        const range = maxValue - minValue;
+
+        // Invert the percentage (higher notes = higher position = smaller top percentage)
+        const percentage = 90 - Math.min(80, Math.max(0, ((noteValue - minValue) / range) * 80));
+
+        // Update pitch indicator position
+        this.currentPitchElement.style.top = `${percentage}%`;
+
+        // Horizontal position slightly varied based on detected cents deviation
+        const cents = note.centsDeviation || 0;
+        const xPosition = 50 + (cents / 50); // Shift left/right based on cents
+        this.currentPitchElement.style.left = `${xPosition}%`;
+    }
+
+    updateTargetNote() {
+        if (!this.exerciseNotes || this.exerciseNotes.length === 0) return;
+
+        const targetNote = this.exerciseNotes[this.currentExerciseStep % this.exerciseNotes.length];
+        this.targetNoteElement.setAttribute('data-note', targetNote);
+
+        // Convert note name to pitch value (MIDI number)
+        const noteValue = this.noteNameToPitchValue(targetNote);
+
+        // Calculate vertical position (inverted, higher notes = smaller top percentage)
+        const minValue = 48; // C3
+        const maxValue = 72; // C5
+        const range = maxValue - minValue;
+        const percentage = 90 - Math.min(80, Math.max(0, ((noteValue - minValue) / range) * 80));
+
+        // Update target line position
+        this.targetNoteElement.style.top = `${percentage}%`;
+    }
+
+    checkPitchMatch(note) {
+        if (!note || !this.exerciseNotes || this.exerciseNotes.length === 0) {
+            this.updatePitchMatchIndicator(false);
+            return;
+        }
+
+        // Get current target note
+        const targetNote = this.exerciseNotes[this.currentExerciseStep % this.exerciseNotes.length];
+        const targetValue = this.noteNameToPitchValue(targetNote);
+        const detectedValue = this.noteToPitchValue(note);
+
+        // Calculate how close we are to the target (in semitones)
+        const semitoneDistance = Math.abs(targetValue - detectedValue);
+        const centsDeviation = Math.abs(note.centsDeviation || 0);
+
+        let matchStatus = false;
+        let isClose = false;
+
+        // Check match conditions
+        if (semitoneDistance === 0 && centsDeviation <= 15) {
+            // Perfect match: same note, less than 15 cents deviation
+            matchStatus = true;
+
+            // Track this match
+            if (!this.isMatchingPitch) {
+                this.isMatchingPitch = true;
+                this.pitchAccuracy.push(Math.max(0, 100 - centsDeviation * 3));
+
+                // Update stats
+                this.notesValueElement.textContent = this.pitchAccuracy.length;
+
+                // Calculate success rate
+                const matches = this.pitchAccuracy.filter(acc => acc >= 80).length;
+                this.matchesValueElement.textContent = matches;
+
+                // Calculate overall accuracy
+                const avgAccuracy = this.pitchAccuracy.reduce((sum, val) => sum + val, 0) / this.pitchAccuracy.length;
+                this.accuracyValueElement.textContent = `${Math.round(avgAccuracy)}%`;
+
+                // If sostenuto mode, wait more time for a match
+                if (this.currentExercise !== 'sostenuto' || this.pitchAccuracy.length % 3 === 0) {
+                    // Move to next note in the exercise after a short delay
+                    setTimeout(() => {
+                        this.currentExerciseStep++;
+                        this.updateTargetNote();
+                        this.isMatchingPitch = false;
+                    }, 1000);
+                }
+            }
+        } else if (semitoneDistance === 0 && centsDeviation <= 30) {
+            // Close match: same note, less than 30 cents deviation
+            isClose = true;
+        } else {
+            // No match
+            this.isMatchingPitch = false;
+        }
+
+        // Update UI to show match status
+        this.updatePitchMatchIndicator(matchStatus, isClose);
+    }
+
+    updatePitchMatchIndicator(isMatch, isClose = false) {
+        // Remove all classes first
+        this.pitchMatchIndicator.classList.remove('match', 'close');
+
+        // Add appropriate class based on match status
+        if (isMatch) {
+            this.pitchMatchIndicator.classList.add('match');
+        } else if (isClose) {
+            this.pitchMatchIndicator.classList.add('close');
+        }
+    }
+
+    updateExerciseInstructions() {
+        switch (this.currentExercise) {
+            case 'scale':
+                this.exerciseInstructions.textContent = "Sing each note of the scale in sequence.";
+                break;
+            case 'intervals':
+                this.exerciseInstructions.textContent = "Sing from the base note (C) to each interval and back.";
+                break;
+            case 'sostenuto':
+                this.exerciseInstructions.textContent = "Hold each note steady for at least 3 seconds.";
+                break;
+            case 'custom':
+                this.exerciseInstructions.textContent = "Practice notes in your comfortable range.";
+                break;
+        }
+    }
+
+    // Helper methods for note conversions
+
+    noteToPitchValue(note) {
+        // Convert note object to MIDI note number
+        if (!note || !note.name) return 60; // Default to C4
+
+        const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        const octave = note.octave !== undefined ? note.octave : 4;
+        const noteIndex = noteNames.indexOf(note.name);
+
+        if (noteIndex === -1) return 60; // Default to C4 if not found
+
+        return 12 + (octave * 12) + noteIndex;
+    }
+
+    noteNameToPitchValue(noteName) {
+        // Convert note name (e.g., "C4") to MIDI note number
+        if (!noteName) return 60; // Default to C4
+
+        const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        const note = noteName.substring(0, noteName.length - 1);
+        const octave = parseInt(noteName.charAt(noteName.length - 1), 10);
+        const noteIndex = noteNames.indexOf(note);
+
+        if (noteIndex === -1 || isNaN(octave)) return 60; // Default to C4 if not found
+
+        return 12 + (octave * 12) + noteIndex;
+    }
+
+    pitchValueToNoteName(pitchValue) {
+        // Convert MIDI note number to note name
+        if (!pitchValue) return 'C4';
+
+        const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        const octave = Math.floor((pitchValue - 12) / 12);
+        const noteIndex = (pitchValue - 12) % 12;
+
+        return `${noteNames[noteIndex]}${octave}`;
+    }
+
     updateMode(mode) {
         this.mode = mode;
         console.log("[MUSIC UI] Mode updated to:", mode);
@@ -498,9 +821,16 @@ class MusicAnalyzer {
         if (mode === 'singing') {
             this.container.querySelector('.singing-analysis').style.display = 'block';
             this.container.querySelector('.guitar-analysis').style.display = 'none';
+            this.container.querySelector('.voice-training').style.display = 'none';
         } else if (mode === 'guitar') {
             this.container.querySelector('.singing-analysis').style.display = 'none';
             this.container.querySelector('.guitar-analysis').style.display = 'block';
+            this.container.querySelector('.voice-training').style.display = 'none';
+        } else if (mode === 'voice') {
+            this.container.querySelector('.singing-analysis').style.display = 'none';
+            this.container.querySelector('.guitar-analysis').style.display = 'none';
+            this.container.querySelector('.voice-training').style.display = 'block';
+            this.initVoiceTraining();
         }
 
         // If we have data and are analyzing, update the UI immediately with the new mode
@@ -511,6 +841,89 @@ class MusicAnalyzer {
             };
             this.updateMusicData(data);
         }
+    }
+
+    initVoiceTraining() {
+        console.log("[MUSIC UI] Initializing voice training mode");
+
+        // Reset voice range tracking
+        this.voiceLowestNote = null;
+        this.voiceHighestNote = null;
+
+        // Reset exercise state
+        this.currentExerciseStep = 0;
+        this.pitchAccuracy = [];
+
+        // Set default exercise
+        this.setVoiceExercise('scale');
+
+        // Update UI
+        this.voiceRangeElement.textContent = "Sing to detect range";
+        this.accuracyValueElement.textContent = "--";
+        this.notesValueElement.textContent = "0";
+        this.matchesValueElement.textContent = "0";
+
+        // Show instructions
+        this.updateExerciseInstructions();
+    }
+
+    setVoiceExercise(exercise) {
+        this.currentExercise = exercise;
+        this.currentExerciseStep = 0;
+
+        // Generate notes for the exercise
+        switch (exercise) {
+            case 'scale':
+                this.exerciseNotes = ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5'];
+                this.exerciseInstructions.textContent = "Sing the scale notes in sequence.";
+                break;
+            case 'intervals':
+                this.exerciseNotes = ['C4', 'E4', 'C4', 'F4', 'C4', 'G4', 'C4', 'A4'];
+                this.exerciseInstructions.textContent = "Practice intervals from the root note (C).";
+                break;
+            case 'sostenuto':
+                this.exerciseNotes = ['C4', 'E4', 'G4'];
+                this.exerciseInstructions.textContent = "Hold each note steady for at least 3 seconds.";
+                break;
+            case 'custom':
+                // Adapt to the user's detected range if available
+                if (this.voiceLowestNote && this.voiceHighestNote) {
+                    const noteRange = this.getCustomNoteRange();
+                    this.exerciseNotes = noteRange;
+                    this.exerciseInstructions.textContent = "Custom exercise based on your vocal range.";
+                } else {
+                    this.exerciseNotes = ['A3', 'C4', 'E4', 'G4', 'A4'];
+                    this.exerciseInstructions.textContent = "Sing more to customize this exercise to your range.";
+                }
+                break;
+        }
+
+        // Set the initial target note
+        this.updateTargetNote();
+    }
+
+    getCustomNoteRange() {
+        // Create a custom exercise based on detected vocal range
+        const result = [];
+
+        if (!this.voiceLowestNote || !this.voiceHighestNote) {
+            return ['C4', 'D4', 'E4', 'F4', 'G4']; // Default if no range detected
+        }
+
+        // Get a comfortable range within their detected limits
+        const lowValue = this.voiceLowestNote + 2; // Start slightly above their lowest note
+        const highValue = this.voiceHighestNote - 2; // End slightly below their highest note
+
+        // Generate 5-8 notes within this range
+        const range = highValue - lowValue;
+        const steps = Math.min(8, Math.max(5, Math.floor(range / 2)));
+
+        for (let i = 0; i < steps; i++) {
+            const noteValue = lowValue + Math.floor((i / (steps - 1)) * range);
+            result.push(this.pitchValueToNoteName(noteValue));
+        }
+
+        return result;
     }
 
     showStatus(message, type = 'info') {
