@@ -460,6 +460,12 @@
     opacity: 1;
 }
 
+/* Remove the click to play/pause tooltip */
+.notation-container::before {
+    display: none;
+    /* Hide the tooltip completely */
+}
+
 /* Disco mode styles */
 body.disco-mode .piano-visualization-container {
     border-top: 1px solid rgba(255, 255, 255, 0.2);
@@ -724,102 +730,35 @@ body.disco-mode .note-bar.playing {
 
 /* Interactive area helpers for notation */
 .notation-container::before {
-    content: "Drag to navigate music";
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    bottom: 5px;
-    font-size: 11px;
-    color: rgba(255, 255, 255, 0.5);
-    background-color: rgba(0, 0, 0, 0.3);
-    padding: 3px 8px;
-    border-radius: 3px;
-    z-index: 10;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.notation-container:hover::before {
-    opacity: 1;
+    display: none;
+    /* Hide the tooltip completely */
 }
 
 /* Notation page navigation controls */
-.notation-page-controls {
-    position: absolute;
-    bottom: 10px;
-    left: 0;
-    right: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 15px;
-    z-index: 20;
-}
 
-.page-nav {
-    background-color: rgba(0, 0, 0, 0.6);
-    color: white;
-    border: none;
-    border-radius: 4px;
-    padding: 5px 10px;
-    cursor: pointer;
-    font-size: 12px;
-    transition: all 0.2s ease;
-}
+/* Remove the navigation-page-controls class styles as they're not used anymore */
 
-.page-nav:hover {
-    background-color: rgba(0, 150, 215, 0.7);
-}
-
-.page-nav:disabled {
-    opacity: 0.3;
-    cursor: not-allowed;
-    background-color: rgba(0, 0, 0, 0.4);
-}
-
+/* Updated page display that's now standalone */
 .page-display {
-    background-color: rgba(0, 0, 0, 0.6);
-    color: white;
-    font-size: 12px;
-    padding: 5px 10px;
-    border-radius: 4px;
-    min-width: 80px;
+    display: none;
+}
+
+/* Simple notation page info styling */
+.simple-page-info {
+    margin: 5px 0;
     text-align: center;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.7);
 }
 
 /* Navigation mode indicator */
 .navigation-mode-indicator {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background-color: rgba(0, 150, 215, 0.2);
-    color: rgba(255, 255, 255, 0.8);
-    padding: 8px 16px;
-    border-radius: 20px;
-    font-size: 14px;
-    font-weight: bold;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    z-index: 30;
-    border: 1px solid rgba(0, 150, 215, 0.4);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    backdrop-filter: blur(2px);
-    box-shadow: 0 0 10px rgba(0, 150, 215, 0.4);
-    animation: pulse 2s infinite;
-}
-
-/* Make the indicator visible when navigation mode is active */
-.notation-container.navigation-mode .navigation-mode-indicator {
-    opacity: 1;
+    display: none;
 }
 
 /* Different cursor for navigation mode */
 .notation-container.navigation-mode {
-    cursor: crosshair;
+    cursor: pointer;
 }
 
 /* Default cursor when not in navigation mode */

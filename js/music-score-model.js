@@ -68,15 +68,25 @@ class MusicScoreModel {
     }
 
     /**
+     * Get high-precision current timestamp
+     * @returns {number} Current timestamp in milliseconds
+     */
+    getTimestamp() {
+        return (performance && typeof performance.now === 'function') ?
+            performance.now() : Date.now();
+    }
+
+    /**
      * Start or resume playback
      */
     play() {
+        // Prevent duplicate play calls
         if (this.isPlaying) return;
 
         this.isPlaying = true;
 
-        // Use performance.now() for more accurate timing when available
-        const now = performance && performance.now ? performance.now() : Date.now();
+        // Use consistent timing method
+        const now = this.getTimestamp();
 
         // If paused, resume from pause time
         if (this.pauseTime > 0) {
@@ -86,6 +96,12 @@ class MusicScoreModel {
         } else {
             // Starting fresh - convert currentPosition to milliseconds
             this.playbackStartTime = now - (this.currentPosition * 1000);
+        }
+
+        // Clean up any existing animation frame before starting a new one
+        if (this.animationFrameId) {
+            cancelAnimationFrame(this.animationFrameId);
+            this.animationFrameId = null;
         }
 
         // Start animation loop
@@ -99,10 +115,12 @@ class MusicScoreModel {
      * Pause playback
      */
     pause() {
+        // Prevent duplicate pause calls
         if (!this.isPlaying) return;
 
         this.isPlaying = false;
-        this.pauseTime = Date.now();
+        // Use the same timing method as play()
+        this.pauseTime = this.getTimestamp();
 
         // Stop animation loop
         if (this.animationFrameId) {
@@ -195,17 +213,19 @@ class MusicScoreModel {
      * @param {number} timestamp Animation frame timestamp
      */
     updatePlayback(timestamp) {
+        // If we're not playing, don't continue the animation
         if (!this.isPlaying) return;
 
-        // Calculate current position from elapsed time - more precise calculation
+        // Calculate current position from elapsed time
         this.previousPosition = this.currentPosition;
 
-        // Use high-resolution timing when available for smoother animation
-        if (performance && performance.now) {
-            const elapsedSeconds = (performance.now() - this.playbackStartTime) / 1000;
+        // Use consistent timing method
+        const currentTime = this.getTimestamp();
+        const elapsedSeconds = (currentTime - this.playbackStartTime) / 1000;
+
+        // Guard against NaN or Infinity
+        if (!isNaN(elapsedSeconds) && isFinite(elapsedSeconds)) {
             this.currentPosition = elapsedSeconds;
-        } else {
-            this.currentPosition = (Date.now() - this.playbackStartTime) / 1000;
         }
 
         // Check for tempo changes at current position and make necessary adjustments

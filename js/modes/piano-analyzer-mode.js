@@ -42,9 +42,6 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         this.currentPage = 0;
         this.measuresPerPage = 2;
         this.totalPages = 1;
-
-        // Add navigation mode state
-        this.navigationMode = false;
     }
 
     initialize() {
@@ -161,6 +158,7 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
 
         // Listen for play/pause events to update UI
         this.scoreModel.addEventListener('play', () => {
+            // Use the scoreModel's state as the source of truth
             this.isPlaying = true;
             this.updatePlayPauseButton();
 
@@ -171,6 +169,7 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         });
 
         this.scoreModel.addEventListener('pause', () => {
+            // Use the scoreModel's state as the source of truth
             this.isPlaying = false;
             this.updatePlayPauseButton();
 
@@ -1211,7 +1210,6 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
 
         this.pianoVisualizationContainer.innerHTML = `
             <div class="notation-container">
-                <div class="navigation-mode-indicator">Navigation Mode</div>
             </div>
             <div class="note-bar-container">
             </div>
@@ -1228,10 +1226,6 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         this.keyboardContainer = this.pianoVisualizationContainer.querySelector('.piano-keyboard-container');
         this.noteBarContainer = this.pianoVisualizationContainer.querySelector('.note-bar-container');
         this.closeButton = this.pianoVisualizationContainer.querySelector('.piano-close-btn');
-        this.navigationIndicator = this.pianoVisualizationContainer.querySelector('.navigation-mode-indicator');
-
-        // Hide the navigation indicator initially
-        this.navigationIndicator.style.display = 'none';
 
         this.generatePianoKeyboard();
 
@@ -1239,16 +1233,13 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             this.closePianoVisualization();
         });
 
-        // Replace old mouse event handlers with new navigation mode handlers
-        this.setupNavigationHandlers();
+        // Simplified click handler for play/pause
+        this.setupSimpleClickHandlers();
 
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
-                if (this.navigationMode) {
-                    // If in navigation mode, exit it
-                    this.toggleNavigationMode(false);
-                } else if (this.pianoVisualizationContainer.style.display !== 'none') {
-                    // Otherwise close the visualization
+                if (this.pianoVisualizationContainer.style.display !== 'none') {
+                    // Close the visualization
                     this.closePianoVisualization();
                 }
             }
@@ -1385,35 +1376,6 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             svgContainer.style.height = '100%';
             this.notationContainer.appendChild(svgContainer);
 
-            // Create page navigation controls
-            const pageControls = document.createElement('div');
-            pageControls.className = 'notation-page-controls';
-
-            const prevButton = document.createElement('button');
-            prevButton.className = 'page-nav prev-page';
-            prevButton.innerHTML = '&laquo; Prev';
-            prevButton.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.goToPreviousPage();
-            });
-
-            const pageDisplay = document.createElement('span');
-            pageDisplay.className = 'page-display';
-
-            const nextButton = document.createElement('button');
-            nextButton.className = 'page-nav next-page';
-            nextButton.innerHTML = 'Next &raquo;';
-            nextButton.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.goToNextPage();
-            });
-
-            pageControls.appendChild(prevButton);
-            pageControls.appendChild(pageDisplay);
-            pageControls.appendChild(nextButton);
-
-            this.notationContainer.appendChild(pageControls);
-
             // Initialize VexFlow
             const VF = Vex.Flow;
 
@@ -1460,11 +1422,6 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
                 this.measureData.length - 1,
                 startMeasureIndex + this.measuresPerPage - 1
             );
-
-            // Update page display
-            pageDisplay.textContent = `Page ${this.currentPage + 1} of ${this.totalPages}`;
-            prevButton.disabled = this.currentPage === 0;
-            nextButton.disabled = this.currentPage >= this.totalPages - 1;
 
             // Get time bounds from measure data
             const startPosition = this.measureData[startMeasureIndex].startPosition;
@@ -1882,18 +1839,10 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             ? this.measureData[endMeasureIndex + 1].startPosition
             : startPosition + this.measureData[endMeasureIndex].durationSeconds;
 
-        // Add page controls
-        const pageControls = document.createElement('div');
-        pageControls.className = 'simple-page-controls';
-        pageControls.innerHTML = `
-            <button class="page-nav prev-page">&laquo; Previous</button>
-            <span>Page ${this.currentPage + 1} of ${this.totalPages}</span>
-            <button class="page-nav next-page">Next &raquo;</button>
-        `;
-
-        // Add event listeners
-        pageControls.querySelector('.prev-page').addEventListener('click', () => this.goToPreviousPage());
-        pageControls.querySelector('.next-page').addEventListener('click', () => this.goToNextPage());
+        // Add page info (instead of controls with buttons)
+        const pageInfo = document.createElement('div');
+        pageInfo.className = 'simple-page-info';
+        pageInfo.innerHTML = `<span>Page ${this.currentPage + 1} of ${this.totalPages}</span>`;
 
         // Add header with position info
         simpleNotation.innerHTML = `
@@ -1902,8 +1851,8 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             <div class="playback-status">${this.isPlaying ? 'Playing' : 'Paused'}</div>
         `;
 
-        // Add the page controls
-        simpleNotation.appendChild(pageControls);
+        // Add the page info
+        simpleNotation.appendChild(pageInfo);
 
         // Filter notes for this page
         const visibleNotes = this.parsedNotes.filter(note => {
@@ -2073,11 +2022,40 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         }
     }
 
+    /**
+     * Toggle playback state with improved reliability
+     */
     togglePlayback() {
-        if (this.scoreModel.isPlaying) {
-            this.scoreModel.pause();
-        } else {
-            this.scoreModel.play();
+        // Prevent multiple rapid toggles by adding a small debounce
+        if (this._toggleInProgress) return;
+        this._toggleInProgress = true;
+
+        try {
+            // Use scoreModel's state directly to determine action
+            if (this.scoreModel.isPlaying) {
+                this.scoreModel.pause();
+            } else {
+                this.scoreModel.play();
+            }
+        } catch (err) {
+            console.error("Error toggling playback:", err);
+        } finally {
+            // Clear debounce after a short delay
+            setTimeout(() => {
+                this._toggleInProgress = false;
+            }, 300);
+        }
+    }
+
+    // Update the play/pause button state
+    updatePlayPauseButton() {
+        const playPauseButton = document.querySelector('.piano-play-pause');
+        if (playPauseButton) {
+            // Ensure button text matches scoreModel state
+            playPauseButton.textContent = this.scoreModel.isPlaying ? 'Pause' : 'Play';
+
+            // Add visual indication of current state
+            playPauseButton.classList.toggle('playing', this.scoreModel.isPlaying);
         }
     }
 
@@ -2227,20 +2205,28 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         let currentMeasure = 1;
         let currentBeat = 1;
 
+        // Add safety check for the current position
+        const safePosition = isNaN(this.currentPosition) || !isFinite(this.currentPosition) ?
+            0 : Math.max(0, this.currentPosition);
+
         for (const measure of this.measureData) {
-            if (this.currentPosition >= measure.startPosition) {
+            if (safePosition >= measure.startPosition) {
                 currentMeasure = measure.number;
 
-                if (measure.startPosition <= this.currentPosition) {
+                if (measure.startPosition <= safePosition) {
                     const nextMeasureStart = measure.index < this.measureData.length - 1
                         ? this.measureData[measure.index + 1].startPosition
                         : measure.startPosition + measure.durationSeconds;
 
-                    const posInMeasure = (this.currentPosition - measure.startPosition) /
+                    const posInMeasure = (safePosition - measure.startPosition) /
                         (nextMeasureStart - measure.startPosition);
 
                     currentBeat = Math.floor(posInMeasure * this.timeSignatureNumerator) + 1;
-                    if (currentBeat > this.timeSignatureNumerator) currentBeat = this.timeSignatureNumerator;
+
+                    // Ensure beat number is valid
+                    if (currentBeat > this.timeSignatureNumerator || !isFinite(currentBeat)) {
+                        currentBeat = this.timeSignatureNumerator;
+                    }
                 }
             } else {
                 break;
@@ -2250,114 +2236,34 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         const infoPanel = document.createElement('div');
         infoPanel.className = 'notation-info-panel';
         infoPanel.innerHTML = `
-            <div class="position-info">Position: ${this.currentPosition.toFixed(1)}s</div>
+            <div class="position-info">Position: ${safePosition.toFixed(1)}s</div>
             <div class="measure-info">Measure: ${currentMeasure}, Beat: ${currentBeat}</div>
             <div class="speed-info">Tempo: ${this.bpm} BPM</div>
             <div class="playback-status">${this.isPlaying ? 'Playing' : 'Paused'}</div>
             <div class="view-info">Page: ${this.currentPage + 1}/${this.totalPages}</div>
-            ${this.navigationMode ? '<div class="nav-info">Navigation Mode: Double-click to exit</div>' :
-                '<div class="nav-info">Double-click to enter Navigation Mode</div>'}
         `;
 
         svgContainer.appendChild(infoPanel);
     }
 
-    // Setup navigation handlers - completely rewritten to remove all drag functionality outside navigation mode
-    setupNavigationHandlers() {
-        // Double click toggles navigation mode
-        this.notationContainer.addEventListener('dblclick', (e) => {
-            // Toggle navigation mode on double click
-            this.toggleNavigationMode(!this.navigationMode);
-            e.preventDefault();
-        });
-
-        // Single click for play/pause (when not in navigation mode)
+    // New simplified event handlers
+    setupSimpleClickHandlers() {
+        // Simple click for play/pause with improved event handling
         this.notationContainer.addEventListener('click', (e) => {
-            if (!this.navigationMode) {
+            // Don't trigger if clicking on specific controls
+            if (e.target.closest('.notation-info-panel')) {
+                return;
+            }
+
+            // Only toggle playback for direct clicks on the main areas
+            if (e.target === this.notationContainer ||
+                e.target.tagName === 'svg' ||
+                e.target.className === 'notation-svg-container' ||
+                e.target.closest('.notation-svg-container')) {
+                e.preventDefault(); // Prevent any other default behaviors
+                e.stopPropagation(); // Stop event from bubbling further
                 this.togglePlayback();
             }
         });
-
-        // Mouse wheel event for page navigation (only in navigation mode)
-        this.notationContainer.addEventListener('wheel', (e) => {
-            if (this.navigationMode) {
-                e.preventDefault();
-                if (e.deltaY < 0) {
-                    // Scroll up = previous page
-                    this.goToPreviousPage();
-                } else {
-                    // Scroll down = next page
-                    this.goToNextPage();
-                }
-            }
-        });
-
-        // Mouse move for position seeking (only in navigation mode)
-        this.notationContainer.addEventListener('mousemove', (e) => {
-            if (this.navigationMode) {
-                this.handleNavigationMouseMove(e);
-            }
-        });
-    }
-
-    // Toggle navigation mode on/off
-    toggleNavigationMode(enable) {
-        this.navigationMode = enable;
-
-        // Show/hide navigation indicator
-        if (this.navigationIndicator) {
-            this.navigationIndicator.style.display = enable ? 'block' : 'none';
-        }
-
-        // Update cursor style
-        this.notationContainer.style.cursor = enable ? 'crosshair' : 'pointer';
-
-        // Add/remove class to notation container
-        this.notationContainer.classList.toggle('navigation-mode', enable);
-
-        console.log(`Navigation mode ${enable ? 'enabled' : 'disabled'}`);
-    }
-
-    // Handle mouse movement in navigation mode - improved to be the only method that changes playback position
-    handleNavigationMouseMove(e) {
-        if (!this.navigationMode) return;
-
-        // Get mouse position relative to notation container
-        const rect = this.notationContainer.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-
-        // Find the current measure indices for this page
-        const startMeasureIndex = this.currentPage * this.measuresPerPage;
-        const endMeasureIndex = Math.min(
-            this.measureData.length - 1,
-            startMeasureIndex + this.measuresPerPage - 1
-        );
-
-        // Calculate which measure based on horizontal position
-        const measureWidth = rect.width / this.measuresPerPage;
-        const measureOffset = Math.floor(x / measureWidth);
-        const targetMeasureIndex = startMeasureIndex + measureOffset;
-
-        // Ensure valid measure index
-        if (targetMeasureIndex >= 0 && targetMeasureIndex <= endMeasureIndex) {
-            const measureData = this.measureData[targetMeasureIndex];
-            if (!measureData) return;
-
-            // Calculate position within measure based on x position
-            const measureX = x - (measureOffset * measureWidth);
-            const measurePosition = measureX / measureWidth; // 0-1 position within measure
-
-            // Calculate time within measure
-            const measureStartTime = measureData.startPosition;
-            const measureDuration = measureData.durationSeconds;
-            const targetTime = measureStartTime + (measurePosition * measureDuration);
-
-            // Update position
-            this.scoreModel.seekTo(targetTime);
-
-            // Provide visual feedback
-            this.renderNotation();
-        }
     }
 }
