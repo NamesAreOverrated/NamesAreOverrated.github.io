@@ -250,9 +250,9 @@
     z-index: 10;
     pointer-events: none;
     box-shadow: 0 0 3px rgba(255, 87, 34, 0.7);
-    /* transition: transform 0.1s linear, opacity 0.2s ease; */
+    transition: transform 1ms linear;
     will-change: transform;
-    transform: translateZ(0);
+    transform: translateZ(0), translateX(0px);
     left: 0;
     /* Force hardware acceleration */
 }

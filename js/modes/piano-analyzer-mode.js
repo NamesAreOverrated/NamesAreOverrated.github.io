@@ -42,6 +42,8 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         this.currentPage = 0;
         this.measuresPerPage = 2;
         this.totalPages = 1;
+
+        this.startUnifiedAnimation = this.startUnifiedAnimation.bind(this);
     }
 
     initialize() {
@@ -121,45 +123,52 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             // Skip visualization updates if containers aren't created yet
             if (!this.pianoVisualizationContainer) return;
 
-            // Get current position from score model
+            // Store current position
             this.currentPosition = data.position;
 
-            // Update position indicator immediately
-            this.updatePositionIndicator(data.position);
+            // For large position jumps, update immediately (seeking behavior)
+            if (Math.abs(data.position - (data.previousPosition || 0)) > 0.3) {
+                // Handle page changes immediately
+                const currentMeasureIndex = this.findCurrentMeasureIndex();
+                const expectedPage = Math.floor(currentMeasureIndex / this.measuresPerPage);
 
-            // Find current measure
-            const currentMeasureIndex = this.findCurrentMeasureIndex();
-
-            // Check if we need to change page
-            const expectedPage = Math.floor(currentMeasureIndex / this.measuresPerPage);
-            if (expectedPage !== this.currentPage) {
-                this.currentPage = expectedPage;
-                // Force notation redraw on page change
-                this.renderNotation();
-                return; // Early return as renderNotation will handle everything
-            }
-
-
-
-
-            // Put other updates in requestAnimationFrame for performance
-            requestAnimationFrame(() => {
-                this.updateNoteBars();
-
-                // Don't update notation on every frame for performance reasons
-                if (Math.floor(data.position * 2) > Math.floor((data.previousPosition || 0) * 2)) {
+                if (expectedPage !== this.currentPage) {
+                    this.currentPage = expectedPage;
+                    // Force notation redraw on page change
                     this.renderNotation();
+                    // This will also update position indicator with forceUpdate
+                    return;
                 }
 
-                // Highlight piano keys
-                const playingNotes = this.scoreModel.getCurrentlyPlayingNotes();
-                this.highlightPianoKeys(playingNotes);
-            });
+                // Update position indicator with forceUpdate=true for seeking
+                this.updatePositionIndicator(data.position, true);
+            }
+
+            // Other updates (note bars, highlighting) run in animation frame for better performance
+            if (!this._pendingRafUpdate) {
+                this._pendingRafUpdate = true;
+
+                requestAnimationFrame(() => {
+                    this._pendingRafUpdate = false;
+
+                    // Update note bars
+                    this.updateNoteBars();
+
+                    // Update notation at lower frequency 
+                    if (Math.floor(data.position * 2) > Math.floor((data.previousPosition || 0) * 2)) {
+                        this.renderNotation(false); // false = don't force full redraw
+                    }
+
+                    // Highlight keys
+                    const playingNotes = this.scoreModel.getCurrentlyPlayingNotes();
+                    this.highlightPianoKeys(playingNotes);
+                });
+            }
         });
 
         // Listen for tempo changes to update UI
         this.scoreModel.addEventListener('tempochange', (data) => {
-            this.updateTempoDisplay(data.tempo);
+
         });
 
         // Listen for play/pause events to update UI
@@ -1056,128 +1065,160 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         });
     }
 
+
     updateNoteBarsPosition() {
         if (!this.noteBarContainer || !this.noteBars.length) return;
 
         const containerHeight = this.noteBarContainer.clientHeight;
         const lookAheadTime = this.noteBarLookAhead;
+        const currentTime = this.scoreModel.currentPosition;
 
+        // Cache these calculations outside the loop
+        const timeToPixelRatio = containerHeight / lookAheadTime;
+        const MIN_NOTE_HEIGHT = 8;
+
+        // Cache DOM rect calculations to avoid layout thrashing
         const containerRect = this.keyboardContainer.getBoundingClientRect();
         const keyPositions = new Map();
 
-        const timeToPixelRatio = containerHeight / lookAheadTime;
-
-        const MIN_NOTE_HEIGHT = 8;
-
-        const currentTime = this.scoreModel.currentPosition;
+        // Batch DOM updates using requestAnimationFrame
+        const updates = [];
 
         this.noteBars.forEach(bar => {
             const note = bar.note;
             const element = bar.element;
+            if (!element || !bar.keyElement) return;
 
-            if (!element) return;
+            // Calculate position data but don't update DOM yet
+            const noteData = this.calculateNoteBarPosition(
+                bar, currentTime, containerHeight,
+                timeToPixelRatio, MIN_NOTE_HEIGHT,
+                containerRect, keyPositions
+            );
 
-            const keyElement = bar.keyElement;
-            if (!keyElement) return;
-
-            let keyPosition;
-            if (keyPositions.has(note.noteNumber)) {
-                keyPosition = keyPositions.get(note.noteNumber);
-            } else {
-                const keyRect = keyElement.getBoundingClientRect();
-                keyPosition = {
-                    left: keyRect.left - containerRect.left + (keyRect.width / 2),
-                    width: keyElement.classList.contains('black-key') ? 14 : 22
-                };
-                keyPositions.set(note.noteNumber, keyPosition);
-            }
-
-            const noteStart = note.start;
-            const noteDuration = note.visualDuration || note.duration;
-            const noteEnd = noteStart + noteDuration;
-
-            const isPlaying = noteStart <= currentTime && noteEnd > currentTime;
-            const isUpcoming = noteStart > currentTime && noteStart <= currentTime + lookAheadTime;
-            const isPartiallyVisible = noteStart < currentTime && noteEnd > currentTime;
-            const isPassed = noteEnd <= currentTime && noteEnd > currentTime - 0.5;
-
-            const isVisible = isPlaying || isUpcoming || isPartiallyVisible || isPassed;
-
-            if (isVisible) {
-                element.style.display = 'block';
-
-                const noteHeight = Math.max(MIN_NOTE_HEIGHT, noteDuration * timeToPixelRatio);
-
-                let topPosition;
-
-                if (isPlaying) {
-                    const elapsedTime = currentTime - noteStart;
-                    const remainingDuration = Math.max(0, noteDuration - elapsedTime);
-                    const remainingHeight = remainingDuration * timeToPixelRatio;
-
-                    topPosition = containerHeight - remainingHeight;
-                }
-                else if (isUpcoming) {
-                    const timeToStart = noteStart - currentTime;
-                    const distanceFromBottom = timeToStart * timeToPixelRatio;
-
-                    topPosition = containerHeight - distanceFromBottom - noteHeight;
-                }
-                else if (isPartiallyVisible) {
-                    const elapsedTime = currentTime - noteStart;
-                    const remainingDuration = Math.max(0, noteDuration - elapsedTime);
-                    const remainingHeight = remainingDuration * timeToPixelRatio;
-
-                    topPosition = containerHeight - remainingHeight;
-                }
-                else if (isPassed) {
-                    const timeSinceEnd = currentTime - noteEnd;
-                    const opacity = Math.max(0, 0.5 - timeSinceEnd);
-                    element.style.opacity = opacity.toString();
-
-                    topPosition = containerHeight;
-                }
-
-                element.style.transform = `translate3d(${keyPosition.left - (keyPosition.width / 2)}px, ${topPosition}px, 0)`;
-                element.style.width = `${keyPosition.width}px`;
-                element.style.height = `${noteHeight}px`;
-
-                element.classList.toggle('playing', isPlaying);
-
-                if (note.staccato) {
-                    element.style.height = `${noteHeight * 0.7}px`;
-                }
-
-                if (note.accent) {
-                    element.style.opacity = '0.95';
-                }
-
-                if (note.dynamic) {
-                    element.classList.add(`dynamic-${note.dynamic}`);
-                }
-            } else {
-                element.style.display = 'none';
+            if (noteData) {
+                updates.push({ element, data: noteData });
             }
         });
+
+        // Apply all DOM updates at once (better performance)
+        if (updates.length > 0) {
+            requestAnimationFrame(() => {
+                updates.forEach(({ element, data }) => {
+                    element.style.display = data.display;
+                    if (data.display === 'block') {
+                        element.style.transform = `translate3d(${data.x}px, ${data.y}px, 0)`;
+                        element.style.width = `${data.width}px`;
+                        element.style.height = `${data.height}px`;
+                        element.style.opacity = data.opacity;
+                        element.classList.toggle('playing', data.isPlaying);
+                    }
+                });
+            });
+        }
     }
+
+    // Extract calculation logic to separate function
+    calculateNoteBarPosition(bar, currentTime, containerHeight, timeToPixelRatio, minHeight, containerRect, keyPositions) {
+        const note = bar.note;
+        const keyElement = bar.keyElement;
+
+        let keyPosition;
+        if (keyPositions.has(note.noteNumber)) {
+            keyPosition = keyPositions.get(note.noteNumber);
+        } else {
+            const keyRect = keyElement.getBoundingClientRect();
+            keyPosition = {
+                left: keyRect.left - containerRect.left + (keyRect.width / 2),
+                width: keyElement.classList.contains('black-key') ? 14 : 22
+            };
+            keyPositions.set(note.noteNumber, keyPosition);
+        }
+
+        const noteStart = note.start;
+        const noteDuration = note.visualDuration || note.duration;
+        const noteEnd = noteStart + noteDuration;
+
+        // Visibility checks
+        const isPlaying = noteStart <= currentTime && noteEnd > currentTime;
+        const isUpcoming = noteStart > currentTime && noteStart <= currentTime + this.noteBarLookAhead;
+        const isPartiallyVisible = noteStart < currentTime && noteEnd > currentTime;
+        const isPassed = noteEnd <= currentTime && noteEnd > currentTime - 0.5;
+        const isVisible = isPlaying || isUpcoming || isPartiallyVisible || isPassed;
+
+        if (!isVisible) {
+            return { display: 'none' };
+        }
+
+        // Calculate position
+        const noteHeight = Math.max(minHeight, noteDuration * timeToPixelRatio);
+        let topPosition, opacity = 1;
+
+        if (isPlaying) {
+            const elapsedTime = currentTime - noteStart;
+            const remainingDuration = Math.max(0, noteDuration - elapsedTime);
+            const remainingHeight = remainingDuration * timeToPixelRatio;
+            topPosition = containerHeight - remainingHeight;
+        } else if (isUpcoming) {
+            const timeToStart = noteStart - currentTime;
+            const distanceFromBottom = timeToStart * timeToPixelRatio;
+            topPosition = containerHeight - distanceFromBottom - noteHeight;
+        } else if (isPartiallyVisible) {
+            const elapsedTime = currentTime - noteStart;
+            const remainingDuration = Math.max(0, noteDuration - elapsedTime);
+            const remainingHeight = remainingDuration * timeToPixelRatio;
+            topPosition = containerHeight - remainingHeight;
+        } else if (isPassed) {
+            const timeSinceEnd = currentTime - noteEnd;
+            opacity = Math.max(0, 0.5 - timeSinceEnd);
+            topPosition = containerHeight;
+        }
+
+        // Apply staccato effect
+        let finalHeight = noteHeight;
+        if (note.staccato) {
+            finalHeight = noteHeight * 0.7;
+        }
+
+        return {
+            display: 'block',
+            x: keyPosition.left - (keyPosition.width / 2),
+            y: topPosition,
+            width: keyPosition.width,
+            height: finalHeight,
+            opacity: note.accent ? 0.95 : opacity,
+            isPlaying
+        };
+    }
+
 
     cleanupInvisibleNoteBars(startTime) {
         const cleanupThreshold = startTime - 1.0;
+        const removeList = [];
 
-        this.noteBars = this.noteBars.filter(bar => {
+        // First identify elements to remove (separation of concerns)
+        for (let i = 0; i < this.noteBars.length; i++) {
+            const bar = this.noteBars[i];
             const note = bar.note;
             const noteDuration = note.visualDuration || note.duration;
-            const isFinished = note.start + noteDuration < cleanupThreshold;
 
-            if (isFinished) {
+            if (note.start + noteDuration < cleanupThreshold) {
+                removeList.push(i);
                 if (bar.element && bar.element.parentNode) {
                     bar.element.parentNode.removeChild(bar.element);
                 }
-                return false;
             }
+        }
 
-            return true;
-        });
+        // Then remove from array (in reverse to maintain indices)
+        for (let i = removeList.length - 1; i >= 0; i--) {
+            this.noteBars.splice(removeList[i], 1);
+        }
+
+        // Log cleanup for debugging
+        if (removeList.length > 0) {
+            console.log(`Removed ${removeList.length} invisible note bars, ${this.noteBars.length} remaining`);
+        }
     }
 
     updateTempoControls() {
@@ -1299,6 +1340,22 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
     updatePlayback(timestamp) {
         if (!this.isPlaying) return;
 
+
+
+        // Calculate current position from elapsed time
+        this.previousPosition = this.currentPosition;
+
+        // Use high-precision timing
+        const currentTime = this.getTimestamp();
+        const elapsedSeconds = (currentTime - this.playbackStartTime) / 1000;
+
+        // Smoother position update with rounding to reduce jitter
+        if (!isNaN(elapsedSeconds) && isFinite(elapsedSeconds)) {
+            // Round to 3 decimal places to reduce tiny fluctuations
+            this.currentPosition = Math.round(elapsedSeconds * 1000) / 1000;
+        }
+
+
         const deltaTime = (timestamp - this.lastRenderTime) / 1000;
         this.lastRenderTime = timestamp;
 
@@ -1325,7 +1382,8 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             this.currentPosition = 0;
         }
 
-        this.animationFrameId = requestAnimationFrame(this.updatePlayback.bind(this));
+        // this.animationFrameId = requestAnimationFrame(this.updatePlayback.bind(this));
+        this.animationFrameId = requestAnimationFrame(this.updatePlayback);
     }
 
     updateTempoAtPosition() {
@@ -1375,6 +1433,14 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
 
     renderNotationWithVexFlow() {
         if (!this.parsedNotes.length || !this.notationContainer) return;
+
+        const now = performance.now();
+        if (this._lastFullRender && now - this._lastFullRender < 500) {
+            // Just update position indicator for smoother experience
+            this.updatePositionIndicator(this.scoreModel.currentPosition);
+            return;
+        }
+        this._lastFullRender = now;
 
         // Remove position indicator before clearing container
         if (this.positionIndicator && this.positionIndicator.parentNode) {
@@ -1687,11 +1753,6 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         }
     }
 
-    /**
- * Update position indicator location based on current playback position
- * @param {number} position Current playback position in seconds
- * @param {boolean} forceUpdate Force update even if position is outside current page
- */
     updatePositionIndicator(position, forceUpdate = false) {
         // Ensure we have the necessary elements
         if (!this.positionIndicator || !this.notationContainer) return;
@@ -1710,48 +1771,47 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
 
         // Position is on this page, make indicator visible
         this.positionIndicator.style.opacity = '1';
-        this.positionIndicator.style.display = 'block';
 
-        // Calculate relative position (0-1) within the page time range
-        // Adjust this calculation to match the visual note representation
-        const pageTimeRange = endPosition - startPosition;
+        // Detect large jumps (seeking) vs. normal playback
+        const isLargeJump = !this.lastIndicatorPosition ||
+            Math.abs(position - this.lastIndicatorPosition) > 0.3;
 
-        // FIX: Scale the position value to match the visual note timing
-        // Find the measure containing current position
-        let currentMeasureIndex = this.findCurrentMeasureIndex();
-        const measureData = this.measureData[currentMeasureIndex] || null;
+        // For large jumps/seeking, disable transition temporarily
+        if (isLargeJump) {
+            this.positionIndicator.style.transition = 'none';
 
-        // Use measure-based positioning for more accurate alignment with notes
-        let relativePosition;
-        if (measureData) {
-            // Calculate position within current measure
-            const measureStartPos = measureData.startPosition;
-            const measureDuration = measureData.durationSeconds;
-            const posInMeasure = (position - measureStartPos) / measureDuration;
-
-            // Calculate measure's relative position within the page
-            const measureRelPos = (measureStartPos - startPosition) / pageTimeRange;
-
-            // Combine for final position
-            relativePosition = Math.max(0, Math.min(1, measureRelPos +
-                (posInMeasure * (measureDuration / pageTimeRange))));
-        } else {
-            // Fallback to simple linear calculation
-            relativePosition = pageTimeRange > 0 ?
-                Math.max(0, Math.min(1, (position - startPosition) / pageTimeRange)) : 0;
+            // Force a reflow to ensure style changes take effect immediately
+            void this.positionIndicator.offsetWidth;
+        } else if (this.positionIndicator.style.transition === 'none') {
+            // Re-enable smooth transition only if it was previously disabled
+            this.positionIndicator.style.transition = 'transform 0.05s linear';
         }
 
-        // Apply to page width accounting for margins
+        // Store position for next comparison
+        this.lastIndicatorPosition = position;
+
+        // Calculate horizontal position
         const containerWidth = this.notationContainer.clientWidth;
         const leftMargin = this.currentPageStartX || 20;
         const rightMargin = 20;
         const usableWidth = containerWidth - leftMargin - rightMargin;
 
-        // Calculate final X position
-        const indicatorX = leftMargin + (relativePosition * usableWidth);
+        // Calculate relative position within page timespan
+        const pageTimeRange = endPosition - startPosition;
+        const relativePos = Math.max(0, Math.min(1, (position - startPosition) / pageTimeRange));
 
-        // Use immediate transform without transitions for reliable positioning
-        this.positionIndicator.style.transform = `translateX(${indicatorX}px)`;
+        // Calculate pixel position
+        const xPosition = leftMargin + (relativePos * usableWidth);
+
+        // Use transform for better performance
+        this.positionIndicator.style.transform = `translateX(${xPosition}px)`;
+
+        // If we disabled transition for a jump, re-enable it on next frame
+        if (isLargeJump) {
+            requestAnimationFrame(() => {
+                this.positionIndicator.style.transition = 'transform 0.05s linear';
+            });
+        }
     }
 
     // FIX: Improved method to create VexFlow notes from grouped notes with better error handling
@@ -1857,19 +1917,19 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
                     if (firstNote.accent) vfNote.addArticulation(0, new VF.Articulation('a>').setPosition(3));
                     if (firstNote.tenuto) vfNote.addArticulation(0, new VF.Articulation('a-').setPosition(3));
 
-                    // Highlight currently playing notes
-                    const isNowPlaying = noteGroup.some(note => {
-                        const duration = note.visualDuration || note.duration;
-                        return note.start <= this.currentPosition &&
-                            (note.start + duration) > this.currentPosition;
-                    });
+                    // // Highlight currently playing notes
+                    // const isNowPlaying = noteGroup.some(note => {
+                    //     const duration = note.visualDuration || note.duration;
+                    //     return note.start <= this.currentPosition &&
+                    //         (note.start + duration) > this.currentPosition;
+                    // });
 
-                    if (isNowPlaying) {
-                        vfNote.setStyle({
-                            fillStyle: 'rgba(0, 150, 215, 0.8)',
-                            strokeStyle: 'rgba(0, 150, 215, 0.9)'
-                        });
-                    }
+                    // if (isNowPlaying) {
+                    //     vfNote.setStyle({
+                    //         fillStyle: 'rgba(0, 150, 215, 0.8)',
+                    //         strokeStyle: 'rgba(0, 150, 215, 0.9)'
+                    //     });
+                    // }
 
                     vfNotes.push(vfNote);
                 } catch (e) {
@@ -2073,29 +2133,66 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         }
     }
 
-    /**
-     * Toggle playback state with improved reliability
-     */
     togglePlayback() {
-        // Prevent multiple rapid toggles by adding a small debounce
         if (this._toggleInProgress) return;
         this._toggleInProgress = true;
 
         try {
-            // Use scoreModel's state directly to determine action
             if (this.scoreModel.isPlaying) {
                 this.scoreModel.pause();
+                // Cancel ALL animation frames
+                if (this.animationFrameId) {
+                    cancelAnimationFrame(this.animationFrameId);
+                    this.animationFrameId = null;
+                }
+                if (this.positionAnimationId) {
+                    cancelAnimationFrame(this.positionAnimationId);
+                    this.positionAnimationId = null;
+                }
             } else {
                 this.scoreModel.play();
+                // Use a single animation loop that handles everything
+                this.startUnifiedAnimation();
             }
         } catch (err) {
             console.error("Error toggling playback:", err);
         } finally {
-            // Clear debounce after a short delay
             setTimeout(() => {
                 this._toggleInProgress = false;
             }, 300);
         }
+    }
+
+    startUnifiedAnimation() {
+        if (this.animationFrameId) {
+            cancelAnimationFrame(this.animationFrameId);
+        }
+
+        const animate = (timestamp) => {
+            if (!this.scoreModel.isPlaying) return;
+
+            // Update position 
+            this.updatePositionIndicator(this.scoreModel.currentPosition);
+
+            // Update note bars
+            this.updateNoteBars();
+
+            // Update notation at lower frequency
+            if (!this._lastNotationUpdate ||
+                timestamp - this._lastNotationUpdate > 500) { // 2fps is enough for notation
+                this.renderNotation(false);
+                this._lastNotationUpdate = timestamp;
+            }
+
+            // Get and highlight playing notes
+            const playingNotes = this.scoreModel.getCurrentlyPlayingNotes();
+            this.highlightPianoKeys(playingNotes);
+
+            // Continue loop
+            this.animationFrameId = requestAnimationFrame(animate);
+        };
+
+        this.animationFrameId = requestAnimationFrame(animate);
     }
 
     // Update the play/pause button state
@@ -2127,7 +2224,9 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
 
         this.updateNoteBars();
 
-        this.animationFrameId = requestAnimationFrame(this.updatePlayback.bind(this));
+        // this.animationFrameId = requestAnimationFrame(this.updatePlayback.bind(this));
+
+        this.animationFrameId = requestAnimationFrame(this.updatePlayback);
     }
 
     pausePlayback() {
@@ -2180,8 +2279,40 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         console.log(`BPM adjusted to ${this.bpm} via scroll`);
     }
 
+    cleanup() {
+        // Cancel any pending animation frames
+        if (this.animationFrameId) {
+            cancelAnimationFrame(this.animationFrameId);
+            this.animationFrameId = null;
+        }
+
+        if (this.positionAnimationId) {
+            cancelAnimationFrame(this.positionAnimationId);
+            this.positionAnimationId = null;
+        }
+
+        // Clear note bars
+        if (this.noteBarContainer) {
+            this.noteBarContainer.innerHTML = '';
+            this.noteBars = [];
+        }
+
+        // Stop any playback
+        if (this.scoreModel) {
+            this.scoreModel.pause();
+        }
+
+        // Remove visualization container if it exists
+        if (this.pianoVisualizationContainer && this.pianoVisualizationContainer.parentNode) {
+            this.pianoVisualizationContainer.parentNode.removeChild(this.pianoVisualizationContainer);
+            this.pianoVisualizationContainer = null;
+        }
+    }
+
+
     closePianoVisualization() {
         this.scoreModel.pause();
+        this.cleanup();
 
         if (this.noteBarContainer) {
             this.noteBars.forEach(bar => {
@@ -2317,4 +2448,7 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             }
         });
     }
+
+
+
 }
