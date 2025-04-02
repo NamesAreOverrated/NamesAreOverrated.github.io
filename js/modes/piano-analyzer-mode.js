@@ -154,10 +154,10 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
                     // Update note bars
                     this.updateNoteBars();
 
-                    // Update notation at lower frequency 
-                    if (Math.floor(data.position * 2) > Math.floor((data.previousPosition || 0) * 2)) {
-                        this.renderNotation(false); // false = don't force full redraw
-                    }
+                    // // Update notation at lower frequency 
+                    // if (Math.floor(data.position * 2) > Math.floor((data.previousPosition || 0) * 2)) {
+                    //     this.renderNotation(false); // false = don't force full redraw
+                    // }
 
                     // Highlight keys
                     const playingNotes = this.scoreModel.getCurrentlyPlayingNotes();
@@ -1341,7 +1341,6 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         if (!this.isPlaying) return;
 
 
-
         // Calculate current position from elapsed time
         this.previousPosition = this.currentPosition;
 
@@ -1363,9 +1362,7 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
 
         this.updateTempoAtPosition();
 
-        if (Math.floor(this.currentPosition * 2) > Math.floor((this.currentPosition - deltaTime) * 2)) {
-            this.renderNotation();
-        }
+
 
         this.updateNoteBars();
 
@@ -1753,66 +1750,6 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         }
     }
 
-    updatePositionIndicator(position, forceUpdate = false) {
-        // Ensure we have the necessary elements
-        if (!this.positionIndicator || !this.notationContainer) return;
-
-        // Get page bounds
-        const startPosition = this.currentPageStartPosition || 0;
-        const endPosition = this.currentPageEndPosition || 0;
-
-        // Check if position is within current page bounds
-        const isInPageBounds = position >= startPosition && position <= endPosition;
-
-        if (!isInPageBounds && !forceUpdate) {
-            this.positionIndicator.style.opacity = '0';
-            return;
-        }
-
-        // Position is on this page, make indicator visible
-        this.positionIndicator.style.opacity = '1';
-
-        // Detect large jumps (seeking) vs. normal playback
-        const isLargeJump = !this.lastIndicatorPosition ||
-            Math.abs(position - this.lastIndicatorPosition) > 0.3;
-
-        // For large jumps/seeking, disable transition temporarily
-        if (isLargeJump) {
-            this.positionIndicator.style.transition = 'none';
-
-            // Force a reflow to ensure style changes take effect immediately
-            void this.positionIndicator.offsetWidth;
-        } else if (this.positionIndicator.style.transition === 'none') {
-            // Re-enable smooth transition only if it was previously disabled
-            this.positionIndicator.style.transition = 'transform 0.05s linear';
-        }
-
-        // Store position for next comparison
-        this.lastIndicatorPosition = position;
-
-        // Calculate horizontal position
-        const containerWidth = this.notationContainer.clientWidth;
-        const leftMargin = this.currentPageStartX || 20;
-        const rightMargin = 20;
-        const usableWidth = containerWidth - leftMargin - rightMargin;
-
-        // Calculate relative position within page timespan
-        const pageTimeRange = endPosition - startPosition;
-        const relativePos = Math.max(0, Math.min(1, (position - startPosition) / pageTimeRange));
-
-        // Calculate pixel position
-        const xPosition = leftMargin + (relativePos * usableWidth);
-
-        // Use transform for better performance
-        this.positionIndicator.style.transform = `translateX(${xPosition}px)`;
-
-        // If we disabled transition for a jump, re-enable it on next frame
-        if (isLargeJump) {
-            requestAnimationFrame(() => {
-                this.positionIndicator.style.transition = 'transform 0.05s linear';
-            });
-        }
-    }
 
     // FIX: Improved method to create VexFlow notes from grouped notes with better error handling
     createVexFlowNotes(groupedNotes, clef, measureStartTime, measureEndTime) {
@@ -1917,19 +1854,14 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
                     if (firstNote.accent) vfNote.addArticulation(0, new VF.Articulation('a>').setPosition(3));
                     if (firstNote.tenuto) vfNote.addArticulation(0, new VF.Articulation('a-').setPosition(3));
 
-                    // // Highlight currently playing notes
-                    // const isNowPlaying = noteGroup.some(note => {
-                    //     const duration = note.visualDuration || note.duration;
-                    //     return note.start <= this.currentPosition &&
-                    //         (note.start + duration) > this.currentPosition;
-                    // });
+                    vfNote.setStyle({
+                        fillStyle: 'rgba(255, 100, 255, 0.9)',      // Brighter pink/purple fill
+                        strokeStyle: 'rgba(80, 200, 255, 0.95)',    // Brighter blue stroke
+                        shadowColor: 'rgba(255, 100, 255, 0.8)',    // Matching shadow
+                        shadowBlur: 15,                             // Blur amount for glow effect
+                        strokeWidth: 2                              // Thicker stroke for better visibility
+                    });
 
-                    // if (isNowPlaying) {
-                    //     vfNote.setStyle({
-                    //         fillStyle: 'rgba(0, 150, 215, 0.8)',
-                    //         strokeStyle: 'rgba(0, 150, 215, 0.9)'
-                    //     });
-                    // }
 
                     vfNotes.push(vfNote);
                 } catch (e) {
@@ -1946,6 +1878,68 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
 
         return vfNotes;
     }
+
+    updatePositionIndicator(position, forceUpdate = false) {
+        // Ensure we have the necessary elements
+        if (!this.positionIndicator || !this.notationContainer) return;
+
+        // Get page bounds
+        const startPosition = this.currentPageStartPosition || 0;
+        const endPosition = this.currentPageEndPosition || 0;
+
+        // Check if position is within current page bounds
+        const isInPageBounds = position >= startPosition && position <= endPosition;
+
+        if (!isInPageBounds && !forceUpdate) {
+            this.positionIndicator.style.opacity = '0';
+            return;
+        }
+
+        // Position is on this page, make indicator visible
+        this.positionIndicator.style.opacity = '1';
+
+        // Detect large jumps (seeking) vs. normal playback
+        const isLargeJump = !this.lastIndicatorPosition ||
+            Math.abs(position - this.lastIndicatorPosition) > 0.3;
+
+        // For large jumps/seeking, disable transition temporarily
+        if (isLargeJump) {
+            this.positionIndicator.style.transition = 'none';
+
+            // Force a reflow to ensure style changes take effect immediately
+            void this.positionIndicator.offsetWidth;
+        } else if (this.positionIndicator.style.transition === 'none') {
+            // Re-enable smooth transition only if it was previously disabled
+            this.positionIndicator.style.transition = 'transform 0.05s linear';
+        }
+
+        // Store position for next comparison
+        this.lastIndicatorPosition = position;
+
+        // Calculate horizontal position
+        const containerWidth = this.notationContainer.clientWidth;
+        const leftMargin = this.currentPageStartX || 20;
+        const rightMargin = 20;
+        const usableWidth = containerWidth - leftMargin - rightMargin;
+
+        // Calculate relative position within page timespan
+        const pageTimeRange = endPosition - startPosition;
+        const relativePos = Math.max(0, Math.min(1, (position - startPosition) / pageTimeRange));
+
+        // Calculate pixel position
+        const xPosition = leftMargin + (relativePos * usableWidth);
+
+        // Use transform for better performance
+        this.positionIndicator.style.transform = `translateX(${xPosition}px)`;
+
+        // If we disabled transition for a jump, re-enable it on next frame
+        if (isLargeJump) {
+            requestAnimationFrame(() => {
+                this.positionIndicator.style.transition = 'transform 0.05s linear';
+            });
+        }
+    }
+
 
     // FIX: Improved helper method to group notes by start time for chord creation
     groupNotesByTime(notes) {
