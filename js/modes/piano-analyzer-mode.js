@@ -2388,6 +2388,15 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             staffInfo: rightHandChord.notes.map(n => n.staff || 'unspecified').join(',')
         } : null;
 
+        // If neither hand has a chord, clear display
+        if (!leftHandChord && !rightHandChord) {
+            if (this.upcomingChord) {
+                this.fadeOutChordDisplay();
+                this.upcomingChord = null;
+            }
+            return;
+        }
+
         // Choose which chord(s) to display
         let chordsToDisplay = [];
 
@@ -2456,6 +2465,26 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         this.chordDisplayElement.classList.remove('fade-in', 'fade-out');
         this.chordDisplayElement.classList.add('fade-in');
 
+        // Format chord name with inversion info if needed
+        const formatChordName = (chordData) => {
+            if (!chordData) return "";
+
+            let displayName = chordData.name;
+
+            // Only append inversion info for "Notes" if we have a proper root and type
+            if (displayName === "Notes" && chordData.root && chordData.type) {
+                displayName = `${chordData.root}${chordData.type}`;
+
+                // Add inversion indication if applicable
+                if (chordData.inversion > 0 && chordData.notes && chordData.notes.length > 0) {
+                    const bassNote = chordData.notes[0]; // First note is bass note
+                    displayName += `/${bassNote}`;
+                }
+            }
+
+            return displayName;
+        };
+
         // If we have an array of chords (both hands)
         if (Array.isArray(chord) && chord.length === 2) {
             // Add both-hands class for styling
@@ -2464,11 +2493,11 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             const leftChord = chord.find(c => c.hand === 'left') || chord[0];
             const rightChord = chord.find(c => c.hand === 'right') || chord[1];
 
-            // Display both chords
+            // Display both chords with proper formatting
             nameElement.innerHTML = `
-                <span class="left-hand-chord">${leftChord.name}</span>
+                <span class="left-hand-chord">${formatChordName(leftChord)}</span>
                 <span class="chord-separator"> | </span>
-                <span class="right-hand-chord">${rightChord.name}</span>
+                <span class="right-hand-chord">${formatChordName(rightChord)}</span>
             `;
 
             // Display notes from both hands
@@ -2493,7 +2522,10 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
                 this.chordDisplayElement.classList.add(`${singleChord.hand}-hand`);
             }
 
-            nameElement.textContent = singleChord.name;
+            // Format the single chord name
+            nameElement.textContent = formatChordName(singleChord);
+
+            // Display the notes
             notesElement.textContent = singleChord.notes.join(' - ');
 
             // Calculate time until chord
