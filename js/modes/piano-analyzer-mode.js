@@ -43,7 +43,58 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         this.measuresPerPage = 2;
         this.totalPages = 1;
 
+        // Bind methods that need access to 'this'
         this.startUnifiedAnimation = this.startUnifiedAnimation.bind(this);
+        this.updatePlayPauseButton = this.updatePlayPauseButton.bind(this);
+        this.highlightPianoKeys = this.highlightPianoKeys.bind(this);
+        this.togglePlayback = this.togglePlayback.bind(this);
+
+        // Add chord detection variables
+        this.chordDisplayElement = null;
+        this.currentChord = null;
+        this.upcomingChord = null;
+        this.chordLookAheadTime = 1.5; // seconds to look ahead for chords
+        this.chordDisplayDebounce = null;
+        this.lastChordUpdateTime = 0;
+    }
+
+    /**
+     * Update the play/pause button state
+     */
+    updatePlayPauseButton() {
+        const playPauseButton = this.analyzer.container.querySelector('.piano-play-pause');
+        if (playPauseButton) {
+            // Ensure button text matches scoreModel state
+            playPauseButton.textContent = this.scoreModel.isPlaying ? 'Pause' : 'Play';
+
+            // Add visual indication of current state
+            playPauseButton.classList.toggle('playing', this.scoreModel.isPlaying);
+        }
+    }
+
+    /**
+     * Highlight piano keys for currently playing notes
+     * @param {Array} notes Array of notes to highlight
+     */
+    highlightPianoKeys(notes) {
+        if (!this.pianoVisualizationContainer) return;
+
+        // First remove all active highlights
+        const keys = this.pianoVisualizationContainer.querySelectorAll('.piano-key');
+        keys.forEach(key => key.classList.remove('active'));
+
+        // Nothing to highlight if no notes provided
+        if (!notes || notes.length === 0) return;
+
+        // Add active class to keys for currently playing notes
+        notes.forEach(note => {
+            if (!note || !note.noteNumber) return;
+
+            const key = this.pianoVisualizationContainer.querySelector(`.piano-key[data-note="${note.noteNumber}"]`);
+            if (key) {
+                key.classList.add('active');
+            }
+        });
     }
 
     initialize() {
@@ -154,11 +205,6 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
                     // Update note bars
                     this.updateNoteBars();
 
-                    // // Update notation at lower frequency 
-                    // if (Math.floor(data.position * 2) > Math.floor((data.previousPosition || 0) * 2)) {
-                    //     this.renderNotation(false); // false = don't force full redraw
-                    // }
-
                     // Highlight keys
                     const playingNotes = this.scoreModel.getCurrentlyPlayingNotes();
                     this.highlightPianoKeys(playingNotes);
@@ -168,7 +214,8 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
 
         // Listen for tempo changes to update UI
         this.scoreModel.addEventListener('tempochange', (data) => {
-
+            // Update tempo display and controls
+            this.updateTempoControls();
         });
 
         // Listen for play/pause events to update UI
@@ -1038,7 +1085,8 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         const isBlackKey = [1, 3, 6, 8, 10].includes(note.noteNumber % 12);
         if (isBlackKey) noteBar.classList.add('black-note');
 
-        const isRightHand = note.staff === 1 || note.noteNumber >= 60;
+        // Determine hand based on staff information first, fallback to note number
+        const isRightHand = note.staff === 1 || (note.staff === undefined && note.noteNumber >= 60);
         noteBar.classList.add(isRightHand ? 'right-hand' : 'left-hand');
 
         if (note.staccato) noteBar.classList.add('staccato');
@@ -1054,6 +1102,7 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         noteBar.dataset.start = note.start;
         noteBar.dataset.part = note.partId;
         noteBar.dataset.voice = note.voice;
+        noteBar.dataset.staff = note.staff || "unspecified"; // Add staff info for debugging
 
         this.noteBarContainer.appendChild(noteBar);
 
@@ -1064,7 +1113,6 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             keyElement
         });
     }
-
 
     updateNoteBarsPosition() {
         if (!this.noteBarContainer || !this.noteBars.length) return;
@@ -1191,7 +1239,6 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         };
     }
 
-
     cleanupInvisibleNoteBars(startTime) {
         const cleanupThreshold = startTime - 1.0;
         const removeList = [];
@@ -1303,6 +1350,17 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
                 this.updateNoteBarsPosition();
             }
         });
+
+        // Add chord display element
+        this.chordDisplayElement = document.createElement('div');
+        this.chordDisplayElement.className = 'chord-display';
+        this.chordDisplayElement.innerHTML = `
+            <div class="chord-name"></div>
+            <div class="chord-notes"></div>
+            <div class="chord-timing"></div>
+        `;
+        this.chordDisplayElement.style.opacity = '0';
+        this.pianoVisualizationContainer.appendChild(this.chordDisplayElement);
     }
 
     createVisualization() {
@@ -1750,7 +1808,6 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         }
     }
 
-
     // FIX: Improved method to create VexFlow notes from grouped notes with better error handling
     createVexFlowNotes(groupedNotes, clef, measureStartTime, measureEndTime) {
         if (!groupedNotes || groupedNotes.length === 0) return [];
@@ -1940,7 +1997,6 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         }
     }
 
-
     // FIX: Improved helper method to group notes by start time for chord creation
     groupNotesByTime(notes) {
         if (!notes || notes.length === 0) return [];
@@ -2127,6 +2183,9 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         }
     }
 
+    /**
+     * Toggle play/pause state with error handling
+     */
     togglePlayback() {
         if (this._toggleInProgress) return;
         this._toggleInProgress = true;
@@ -2171,6 +2230,9 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             // Update note bars
             this.updateNoteBars();
 
+            // Update chord display
+            this.updateChordDisplay();
+
             // Update notation at lower frequency
             if (!this._lastNotationUpdate ||
                 timestamp - this._lastNotationUpdate > 500) { // 2fps is enough for notation
@@ -2189,88 +2251,289 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         this.animationFrameId = requestAnimationFrame(animate);
     }
 
-    // Update the play/pause button state
-    updatePlayPauseButton() {
-        const playPauseButton = document.querySelector('.piano-play-pause');
-        if (playPauseButton) {
-            // Ensure button text matches scoreModel state
-            playPauseButton.textContent = this.scoreModel.isPlaying ? 'Pause' : 'Play';
+    /**
+     * Update the chord display with upcoming chord information
+     * Now separates left and right hand chords based on staff assignment
+     */
+    updateChordDisplay() {
+        // Don't update chords too frequently to avoid flickering
+        const now = performance.now();
+        if (now - this.lastChordUpdateTime < 500) return;
 
-            // Add visual indication of current state
-            playPauseButton.classList.toggle('playing', this.scoreModel.isPlaying);
-        }
-    }
+        // Look ahead for upcoming notes
+        const currentPosition = this.scoreModel.currentPosition;
+        const lookAheadStart = currentPosition + 0.2; // Small buffer after current position
+        const lookAheadEnd = currentPosition + this.chordLookAheadTime;
 
-    startPlayback() {
-        if (this.isPlaying) return;
+        // Get upcoming notes within the look-ahead window
+        const upcomingNotes = this.scoreModel.getVisibleNotes(lookAheadStart, lookAheadEnd);
 
-        this.isPlaying = true;
-        this.lastRenderTime = performance.now();
-
-        const playPauseButton = document.querySelector('.piano-play-pause');
-        if (playPauseButton) {
-            playPauseButton.textContent = 'Pause';
-        }
-
-        if (this.noteBarContainer) {
-            this.noteBarContainer.classList.remove('paused');
-        }
-
-        this.updateNoteBars();
-
-        // this.animationFrameId = requestAnimationFrame(this.updatePlayback.bind(this));
-
-        this.animationFrameId = requestAnimationFrame(this.updatePlayback);
-    }
-
-    pausePlayback() {
-        this.isPlaying = false;
-
-        const playPauseButton = document.querySelector('.piano-play-pause');
-        if (playPauseButton) {
-            playPauseButton.textContent = 'Play';
-        }
-
-        if (this.noteBarContainer) {
-            this.noteBarContainer.classList.add('paused');
-        }
-
-        if (this.animationFrameId) {
-            cancelAnimationFrame(this.animationFrameId);
-            this.animationFrameId = null;
-        }
-    }
-
-    highlightPianoKeys(notes) {
-        if (!this.pianoVisualizationContainer) return;
-
-        const keys = this.pianoVisualizationContainer.querySelectorAll('.piano-key');
-        keys.forEach(key => key.classList.remove('active'));
-
-        notes.forEach(note => {
-            const key = this.pianoVisualizationContainer.querySelector(`.piano-key[data-note="${note.noteNumber}"]`);
-            if (key) {
-                key.classList.add('active');
+        // Skip if no upcoming notes
+        if (!upcomingNotes || upcomingNotes.length < 2) {
+            if (this.upcomingChord) {
+                // Hide chord display if we showed a chord before but no longer have upcoming chords
+                this.fadeOutChordDisplay();
+                this.upcomingChord = null;
             }
+            return;
+        }
+
+        // Separate notes into left and right hand based on staff information
+        // Staff=1 is treble (right hand), Staff=2 is bass (left hand)
+        // In case staff information is missing, fall back to note number
+        const leftHandNotes = upcomingNotes.filter(note => {
+            // Priority 1: Explicit staff assignment from MusicXML
+            if (note.staff !== undefined) {
+                return note.staff === 2; // Bass staff = left hand
+            }
+            // Priority 2: Fall back to note number (below middle C) only if staff is not specified
+            return note.noteNumber < 60;
         });
+
+        const rightHandNotes = upcomingNotes.filter(note => {
+            // Priority 1: Explicit staff assignment from MusicXML
+            if (note.staff !== undefined) {
+                return note.staff === 1; // Treble staff = right hand
+            }
+            // Priority 2: Fall back to note number (above or at middle C) only if staff is not specified
+            return note.noteNumber >= 60;
+        });
+
+        // Group notes by their starting times for each hand
+        const groupNotesByTime = (notes) => {
+            const notesByStartTime = {};
+            notes.forEach(note => {
+                // Skip tied continuation notes
+                if (note.isTiedFromPrevious) return;
+
+                // Round to nearest 50ms to group notes that start at almost the same time
+                const roundedStart = Math.round(note.start * 20) / 20;
+                if (!notesByStartTime[roundedStart]) {
+                    notesByStartTime[roundedStart] = [];
+                }
+                notesByStartTime[roundedStart].push(note);
+            });
+            return notesByStartTime;
+        };
+
+        const leftHandNotesByTime = groupNotesByTime(leftHandNotes);
+        const rightHandNotesByTime = groupNotesByTime(rightHandNotes);
+
+        // Find earliest chord for each hand (at least 2 notes)
+        const findEarliestChord = (notesByTime) => {
+            let earliestTime = Infinity;
+            let earliestNotes = null;
+
+            Object.entries(notesByTime).forEach(([startTime, notes]) => {
+                if (notes.length >= 2 && parseFloat(startTime) < earliestTime) {
+                    earliestTime = parseFloat(startTime);
+                    earliestNotes = notes;
+                }
+            });
+
+            return earliestNotes ? { time: earliestTime, notes: earliestNotes } : null;
+        };
+
+        const leftHandChord = findEarliestChord(leftHandNotesByTime);
+        const rightHandChord = findEarliestChord(rightHandNotesByTime);
+
+        // If neither hand has a chord, clear display
+        if (!leftHandChord && !rightHandChord) {
+            if (this.upcomingChord) {
+                this.fadeOutChordDisplay();
+                this.upcomingChord = null;
+            }
+            return;
+        }
+
+        // Detect chords using MusicTheory for each hand
+        const detectChordFromNotes = (notes) => {
+            if (!notes || notes.length < 2) return null;
+
+            // Use MusicTheory to detect the chord
+            const detectedChord = MusicTheory.detectChord(notes);
+
+            // If chord detection failed, just show the notes
+            if (!detectedChord) {
+                // Create a simple representation of the notes
+                const noteNames = notes.map(note => {
+                    const noteName = note.step;
+                    const accidental = note.alter === 1 ? '#' : note.alter === -1 ? 'b' : '';
+                    return `${noteName}${accidental}`;
+                });
+
+                return {
+                    name: "Notes",
+                    notes: [...new Set(noteNames)], // Remove duplicates
+                };
+            }
+
+            return detectedChord;
+        };
+
+        // Process left and right hand chords
+        const leftHandChordData = leftHandChord ? {
+            ...detectChordFromNotes(leftHandChord.notes),
+            time: leftHandChord.time,
+            hand: 'left',
+            // Add debug info
+            staffInfo: leftHandChord.notes.map(n => n.staff || 'unspecified').join(',')
+        } : null;
+
+        const rightHandChordData = rightHandChord ? {
+            ...detectChordFromNotes(rightHandChord.notes),
+            time: rightHandChord.time,
+            hand: 'right',
+            // Add debug info
+            staffInfo: rightHandChord.notes.map(n => n.staff || 'unspecified').join(',')
+        } : null;
+
+        // Choose which chord(s) to display
+        let chordsToDisplay = [];
+
+        if (leftHandChordData && rightHandChordData) {
+            // If both hands have chords
+            const timeDifference = Math.abs(leftHandChordData.time - rightHandChordData.time);
+
+            // If chords are played at similar times (within 0.2s), display both
+            if (timeDifference < 0.2) {
+                chordsToDisplay = [leftHandChordData, rightHandChordData];
+            } else {
+                // Otherwise, display the earlier chord
+                chordsToDisplay = [leftHandChordData.time < rightHandChordData.time ?
+                    leftHandChordData : rightHandChordData];
+            }
+        } else {
+            // Display whichever hand has a chord
+            chordsToDisplay = leftHandChordData ? [leftHandChordData] :
+                rightHandChordData ? [rightHandChordData] : [];
+        }
+
+        // Skip update if no chords to display
+        if (chordsToDisplay.length === 0) {
+            if (this.upcomingChord) {
+                this.fadeOutChordDisplay();
+                this.upcomingChord = null;
+            }
+            return;
+        }
+
+        // Check if chords have changed
+        const chordSignature = chordsToDisplay.map(c => `${c.hand}-${c.name}-${c.time}`).join('|');
+        const previousSignature = this.upcomingChord ?
+            (Array.isArray(this.upcomingChord) ?
+                this.upcomingChord.map(c => `${c.hand}-${c.name}-${c.time}`).join('|') :
+                `${this.upcomingChord.hand}-${this.upcomingChord.name}-${this.upcomingChord.time}`)
+            : '';
+
+        // Only update display if chord is different
+        if (chordSignature !== previousSignature) {
+            this.upcomingChord = chordsToDisplay.length === 1 ? chordsToDisplay[0] : chordsToDisplay;
+            this.updateChordDisplayContent(this.upcomingChord);
+            this.lastChordUpdateTime = now;
+        }
     }
 
-    adjustPlaybackSpeed(event) {
-        const delta = Math.sign(event.deltaY) * -5;
+    /**
+     * Update the content of the chord display element
+     * Now handles multiple chords (left/right hand)
+     * @param {Object|Array} chord The chord information to display
+     */
+    updateChordDisplayContent(chord) {
+        if (!this.chordDisplayElement) return;
 
-        this.bpm = Math.max(40, Math.min(240, this.bpm + delta));
+        // Get the HTML elements
+        const nameElement = this.chordDisplayElement.querySelector('.chord-name');
+        const notesElement = this.chordDisplayElement.querySelector('.chord-notes');
+        const timingElement = this.chordDisplayElement.querySelector('.chord-timing');
 
-        const speedValue = this.analyzer.container.querySelector('.speed-value');
-        if (speedValue) {
-            speedValue.textContent = `${this.bpm} BPM`;
+        if (!nameElement || !notesElement || !timingElement) return;
+
+        // Reset existing hand classes
+        this.chordDisplayElement.classList.remove('left-hand', 'right-hand', 'both-hands');
+
+        // Update with transition effect
+        this.chordDisplayElement.classList.remove('fade-in', 'fade-out');
+        this.chordDisplayElement.classList.add('fade-in');
+
+        // If we have an array of chords (both hands)
+        if (Array.isArray(chord) && chord.length === 2) {
+            // Add both-hands class for styling
+            this.chordDisplayElement.classList.add('both-hands');
+
+            const leftChord = chord.find(c => c.hand === 'left') || chord[0];
+            const rightChord = chord.find(c => c.hand === 'right') || chord[1];
+
+            // Display both chords
+            nameElement.innerHTML = `
+                <span class="left-hand-chord">${leftChord.name}</span>
+                <span class="chord-separator"> | </span>
+                <span class="right-hand-chord">${rightChord.name}</span>
+            `;
+
+            // Display notes from both hands
+            notesElement.innerHTML = `
+                <span class="left-hand-notes">${leftChord.notes.join(' - ')}</span>
+                <span class="notes-separator"> | </span>
+                <span class="right-hand-notes">${rightChord.notes.join(' - ')}</span>
+            `;
+
+            // Use the earlier time for countdown
+            const earliestTime = Math.min(leftChord.time, rightChord.time);
+            const timeUntilChord = earliestTime - this.scoreModel.currentPosition;
+            const timeUntilChordSec = Math.max(0, timeUntilChord.toFixed(1));
+
+            timingElement.textContent = `in ${timeUntilChordSec}s`;
+        } else {
+            // Single chord - could be left or right hand
+            const singleChord = Array.isArray(chord) ? chord[0] : chord;
+
+            // Add hand-specific class for styling
+            if (singleChord.hand) {
+                this.chordDisplayElement.classList.add(`${singleChord.hand}-hand`);
+            }
+
+            nameElement.textContent = singleChord.name;
+            notesElement.textContent = singleChord.notes.join(' - ');
+
+            // Calculate time until chord
+            const timeUntilChord = singleChord.time - this.scoreModel.currentPosition;
+            const timeUntilChordSec = Math.max(0, timeUntilChord.toFixed(1));
+
+            timingElement.textContent = `in ${timeUntilChordSec}s`;
         }
 
-        const speedControl = this.analyzer.container.querySelector('.piano-speed');
-        if (speedControl) {
-            speedControl.value = this.bpm;
-        }
+        // Show the element if it was hidden
+        this.chordDisplayElement.style.opacity = '1';
 
-        console.log(`BPM adjusted to ${this.bpm} via scroll`);
+        // Determine time until earliest chord for pulse effect
+        const earliestTime = Array.isArray(chord)
+            ? Math.min(...chord.map(c => c.time))
+            : chord.time;
+        const timeUntilEarliest = earliestTime - this.scoreModel.currentPosition;
+
+        // Add pulse effect if chord is coming soon
+        if (timeUntilEarliest < 0.5) {
+            this.chordDisplayElement.classList.add('pulse');
+        } else {
+            this.chordDisplayElement.classList.remove('pulse');
+        }
+    }
+
+    /**
+     * Fade out the chord display
+     */
+    fadeOutChordDisplay() {
+        if (!this.chordDisplayElement) return;
+
+        this.chordDisplayElement.classList.remove('fade-in', 'pulse');
+        this.chordDisplayElement.classList.add('fade-out');
+
+        setTimeout(() => {
+            if (this.chordDisplayElement) {
+                this.chordDisplayElement.style.opacity = '0';
+            }
+        }, 300);
     }
 
     cleanup() {
@@ -2301,8 +2564,12 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             this.pianoVisualizationContainer.parentNode.removeChild(this.pianoVisualizationContainer);
             this.pianoVisualizationContainer = null;
         }
-    }
 
+        // Hide chord display
+        if (this.chordDisplayElement) {
+            this.chordDisplayElement.style.opacity = '0';
+        }
+    }
 
     closePianoVisualization() {
         this.scoreModel.pause();
@@ -2443,6 +2710,45 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         });
     }
 
+    // Update the play/pause button state
+    updatePlayPauseButton() {
+        const playPauseButton = document.querySelector('.piano-play-pause');
+        if (playPauseButton) {
+            // Ensure button text matches scoreModel state
+            playPauseButton.textContent = this.scoreModel.isPlaying ? 'Pause' : 'Play';
 
+            // Add visual indication of current state
+            playPauseButton.classList.toggle('playing', this.scoreModel.isPlaying);
+        }
+    }
+
+    /**
+     * Highlight piano keys for currently playing notes
+     * @param {Array} notes Array of notes to highlight
+     */
+    highlightPianoKeys(notes) {
+        if (!this.pianoVisualizationContainer) return;
+
+        // First remove all active highlights
+        const keys = this.pianoVisualizationContainer.querySelectorAll('.piano-key');
+        keys.forEach(key => key.classList.remove('active'));
+
+        // Nothing to highlight if no notes provided
+        if (!notes || notes.length === 0) return;
+
+        // Add active class to keys for currently playing notes
+        notes.forEach(note => {
+            if (!note || !note.noteNumber) return;
+
+            const key = this.pianoVisualizationContainer.querySelector(`.piano-key[data-note="${note.noteNumber}"]`);
+            if (key) {
+                key.classList.add('active');
+            }
+        });
+    }
+
+    startPlayback() {
+        // ...existing code...
+    }
 
 }

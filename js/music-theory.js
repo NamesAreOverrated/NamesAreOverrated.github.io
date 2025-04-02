@@ -54,6 +54,26 @@ class MusicTheory {
         minor: [5, 1, 3, 1, 3, 1, 1]  // i, ii°, III, iv, v/V, VI, VII/vii°
     };
 
+    // Common chord types and their interval patterns
+    static chordTypes = {
+        'maj': [0, 4, 7],           // Major
+        'min': [0, 3, 7],           // Minor
+        'dim': [0, 3, 6],           // Diminished
+        'aug': [0, 4, 8],           // Augmented
+        '7': [0, 4, 7, 10],         // Dominant 7th
+        'maj7': [0, 4, 7, 11],      // Major 7th
+        'min7': [0, 3, 7, 10],      // Minor 7th
+        'dim7': [0, 3, 6, 9],       // Diminished 7th
+        'hdim7': [0, 3, 6, 10],     // Half-diminished 7th
+        'sus4': [0, 5, 7],          // Suspended 4th
+        'sus2': [0, 2, 7],          // Suspended 2nd
+        'add9': [0, 4, 7, 14],      // Add 9
+        '6': [0, 4, 7, 9],          // Major 6th
+        'min6': [0, 3, 7, 9],       // Minor 6th
+        '9': [0, 4, 7, 10, 14],     // Dominant 9th
+        'maj9': [0, 4, 7, 11, 14]   // Major 9th
+    };
+
     /**
      * Detect musical notes from frequency data
      * @param {Array} frequencies Array of frequency objects 
@@ -278,6 +298,113 @@ class MusicTheory {
         }
 
         return null;
+    }
+
+    /**
+     * Detect chord from a set of notes
+     * @param {Array} notes Array of note objects with noteNumber or name+octave
+     * @returns {Object} Detected chord information or null
+     */
+    static detectChord(notes) {
+        if (!notes || notes.length < 2) return null;
+
+        // Convert notes to MIDI numbers if they're not already
+        const midiNotes = notes.map(note => {
+            if (note.noteNumber !== undefined) {
+                return note.noteNumber;
+            } else if (note.name && note.octave !== undefined) {
+                return this.noteNameToMidi(note.name, note.octave);
+            }
+            return null;
+        }).filter(n => n !== null);
+
+        if (midiNotes.length < 2) return null;
+
+        // Sort notes and find lowest note (potential root)
+        midiNotes.sort((a, b) => a - b);
+        const lowestNote = midiNotes[0];
+
+        // Transform to semitone intervals from the lowest note
+        const intervals = midiNotes.map(note => (note - lowestNote) % 12);
+
+        // Remove duplicates (we only care about pitch classes)
+        const uniqueIntervals = [...new Set(intervals)].sort((a, b) => a - b);
+
+        // Check against known chord patterns
+        let bestMatchName = '';
+        let bestMatchScore = 0;
+        let bestMatchMissing = Infinity;
+
+        for (const [chordName, chordPattern] of Object.entries(this.chordTypes)) {
+            // Count matching notes and missing notes
+            let matchCount = 0;
+            let missingCount = 0;
+
+            for (const interval of chordPattern) {
+                if (uniqueIntervals.includes(interval)) {
+                    matchCount++;
+                } else {
+                    missingCount++;
+                }
+            }
+
+            // Count extra notes not in the pattern
+            const extraCount = uniqueIntervals.length - matchCount;
+
+            // Calculate score: prioritize matches, then fewer missing notes, then fewer extra notes
+            const score = (matchCount * 10) - (missingCount * 5) - (extraCount * 2);
+
+            // Update best match if this is better
+            if (score > bestMatchScore ||
+                (score === bestMatchScore && missingCount < bestMatchMissing)) {
+                bestMatchScore = score;
+                bestMatchName = chordName;
+                bestMatchMissing = missingCount;
+            }
+        }
+
+        // Require at least 2 matching notes and more than 60% of the chord
+        if (bestMatchScore < 15) return null;
+
+        // Get the root note name
+        const rootNoteName = this.midiNoteToName(lowestNote);
+
+        return {
+            name: `${rootNoteName}${bestMatchName}`,
+            root: rootNoteName,
+            type: bestMatchName,
+            notes: midiNotes.map(midi => this.midiNoteToName(midi)),
+            inversion: 0, // Basic implementation, doesn't detect inversions yet
+            confidence: bestMatchScore / (this.chordTypes[bestMatchName].length * 10)
+        };
+    }
+
+    /**
+     * Convert note name and octave to MIDI note number
+     * @param {string} name Note name (e.g., 'C', 'C#')
+     * @param {number} octave Octave number
+     * @returns {number} MIDI note number
+     */
+    static noteNameToMidi(name, octave) {
+        const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        const noteIndex = noteNames.indexOf(name);
+
+        if (noteIndex === -1) return null;
+
+        return (octave + 1) * 12 + noteIndex;
+    }
+
+    /**
+     * Convert MIDI note number to note name
+     * @param {number} midiNumber MIDI note number
+     * @returns {string} Note name with octave
+     */
+    static midiNoteToName(midiNumber) {
+        const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        const octave = Math.floor(midiNumber / 12) - 1;
+        const noteIndex = midiNumber % 12;
+
+        return noteNames[noteIndex];
     }
 }
 
