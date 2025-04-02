@@ -1104,6 +1104,12 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         noteBar.dataset.voice = note.voice;
         noteBar.dataset.staff = note.staff || "unspecified"; // Add staff info for debugging
 
+        // Add note name to the note bar
+        const noteNameElement = document.createElement('div');
+        noteNameElement.className = 'note-name';
+        noteNameElement.textContent = note.step + (note.alter === 1 ? '#' : note.alter === -1 ? 'b' : '');
+        noteBar.appendChild(noteNameElement);
+
         this.noteBarContainer.appendChild(noteBar);
 
         this.noteBars.push({

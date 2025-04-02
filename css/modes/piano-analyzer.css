@@ -554,12 +554,27 @@ body.disco-mode .piano-key.active {
     /* Updated from bottom border radius to top */
 }
 
-.note-bar.black-note {
-    background-color: #00ccaa;
-    opacity: 0.8;
-    /* Slightly different border for black notes */
-    border: 1px solid rgba(0, 0, 0, 0.5);
+/* Note name inside note bar */
+.note-bar .note-name {
+    position: absolute;
+    color: rgb(0, 0, 0);
+    font-size: 18px;
+    /* Increased from 15px */
+    font-weight: 900;
+    /* Extra bold */
+    width: 100%;
+    text-align: center;
+    top: 5px;
+    pointer-events: none;
+    user-select: none;
+    /* Improved contrast with stronger outline */
+    text-shadow:
+        0 0 3px rgba(255, 255, 255, 1),
+        0 0 5px rgba(255, 255, 255, 1),
+        0 0 7px rgba(255, 255, 255, 0.8);
+
 }
+
 
 /* Note bar that's currently playing */
 .note-bar.playing {
