@@ -124,6 +124,9 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             // Get current position from score model
             this.currentPosition = data.position;
 
+            // Update position indicator immediately
+            this.updatePositionIndicator(data.position);
+
             // Find current measure
             const currentMeasureIndex = this.findCurrentMeasureIndex();
 
@@ -136,7 +139,10 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
                 return; // Early return as renderNotation will handle everything
             }
 
-            // Normal updates if page didn't change
+
+
+
+            // Put other updates in requestAnimationFrame for performance
             requestAnimationFrame(() => {
                 this.updateNoteBars();
 
@@ -1227,6 +1233,11 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         this.noteBarContainer = this.pianoVisualizationContainer.querySelector('.note-bar-container');
         this.closeButton = this.pianoVisualizationContainer.querySelector('.piano-close-btn');
 
+        // Create position indicator once here
+        this.positionIndicator = document.createElement('div');
+        this.positionIndicator.className = 'notation-position-indicator';
+        this.notationContainer.appendChild(this.positionIndicator);
+
         this.generatePianoKeyboard();
 
         this.closeButton.addEventListener('click', () => {
@@ -1365,6 +1376,11 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
     renderNotationWithVexFlow() {
         if (!this.parsedNotes.length || !this.notationContainer) return;
 
+        // Remove position indicator before clearing container
+        if (this.positionIndicator && this.positionIndicator.parentNode) {
+            this.positionIndicator.parentNode.removeChild(this.positionIndicator);
+        }
+
         // Clear notation container
         this.notationContainer.innerHTML = '';
 
@@ -1375,6 +1391,10 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             svgContainer.style.width = '100%';
             svgContainer.style.height = '100%';
             this.notationContainer.appendChild(svgContainer);
+
+            // Always create a new position indicator to avoid stale references
+            this.notationContainer.appendChild(this.positionIndicator);
+
 
             // Initialize VexFlow
             const VF = Vex.Flow;
@@ -1428,6 +1448,12 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             const endPosition = endMeasureIndex < this.measureData.length - 1
                 ? this.measureData[endMeasureIndex + 1].startPosition
                 : startPosition + this.measureData[endMeasureIndex].durationSeconds;
+
+            // Store page time bounds for position indicator calculations
+            this.currentPageStartPosition = startPosition;
+            this.currentPageEndPosition = endPosition;
+            this.currentPageStartX = 20; // Left margin
+            this.currentPageEndX = containerWidth - 20; // Right margin
 
             // Layout settings for a single staff system
             const staffHeight = 80;
@@ -1649,8 +1675,7 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
                 }
             });
 
-            // Draw playhead at current position
-            this.drawPlayheadAtCurrentPosition(context, staves, startMeasureIndex, endMeasureIndex);
+
 
             // Add position and info overlay
             this.addNotationOverlays(svgContainer, startPosition, endPosition);
@@ -1660,6 +1685,73 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             // Fallback to simpler notation
             this.renderSimpleNotation();
         }
+    }
+
+    /**
+ * Update position indicator location based on current playback position
+ * @param {number} position Current playback position in seconds
+ * @param {boolean} forceUpdate Force update even if position is outside current page
+ */
+    updatePositionIndicator(position, forceUpdate = false) {
+        // Ensure we have the necessary elements
+        if (!this.positionIndicator || !this.notationContainer) return;
+
+        // Get page bounds
+        const startPosition = this.currentPageStartPosition || 0;
+        const endPosition = this.currentPageEndPosition || 0;
+
+        // Check if position is within current page bounds
+        const isInPageBounds = position >= startPosition && position <= endPosition;
+
+        if (!isInPageBounds && !forceUpdate) {
+            this.positionIndicator.style.opacity = '0';
+            return;
+        }
+
+        // Position is on this page, make indicator visible
+        this.positionIndicator.style.opacity = '1';
+        this.positionIndicator.style.display = 'block';
+
+        // Calculate relative position (0-1) within the page time range
+        // Adjust this calculation to match the visual note representation
+        const pageTimeRange = endPosition - startPosition;
+
+        // FIX: Scale the position value to match the visual note timing
+        // Find the measure containing current position
+        let currentMeasureIndex = this.findCurrentMeasureIndex();
+        const measureData = this.measureData[currentMeasureIndex] || null;
+
+        // Use measure-based positioning for more accurate alignment with notes
+        let relativePosition;
+        if (measureData) {
+            // Calculate position within current measure
+            const measureStartPos = measureData.startPosition;
+            const measureDuration = measureData.durationSeconds;
+            const posInMeasure = (position - measureStartPos) / measureDuration;
+
+            // Calculate measure's relative position within the page
+            const measureRelPos = (measureStartPos - startPosition) / pageTimeRange;
+
+            // Combine for final position
+            relativePosition = Math.max(0, Math.min(1, measureRelPos +
+                (posInMeasure * (measureDuration / pageTimeRange))));
+        } else {
+            // Fallback to simple linear calculation
+            relativePosition = pageTimeRange > 0 ?
+                Math.max(0, Math.min(1, (position - startPosition) / pageTimeRange)) : 0;
+        }
+
+        // Apply to page width accounting for margins
+        const containerWidth = this.notationContainer.clientWidth;
+        const leftMargin = this.currentPageStartX || 20;
+        const rightMargin = 20;
+        const usableWidth = containerWidth - leftMargin - rightMargin;
+
+        // Calculate final X position
+        const indicatorX = leftMargin + (relativePosition * usableWidth);
+
+        // Use immediate transform without transitions for reliable positioning
+        this.positionIndicator.style.transform = `translateX(${indicatorX}px)`;
     }
 
     // FIX: Improved method to create VexFlow notes from grouped notes with better error handling
@@ -1977,50 +2069,6 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             const measureIndex = this.currentPage * this.measuresPerPage;
             if (measureIndex < this.measureData.length) {
                 this.scoreModel.seekTo(this.measureData[measureIndex].startPosition);
-            }
-        }
-    }
-
-    drawPlayheadAtCurrentPosition(context, staves, startMeasureIndex, endMeasureIndex) {
-        const currentPosition = this.scoreModel.currentPosition;
-
-        for (let i = 0; i < staves.measureIndices.length; i++) {
-            const measureIndex = staves.measureIndices[i];
-
-            if (measureIndex < this.measureData.length) {
-                const measureStartTime = this.measureData[measureIndex].startPosition;
-                const measureEndTime = measureIndex < this.measureData.length - 1
-                    ? this.measureData[measureIndex + 1].startPosition
-                    : measureStartTime + this.measureData[measureIndex].durationSeconds;
-
-                if (currentPosition >= measureStartTime && currentPosition < measureEndTime) {
-                    const measurePos = (currentPosition - measureStartTime) /
-                        (measureEndTime - measureStartTime);
-
-                    const trebleStave = staves.treble[i];
-                    const bassStave = staves.bass[i];
-
-                    if (!trebleStave || !bassStave) continue;
-
-                    const staveX = trebleStave.getX();
-                    const staveWidth = trebleStave.getWidth();
-
-                    const playheadX = staveX + (staveWidth * measurePos);
-
-                    context.save();
-                    context.beginPath();
-                    const systemStartY = trebleStave.getY() - 10;
-                    const systemEndY = bassStave.getY() + bassStave.getHeight() + 10;
-
-                    context.moveTo(playheadX, systemStartY);
-                    context.lineTo(playheadX, systemEndY);
-                    context.strokeStyle = 'rgba(255, 0, 0, 0.7)';
-                    context.lineWidth = 2;
-                    context.stroke();
-                    context.restore();
-
-                    return;
-                }
             }
         }
     }

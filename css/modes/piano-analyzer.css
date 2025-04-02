@@ -249,6 +249,46 @@
     background-color: #FF5722;
     z-index: 10;
     pointer-events: none;
+    box-shadow: 0 0 3px rgba(255, 87, 34, 0.7);
+    /* transition: transform 0.1s linear, opacity 0.2s ease; */
+    will-change: transform;
+    transform: translateZ(0);
+    left: 0;
+    /* Force hardware acceleration */
+}
+
+/* Add a highlight at the top of the position indicator for better visibility */
+.notation-position-indicator::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -4px;
+    width: 10px;
+    height: 10px;
+    background-color: #FF5722;
+    border-radius: 50%;
+    box-shadow: 0 0 5px rgba(255, 87, 34, 0.9);
+    transform: translateZ(0);
+}
+
+/* Add a pulse animation to make the indicator more noticeable */
+@keyframes position-pulse {
+    0% {
+        box-shadow: 0 0 3px rgba(255, 87, 34, 0.7);
+    }
+
+    50% {
+        box-shadow: 0 0 8px rgba(255, 87, 34, 0.9);
+    }
+
+    100% {
+        box-shadow: 0 0 3px rgba(255, 87, 34, 0.7);
+    }
+}
+
+/* Apply the pulse animation when playing */
+.piano-visualization-container:not(.paused) .notation-position-indicator::after {
+    animation: position-pulse 2s infinite;
 }
 
 /* Info panel styling */
@@ -631,7 +671,6 @@ body.disco-mode .note-bar.playing {
     transform: scale(1.1);
 }
 
-
 /* Ensure SVG scales properly */
 .notation-svg-container svg {
     width: 100%;
@@ -673,6 +712,43 @@ body.disco-mode .note-bar.playing {
     z-index: 10;
     pointer-events: none;
     box-shadow: 0 0 3px rgba(255, 87, 34, 0.7);
+    transition: transform 0.1s linear, opacity 0.2s ease;
+    will-change: transform;
+    transform: translateZ(0);
+    /* Force hardware acceleration */
+}
+
+/* Add a highlight at the top of the position indicator for better visibility */
+.notation-position-indicator::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -4px;
+    width: 10px;
+    height: 10px;
+    background-color: #FF5722;
+    border-radius: 50%;
+    box-shadow: 0 0 5px rgba(255, 87, 34, 0.9);
+}
+
+/* Add a pulse animation to make the indicator more noticeable */
+@keyframes position-pulse {
+    0% {
+        box-shadow: 0 0 3px rgba(255, 87, 34, 0.7);
+    }
+
+    50% {
+        box-shadow: 0 0 8px rgba(255, 87, 34, 0.9);
+    }
+
+    100% {
+        box-shadow: 0 0 3px rgba(255, 87, 34, 0.7);
+    }
+}
+
+/* Apply the pulse animation when playing */
+.piano-visualization-container:not(.paused) .notation-position-indicator::after {
+    animation: position-pulse 2s infinite;
 }
 
 /* Enhanced info panel styling */
@@ -773,4 +849,9 @@ body.disco-mode .note-bar.playing {
 .notation-container.navigation-mode .notation-position-indicator {
     background-color: rgba(0, 150, 215, 0.8);
     box-shadow: 0 0 8px rgba(0, 150, 215, 0.6);
+}
+
+.notation-container.navigation-mode .notation-position-indicator::after {
+    background-color: rgba(0, 150, 215, 0.8);
+    box-shadow: 0 0 5px rgba(0, 150, 215, 0.9);
 }
