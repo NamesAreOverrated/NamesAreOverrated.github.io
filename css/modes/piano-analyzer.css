@@ -548,32 +548,44 @@ body.disco-mode .piano-key.active {
     will-change: transform, opacity, height;
     backface-visibility: hidden;
     transform: translate3d(0, 0, 0);
-    /* Remove any existing animations that might conflict with JS positioning */
+    /* Add borders to distinguish between adjacent notes */
+    border: 1px solid rgba(0, 0, 0, 0.4);
+    box-sizing: border-box;
     /* Updated from bottom border radius to top */
 }
 
 .note-bar.black-note {
     background-color: #00ccaa;
     opacity: 0.8;
+    /* Slightly different border for black notes */
+    border: 1px solid rgba(0, 0, 0, 0.5);
 }
 
 /* Note bar that's currently playing */
 .note-bar.playing {
     opacity: 1;
     box-shadow: 0 0 10px rgba(0, 255, 200, 0.7);
+    /* Stronger border when playing */
+    border: 1px solid rgba(0, 0, 0, 0.6);
 }
 
 /* Different colors for different hand parts in piano music */
 .note-bar.right-hand {
     background-color: var(--accent-color);
+    /* Add specific border color that works with teal/cyan */
+    border-color: rgba(0, 50, 50, 0.5);
 }
 
 .note-bar.left-hand {
     background-color: #ff5588;
+    /* Add specific border color that works with pink/red */
+    border-color: rgba(50, 0, 20, 0.5);
 }
 
 .note-bar.black-note.left-hand {
     background-color: #ff3366;
+    /* Darker border for black notes of left hand */
+    border-color: rgba(50, 0, 20, 0.6);
 }
 
 /* Add falling animation effect */
