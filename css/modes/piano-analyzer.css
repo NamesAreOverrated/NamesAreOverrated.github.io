@@ -714,6 +714,60 @@ body.disco-mode .note-bar.playing {
     stroke-width: 1.5px;
 }
 
+/* Improved stave styling */
+.notation-svg-container .vf-stave {
+    stroke: rgba(255, 255, 255, 0.666);
+    stroke-width: 1.2px;
+}
+
+/* Enhance clefs and other notation elements */
+.notation-svg-container .vf-clef {
+    fill: rgba(191, 255, 0, 0.85);
+    stroke: rgba(255, 255, 255, 0.3);
+
+}
+
+.notation-svg-container .vf-timesignature {
+    fill: rgba(255, 255, 255, 0.7);
+}
+
+/* Make bar lines more visible */
+.notation-svg-container .vf-bar,
+.notation-svg-container .vf-bar-line {
+    stroke: rgba(255, 255, 255, 0.9);
+    stroke-width: 1.5px;
+}
+
+/* Enhance note styling */
+.notation-svg-container .vf-note .vf-notehead {
+    fill: rgba(255, 255, 255, 0.9);
+    stroke: rgba(0, 0, 0, 0.8);
+    stroke-width: 1.5px;
+}
+
+.notation-svg-container .vf-note .vf-stem {
+    stroke: rgba(255, 255, 255, 0.9);
+    stroke-width: 1.5px;
+}
+
+.notation-svg-container .vf-note .vf-flag {
+    fill: rgba(255, 255, 255, 0.9);
+    stroke: rgba(0, 0, 0, 0.5);
+}
+
+/* Enhance accidentals */
+.notation-svg-container .vf-accidental {
+    fill: rgba(255, 255, 255, 0.95);
+    stroke: rgba(0, 0, 0, 0.2);
+    font-weight: bold;
+}
+
+/* Style articulations */
+.notation-svg-container .vf-articulation {
+    fill: rgba(255, 255, 255, 0.95);
+}
+
+
 /* Style playhead indicator */
 .notation-position-indicator {
     position: absolute;
