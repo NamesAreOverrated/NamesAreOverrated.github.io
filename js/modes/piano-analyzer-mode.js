@@ -56,6 +56,10 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         this.chordLookAheadTime = 1.5; // seconds to look ahead for chords
         this.chordDisplayDebounce = null;
         this.lastChordUpdateTime = 0;
+
+        // Add falling chord visualization variables
+        this.fallingChords = [];
+        this.fallingChordLookAhead = 4; // Same as noteBarLookAhead
     }
 
     /**
@@ -1034,6 +1038,7 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         if (this.scoreModel.currentPosition < 0.1 && this.noteBars.length > 0) {
             this.noteBarContainer.innerHTML = '';
             this.noteBars = [];
+            this.fallingChords = []; // Also reset falling chords
         }
 
         const startTime = this.scoreModel.currentPosition - 0.5;
@@ -1043,26 +1048,13 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
 
         this.createMissingNoteBars(visibleNotes);
 
+        // Add chord visualization
+        this.createFallingChordVisualizations(visibleNotes);
+
         this.updateNoteBarsPosition();
 
         this.cleanupInvisibleNoteBars(startTime);
     }
-
-    getVisibleNotes(startTime, endTime) {
-        return this.parsedNotes.filter(note => {
-            const noteDuration = note.visualDuration || note.duration;
-            const noteEnd = note.start + noteDuration;
-
-            return (
-                (note.start >= startTime && note.start <= endTime) ||
-
-                (note.start < startTime && noteEnd > startTime) ||
-
-                (note.start < startTime && noteEnd > startTime && noteEnd <= endTime)
-            );
-        });
-    }
-
     createMissingNoteBars(visibleNotes) {
         visibleNotes.forEach(note => {
             const noteId = `${note.id}-${note.start.toFixed(6)}`;
@@ -1118,58 +1110,6 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             note,
             keyElement
         });
-    }
-
-    updateNoteBarsPosition() {
-        if (!this.noteBarContainer || !this.noteBars.length) return;
-
-        const containerHeight = this.noteBarContainer.clientHeight;
-        const lookAheadTime = this.noteBarLookAhead;
-        const currentTime = this.scoreModel.currentPosition;
-
-        // Cache these calculations outside the loop
-        const timeToPixelRatio = containerHeight / lookAheadTime;
-        const MIN_NOTE_HEIGHT = 8;
-
-        // Cache DOM rect calculations to avoid layout thrashing
-        const containerRect = this.keyboardContainer.getBoundingClientRect();
-        const keyPositions = new Map();
-
-        // Batch DOM updates using requestAnimationFrame
-        const updates = [];
-
-        this.noteBars.forEach(bar => {
-            const note = bar.note;
-            const element = bar.element;
-            if (!element || !bar.keyElement) return;
-
-            // Calculate position data but don't update DOM yet
-            const noteData = this.calculateNoteBarPosition(
-                bar, currentTime, containerHeight,
-                timeToPixelRatio, MIN_NOTE_HEIGHT,
-                containerRect, keyPositions
-            );
-
-            if (noteData) {
-                updates.push({ element, data: noteData });
-            }
-        });
-
-        // Apply all DOM updates at once (better performance)
-        if (updates.length > 0) {
-            requestAnimationFrame(() => {
-                updates.forEach(({ element, data }) => {
-                    element.style.display = data.display;
-                    if (data.display === 'block') {
-                        element.style.transform = `translate3d(${data.x}px, ${data.y}px, 0)`;
-                        element.style.width = `${data.width}px`;
-                        element.style.height = `${data.height}px`;
-                        element.style.opacity = data.opacity;
-                        element.classList.toggle('playing', data.isPlaying);
-                    }
-                });
-            });
-        }
     }
 
     // Extract calculation logic to separate function
@@ -1245,6 +1185,259 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         };
     }
 
+
+    /**
+     * Create falling chord visualizations for upcoming chord groups
+     * @param {Array} visibleNotes Visible notes within the current window
+     */
+    createFallingChordVisualizations(visibleNotes) {
+        if (!visibleNotes || visibleNotes.length < 2) return;
+
+        // First, group notes by start time and hand
+        const leftHandNotesByTime = this.groupNotesByTimeAndHand(visibleNotes, false);
+        const rightHandNotesByTime = this.groupNotesByTimeAndHand(visibleNotes, true);
+
+        // Process each group for left hand
+        this.processHandChords(leftHandNotesByTime, 'left');
+
+        // Process each group for right hand
+        this.processHandChords(rightHandNotesByTime, 'right');
+    }
+
+    /**
+     * Group notes by start time and hand (left or right)
+     * @param {Array} notes Array of notes
+     * @param {boolean} isRightHand True for right hand, false for left hand
+     * @returns {Object} Notes grouped by time
+     */
+    groupNotesByTimeAndHand(notes, isRightHand) {
+        const notesByTime = {};
+
+        notes.forEach(note => {
+            // Skip tied continuation notes
+            if (note.isTiedFromPrevious) return;
+
+            // Determine hand based on staff or note number
+            const noteHand = (note.staff === 1 || (note.staff === undefined && note.noteNumber >= 60));
+
+            // Only include notes for the specified hand
+            if (noteHand === isRightHand) {
+                // Round to 50ms for chord grouping
+                const timeKey = Math.round(note.start * 20) / 20;
+
+                if (!notesByTime[timeKey]) {
+                    notesByTime[timeKey] = [];
+                }
+                notesByTime[timeKey].push(note);
+            }
+        });
+
+        return notesByTime;
+    }
+
+    /**
+     * Process and create chord visualizations for one hand
+     * @param {Object} notesByTime Notes grouped by time
+     * @param {string} hand 'left' or 'right'
+     */
+    processHandChords(notesByTime, hand) {
+        // Process each time group that has multiple notes (potential chord)
+        Object.keys(notesByTime).forEach(timeKey => {
+            const notes = notesByTime[timeKey];
+            const startTime = parseFloat(timeKey);
+
+            // Only consider as chord if we have at least 2 notes
+            if (notes.length >= 2) {
+                // Find if we already have a chord visualization for this time and hand
+                const existingChordIndex = this.fallingChords.findIndex(
+                    c => Math.abs(c.startTime - startTime) < 0.05 && c.hand === hand
+                );
+
+                // Skip if we already have this chord
+                if (existingChordIndex >= 0) return;
+
+                // Detect chord using MusicTheory
+                const detectedChord = MusicTheory.detectChord(notes);
+
+                // Only proceed if we have a valid chord detection
+                if (detectedChord && detectedChord.name) {
+                    this.createFallingChordElement(detectedChord, startTime, hand, notes);
+                }
+            }
+        });
+    }
+
+    /**
+     * Create a visual element for a falling chord
+     * @param {Object} chord The detected chord
+     * @param {number} startTime When the chord begins
+     * @param {string} hand 'left' or 'right'
+     * @param {Array} notes Array of notes in the chord
+     */
+    createFallingChordElement(chord, startTime, hand, notes) {
+        if (!this.noteBarContainer) return;
+
+        // Create the DOM element
+        const chordElement = document.createElement('div');
+        chordElement.className = `falling-chord ${hand}-hand`;
+
+        // Calculate duration based on the longest note in the chord
+        let maxDuration = 0;
+        notes.forEach(note => {
+            const noteDuration = note.visualDuration || note.duration;
+            if (noteDuration > maxDuration) {
+                maxDuration = noteDuration;
+            }
+        });
+
+        // Add chord information
+        const chordNameEl = document.createElement('div');
+        chordNameEl.className = 'chord-name';
+        chordNameEl.textContent = chord.name || "Chord";
+        chordElement.appendChild(chordNameEl);
+
+        // Add a subtle indicator for the notes in the chord
+        const chordNotesEl = document.createElement('div');
+        chordNotesEl.className = 'chord-notes';
+        chordNotesEl.textContent = chord.notes?.join(' ') || "";
+        chordElement.appendChild(chordNotesEl);
+
+        // Store chord data
+        const chordData = {
+            element: chordElement,
+            startTime: startTime,
+            duration: maxDuration,
+            hand: hand,
+            chord: chord,
+            notes: notes
+        };
+
+        // Add to the container and track in our array
+        this.noteBarContainer.appendChild(chordElement);
+        this.fallingChords.push(chordData);
+    }
+
+    updateNoteBarsPosition() {
+        if (!this.noteBarContainer || !this.noteBars.length) return;
+
+        const containerHeight = this.noteBarContainer.clientHeight;
+        const lookAheadTime = this.noteBarLookAhead;
+        const currentTime = this.scoreModel.currentPosition;
+
+        // Cache these calculations outside the loop
+        const timeToPixelRatio = containerHeight / lookAheadTime;
+        const MIN_NOTE_HEIGHT = 8;
+
+        // Cache DOM rect calculations to avoid layout thrashing
+        const containerRect = this.keyboardContainer.getBoundingClientRect();
+        const keyPositions = new Map();
+
+        // Batch DOM updates using requestAnimationFrame
+        const updates = [];
+
+        this.noteBars.forEach(bar => {
+            const note = bar.note;
+            const element = bar.element;
+            if (!element || !bar.keyElement) return;
+
+            // Calculate position data but don't update DOM yet
+            const noteData = this.calculateNoteBarPosition(
+                bar, currentTime, containerHeight,
+                timeToPixelRatio, MIN_NOTE_HEIGHT,
+                containerRect, keyPositions
+            );
+
+            if (noteData) {
+                updates.push({ element, data: noteData });
+            }
+        });
+
+        // Apply all DOM updates at once (better performance)
+        if (updates.length > 0) {
+            requestAnimationFrame(() => {
+                updates.forEach(({ element, data }) => {
+                    element.style.display = data.display;
+                    if (data.display === 'block') {
+                        element.style.transform = `translate3d(${data.x}px, ${data.y}px, 0)`;
+                        element.style.width = `${data.width}px`;
+                        element.style.height = `${data.height}px`;
+                        element.style.opacity = data.opacity;
+                        element.classList.toggle('playing', data.isPlaying);
+                    }
+                });
+            });
+        }
+
+        // Update falling chord positions
+        this.updateFallingChordPositions(containerHeight, currentTime, lookAheadTime);
+    }
+
+    /**
+     * Update positions of falling chord elements
+     * @param {number} containerHeight Height of the container
+     * @param {number} currentTime Current playback position
+     * @param {number} lookAheadTime How far ahead to show chords
+     */
+    updateFallingChordPositions(containerHeight, currentTime, lookAheadTime) {
+        if (!this.fallingChords || this.fallingChords.length === 0) return;
+
+        // Calculate positions for chords
+        const timeToPixelRatio = containerHeight / lookAheadTime;
+
+        this.fallingChords.forEach(chordData => {
+            const element = chordData.element;
+            if (!element || !element.parentNode) return;
+
+            const chordStart = chordData.startTime;
+            const chordDuration = chordData.duration;
+            const chordEnd = chordStart + chordDuration;
+
+            // Visibility checks - same logic as note bars
+            const isPlaying = chordStart <= currentTime && chordEnd > currentTime;
+            const isUpcoming = chordStart > currentTime && chordStart <= currentTime + lookAheadTime;
+            const isPartiallyVisible = chordStart < currentTime && chordEnd > currentTime;
+            const isPassed = chordEnd <= currentTime && chordEnd > currentTime - 0.5;
+            const isVisible = isPlaying || isUpcoming || isPartiallyVisible || isPassed;
+
+            element.style.display = isVisible ? 'block' : 'none';
+
+            if (isVisible) {
+                // Position logic similar to note bars
+                let topPosition = 0;
+                let height = Math.max(30, chordDuration * timeToPixelRatio);
+                let opacity = 1;
+
+                if (isPlaying) {
+                    const elapsedTime = currentTime - chordStart;
+                    const remainingDuration = Math.max(0, chordDuration - elapsedTime);
+                    const remainingHeight = remainingDuration * timeToPixelRatio;
+                    topPosition = containerHeight - remainingHeight;
+                } else if (isUpcoming) {
+                    const timeToStart = chordStart - currentTime;
+                    const distanceFromBottom = timeToStart * timeToPixelRatio;
+                    topPosition = containerHeight - distanceFromBottom - height;
+                } else if (isPartiallyVisible) {
+                    const elapsedTime = currentTime - chordStart;
+                    const remainingDuration = Math.max(0, chordDuration - elapsedTime);
+                    const remainingHeight = remainingDuration * timeToPixelRatio;
+                    topPosition = containerHeight - remainingHeight;
+                } else if (isPassed) {
+                    const timeSinceEnd = currentTime - chordEnd;
+                    opacity = Math.max(0, 0.5 - timeSinceEnd);
+                    topPosition = containerHeight;
+                }
+
+                // Use translate3d for hardware acceleration like note bars
+                element.style.transform = `translate3d(0, ${topPosition}px, 0)`;
+                element.style.height = `${height}px`;
+                element.style.opacity = opacity;
+
+                // Mark if currently playing
+                element.classList.toggle('playing', isPlaying);
+            }
+        });
+    }
+
     cleanupInvisibleNoteBars(startTime) {
         const cleanupThreshold = startTime - 1.0;
         const removeList = [];
@@ -1271,6 +1464,25 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         // Log cleanup for debugging
         if (removeList.length > 0) {
             console.log(`Removed ${removeList.length} invisible note bars, ${this.noteBars.length} remaining`);
+        }
+
+        // Also clean up falling chords that are no longer visible
+        const chordsToRemove = [];
+
+        // First identify chords to remove
+        for (let i = 0; i < this.fallingChords.length; i++) {
+            const chordData = this.fallingChords[i];
+            if (chordData.startTime + chordData.duration < cleanupThreshold) {
+                chordsToRemove.push(i);
+                if (chordData.element && chordData.element.parentNode) {
+                    chordData.element.parentNode.removeChild(chordData.element);
+                }
+            }
+        }
+
+        // Then remove from array in reverse order to maintain indexes
+        for (let i = chordsToRemove.length - 1; i >= 0; i--) {
+            this.fallingChords.splice(chordsToRemove[i], 1);
         }
     }
 
@@ -2785,8 +2997,5 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         });
     }
 
-    startPlayback() {
-        // ...existing code...
-    }
 
 }

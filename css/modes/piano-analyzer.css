@@ -575,7 +575,6 @@ body.disco-mode .piano-key.active {
 
 }
 
-
 /* Note bar that's currently playing */
 .note-bar.playing {
     opacity: 1;
@@ -781,7 +780,6 @@ body.disco-mode .note-bar.playing {
 .notation-svg-container .vf-articulation {
     fill: rgba(255, 255, 255, 0.95);
 }
-
 
 /* Style playhead indicator */
 .notation-position-indicator {
@@ -1110,5 +1108,104 @@ body.disco-mode .chord-display {
     80% {
         border: 1px solid rgba(0, 255, 136, 0.5);
         box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
+    }
+}
+
+/* Falling chord visualization */
+.falling-chord {
+    position: absolute;
+    width: 100px;
+    min-height: 30px;
+    border-radius: 4px;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 5px;
+    box-sizing: border-box;
+    opacity: 0.85;
+    transition: opacity 0.2s ease-out;
+    will-change: transform, opacity, height;
+    backface-visibility: hidden;
+    transform: translate3d(0, 0, 0);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+    z-index: 5;
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    /* Ensure fixed positioning on sides */
+    top: 0;
+}
+
+/* Left hand chords on left side */
+.falling-chord.left-hand {
+    left: 10px;
+    background-color: rgba(255, 85, 136, 0.7);
+    border-left: 3px solid #ff5588;
+}
+
+/* Right hand chords on right side */
+.falling-chord.right-hand {
+    right: 10px;
+    background-color: rgba(0, 220, 180, 0.7);
+    border-right: 3px solid var(--accent-color, #64ffda);
+}
+
+/* Chord name styling */
+.falling-chord .chord-name {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 3px;
+    text-shadow: 0 0 5px rgba(0, 0, 0, 0.7);
+    letter-spacing: 0.5px;
+}
+
+/* Chord notes styling */
+.falling-chord .chord-notes {
+    font-size: 10px;
+    opacity: 0.8;
+}
+
+/* Playing state */
+.falling-chord.playing {
+    opacity: 1;
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+    z-index: 6;
+}
+
+/* Different styling for different chord types */
+.falling-chord.left-hand.playing {
+    background-color: rgba(255, 85, 136, 0.9);
+    box-shadow: 0 0 15px rgba(255, 85, 136, 0.6);
+}
+
+.falling-chord.right-hand.playing {
+    background-color: rgba(0, 220, 180, 0.9);
+    box-shadow: 0 0 15px rgba(0, 220, 180, 0.6);
+}
+
+/* Make sure paused state works for falling chords too */
+.note-bar-container.paused .falling-chord {
+    animation-play-state: paused !important;
+}
+
+/* Enhance display in disco mode */
+body.disco-mode .falling-chord {
+    backdrop-filter: blur(5px);
+    animation: disco-chord 5.8s steps(1, end) infinite;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+    .falling-chord {
+        width: 80px;
+    }
+
+    .falling-chord .chord-name {
+        font-size: 14px;
+    }
+
+    .falling-chord .chord-notes {
+        font-size: 8px;
     }
 }
