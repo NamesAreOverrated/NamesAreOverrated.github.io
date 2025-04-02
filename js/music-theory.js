@@ -56,23 +56,181 @@ class MusicTheory {
 
     // Common chord types and their interval patterns
     static chordTypes = {
+        // Basic triads
         'maj': [0, 4, 7],           // Major
         'min': [0, 3, 7],           // Minor
         'dim': [0, 3, 6],           // Diminished
         'aug': [0, 4, 8],           // Augmented
+
+        // Seventh chords
         '7': [0, 4, 7, 10],         // Dominant 7th
         'maj7': [0, 4, 7, 11],      // Major 7th
         'min7': [0, 3, 7, 10],      // Minor 7th
         'dim7': [0, 3, 6, 9],       // Diminished 7th
-        'hdim7': [0, 3, 6, 10],     // Half-diminished 7th
-        'sus4': [0, 5, 7],          // Suspended 4th
-        'sus2': [0, 2, 7],          // Suspended 2nd
-        'add9': [0, 4, 7, 14],      // Add 9
+        'hdim7': [0, 3, 6, 10],     // Half-diminished 7th (min7b5)
+        'm7b5': [0, 3, 6, 10],      // Minor 7th flat 5 (same as hdim7)
+        '7b5': [0, 4, 6, 10],       // Dominant 7th flat 5
+        '7#5': [0, 4, 8, 10],       // Dominant 7th sharp 5
+        '7aug': [0, 4, 8, 10],      // Dominant 7th augmented (same as 7#5)
+        'maj7b5': [0, 4, 6, 11],    // Major 7th flat 5
+        'maj7#5': [0, 4, 8, 11],    // Major 7th sharp 5
+        'maj7aug': [0, 4, 8, 11],   // Major 7th augmented (same as maj7#5)
+
+        // Sixth chords
         '6': [0, 4, 7, 9],          // Major 6th
         'min6': [0, 3, 7, 9],       // Minor 6th
+
+        // Suspended chords
+        'sus4': [0, 5, 7],          // Suspended 4th
+        'sus2': [0, 2, 7],          // Suspended 2nd
+        '7sus4': [0, 5, 7, 10],     // Dominant 7th suspended 4th
+        '7sus': [0, 5, 7, 10],      // Short form of 7sus4
+
+        // Added tone chords
+        'add9': [0, 4, 7, 14],      // Add 9
+        'add11': [0, 4, 7, 17],     // Add 11
+        'add13': [0, 4, 7, 21],     // Add 13
+
+        // Extended chords (9th, 11th, 13th)
         '9': [0, 4, 7, 10, 14],     // Dominant 9th
-        'maj9': [0, 4, 7, 11, 14]   // Major 9th
+        'maj9': [0, 4, 7, 11, 14],  // Major 9th
+        'min9': [0, 3, 7, 10, 14],  // Minor 9th
+        '11': [0, 4, 7, 10, 14, 17],// Dominant 11th
+        'maj11': [0, 4, 7, 11, 14, 17], // Major 11th
+        'min11': [0, 3, 7, 10, 14, 17], // Minor 11th
+        '13': [0, 4, 7, 10, 14, 21], // Dominant 13th
+        'maj13': [0, 4, 7, 11, 14, 21], // Major 13th
+        'min13': [0, 3, 7, 10, 14, 21]  // Minor 13th
     };
+
+    /**
+     * Detect chord from a set of notes
+     * @param {Array} notes Array of note objects with noteNumber or name+octave
+     * @returns {Object} Detected chord information or null
+     */
+    static detectChord(notes) {
+        if (!notes || notes.length < 2) return null;
+
+        // Convert notes to MIDI numbers if they're not already
+        const midiNotes = notes.map(note => {
+            if (note.noteNumber !== undefined) {
+                return note.noteNumber;
+            } else if (note.name && note.octave !== undefined) {
+                return this.noteNameToMidi(note.name, note.octave);
+            }
+            return null;
+        }).filter(n => n !== null);
+
+        if (midiNotes.length < 2) return null;
+
+        // Sort notes and find lowest note (potential root)
+        midiNotes.sort((a, b) => a - b);
+
+        // Find all potential roots by testing each note as a potential root
+        const allPossibleChords = [];
+
+        for (let rootIndex = 0; rootIndex < midiNotes.length; rootIndex++) {
+            const potentialRoot = midiNotes[rootIndex];
+            const potentialRootName = this.midiNoteToName(potentialRoot);
+
+            // Get intervals relative to this potential root
+            const intervals = midiNotes.map(note => (note - potentialRoot + 12) % 12);
+
+            // Remove duplicates (we only care about pitch classes)
+            const uniqueIntervals = [...new Set(intervals)].sort((a, b) => a - b);
+
+            // Check against known chord patterns
+            for (const [chordName, chordPattern] of Object.entries(this.chordTypes)) {
+                // Count matching notes, missing notes, and extra notes
+                let matchCount = 0;
+                let missingCount = 0;
+
+                // Check required intervals for this chord type
+                for (const interval of chordPattern) {
+                    if (uniqueIntervals.includes(interval)) {
+                        matchCount++;
+                    } else {
+                        missingCount++;
+                    }
+                }
+
+                // Count extra notes not in the pattern
+                const extraCount = uniqueIntervals.length - matchCount;
+
+                // Calculate inversion (0 = root position, 1 = first inversion, etc.)
+                let inversion = 0;
+                if (matchCount >= 3) { // Only calculate inversion for chords we match well
+                    const bassNote = midiNotes[0] % 12; // Lowest note's pitch class
+                    const rootPitchClass = potentialRoot % 12;
+
+                    // If bass note is not the root, find which chord tone it is
+                    if (bassNote !== rootPitchClass) {
+                        const sortedChordTones = [0, ...chordPattern].sort((a, b) => a - b);
+                        inversion = sortedChordTones.indexOf((bassNote - rootPitchClass + 12) % 12);
+                        if (inversion === -1) inversion = 0; // Fallback if not found
+                    }
+                }
+
+                // Calculate score: prioritize matches, then fewer missing notes, then fewer extra notes
+                const score = (matchCount * 10) - (missingCount * 5) - (extraCount * 2);
+
+                // Only consider reasonable matches
+                if (score >= 15 && matchCount >= 2) {
+                    allPossibleChords.push({
+                        root: potentialRootName,
+                        type: chordName,
+                        score: score,
+                        matchCount: matchCount,
+                        missingCount: missingCount,
+                        extraCount: extraCount,
+                        inversion: inversion,
+                        bassPitchClass: midiNotes[0] % 12
+                    });
+                }
+            }
+        }
+
+        // No valid chords found
+        if (allPossibleChords.length === 0) {
+            // Create a simple representation of the notes
+            const noteNames = midiNotes.map(midi => this.midiNoteToName(midi));
+
+            return {
+                name: "Notes",
+                root: "",
+                type: "",
+                notes: [...new Set(noteNames)], // Remove duplicates
+                inversion: 0,
+                confidence: 0.1
+            };
+        }
+
+        // Sort by score (highest first)
+        allPossibleChords.sort((a, b) => b.score - a.score || a.inversion - b.inversion);
+
+        // Get the best match
+        const bestMatch = allPossibleChords[0];
+
+        // Format the chord name with inversion notation
+        let chordName = `${bestMatch.root}${bestMatch.type}`;
+        let inversionNotation = "";
+
+        // Add inversion notation if applicable
+        if (bestMatch.inversion > 0) {
+            // Use slash notation for inversions
+            const bassNote = this.midiNoteToName(midiNotes[0]);
+            inversionNotation = `/${bassNote}`;
+        }
+
+        return {
+            name: chordName + inversionNotation,
+            root: bestMatch.root,
+            type: bestMatch.type,
+            notes: midiNotes.map(midi => this.midiNoteToName(midi)),
+            inversion: bestMatch.inversion,
+            confidence: bestMatch.score / ((this.chordTypes[bestMatch.type].length + 1) * 10)
+        };
+    }
 
     /**
      * Detect musical notes from frequency data
@@ -300,134 +458,6 @@ class MusicTheory {
         return null;
     }
 
-    /**
-     * Detect chord from a set of notes
-     * @param {Array} notes Array of note objects with noteNumber or name+octave
-     * @returns {Object} Detected chord information or null
-     */
-    static detectChord(notes) {
-        if (!notes || notes.length < 2) return null;
-
-        // Convert notes to MIDI numbers if they're not already
-        const midiNotes = notes.map(note => {
-            if (note.noteNumber !== undefined) {
-                return note.noteNumber;
-            } else if (note.name && note.octave !== undefined) {
-                return this.noteNameToMidi(note.name, note.octave);
-            }
-            return null;
-        }).filter(n => n !== null);
-
-        if (midiNotes.length < 2) return null;
-
-        // Sort notes and find lowest note (potential root)
-        midiNotes.sort((a, b) => a - b);
-
-        // Find all potential roots by testing each note as a potential root
-        const allPossibleChords = [];
-
-        for (let rootIndex = 0; rootIndex < midiNotes.length; rootIndex++) {
-            const potentialRoot = midiNotes[rootIndex];
-            const potentialRootName = this.midiNoteToName(potentialRoot);
-
-            // Get intervals relative to this potential root
-            const intervals = midiNotes.map(note => (note - potentialRoot + 12) % 12);
-
-            // Remove duplicates (we only care about pitch classes)
-            const uniqueIntervals = [...new Set(intervals)].sort((a, b) => a - b);
-
-            // Check against known chord patterns
-            for (const [chordName, chordPattern] of Object.entries(this.chordTypes)) {
-                // Count matching notes, missing notes, and extra notes
-                let matchCount = 0;
-                let missingCount = 0;
-
-                // Check required intervals for this chord type
-                for (const interval of chordPattern) {
-                    if (uniqueIntervals.includes(interval)) {
-                        matchCount++;
-                    } else {
-                        missingCount++;
-                    }
-                }
-
-                // Count extra notes not in the pattern
-                const extraCount = uniqueIntervals.length - matchCount;
-
-                // Calculate inversion (0 = root position, 1 = first inversion, etc.)
-                let inversion = 0;
-                if (matchCount >= 3) { // Only calculate inversion for chords we match well
-                    const bassNote = midiNotes[0] % 12; // Lowest note's pitch class
-                    const rootPitchClass = potentialRoot % 12;
-
-                    // If bass note is not the root, find which chord tone it is
-                    if (bassNote !== rootPitchClass) {
-                        const sortedChordTones = [0, ...chordPattern].sort((a, b) => a - b);
-                        inversion = sortedChordTones.indexOf((bassNote - rootPitchClass + 12) % 12);
-                        if (inversion === -1) inversion = 0; // Fallback if not found
-                    }
-                }
-
-                // Calculate score: prioritize matches, then fewer missing notes, then fewer extra notes
-                const score = (matchCount * 10) - (missingCount * 5) - (extraCount * 2);
-
-                // Only consider reasonable matches
-                if (score >= 15 && matchCount >= 2) {
-                    allPossibleChords.push({
-                        root: potentialRootName,
-                        type: chordName,
-                        score: score,
-                        matchCount: matchCount,
-                        missingCount: missingCount,
-                        extraCount: extraCount,
-                        inversion: inversion,
-                        bassPitchClass: midiNotes[0] % 12
-                    });
-                }
-            }
-        }
-
-        // No valid chords found
-        if (allPossibleChords.length === 0) {
-            // Create a simple representation of the notes
-            const noteNames = midiNotes.map(midi => this.midiNoteToName(midi));
-
-            return {
-                name: "Notes",
-                root: "",
-                type: "",
-                notes: [...new Set(noteNames)], // Remove duplicates
-                inversion: 0,
-                confidence: 0.1
-            };
-        }
-
-        // Sort by score (highest first)
-        allPossibleChords.sort((a, b) => b.score - a.score || a.inversion - b.inversion);
-
-        // Get the best match
-        const bestMatch = allPossibleChords[0];
-
-        // Format the chord name with inversion notation
-        let chordName = `${bestMatch.root}${bestMatch.type}`;
-        let inversionNotation = "";
-
-        // Add inversion notation if applicable
-        if (bestMatch.inversion > 0) {
-            // Use slash notation for inversions
-            const bassNote = this.midiNoteToName(midiNotes[0]);
-            inversionNotation = `/${bassNote}`;
-        }
-
-        return {
-            name: chordName + inversionNotation,
-            root: bestMatch.root,
-            type: bestMatch.type,
-            notes: midiNotes.map(midi => this.midiNoteToName(midi)),
-            inversion: bestMatch.inversion,
-            confidence: bestMatch.score / ((this.chordTypes[bestMatch.type].length + 1) * 10)
-        };
-    }
 
     /**
      * Convert note name and octave to MIDI note number

@@ -49,13 +49,7 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         this.highlightPianoKeys = this.highlightPianoKeys.bind(this);
         this.togglePlayback = this.togglePlayback.bind(this);
 
-        // Add chord detection variables
-        this.chordDisplayElement = null;
-        this.currentChord = null;
-        this.upcomingChord = null;
-        this.chordLookAheadTime = 1.5; // seconds to look ahead for chords
-        this.chordDisplayDebounce = null;
-        this.lastChordUpdateTime = 0;
+
 
         // Add falling chord visualization variables
         this.fallingChords = [];
@@ -1294,6 +1288,11 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         const chordNameEl = document.createElement('div');
         chordNameEl.className = 'chord-name';
         chordNameEl.textContent = chord.name || "Chord";
+
+        // Add chord type attribute for styling
+        const chordType = this.getChordType(chord);
+        chordNameEl.setAttribute('data-chord-type', chordType);
+
         chordElement.appendChild(chordNameEl);
 
         // Add a subtle indicator for the notes in the chord
@@ -1315,6 +1314,78 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         // Add to the container and track in our array
         this.noteBarContainer.appendChild(chordElement);
         this.fallingChords.push(chordData);
+    }
+
+
+    /**
+ * Extract chord type from chord name with improved pattern matching
+ * @param {Object} chord The chord object
+ * @returns {string} The chord type for styling
+ */
+    getChordType(chord) {
+        if (!chord || !chord.name) return 'other';
+
+        // Convert to lowercase and remove all spaces for consistent processing
+        const name = chord.name.toLowerCase().replace(/\s+/g, '');
+
+        // First extract the root note to avoid confusion
+        const rootPattern = /^[a-g][#b]?/;
+        const rootMatch = name.match(rootPattern);
+
+        // Get just the chord quality part (without the root note)
+        const quality = rootMatch ? name.substring(rootMatch[0].length) : name;
+
+        // Handle slash chords - extract just the quality before the slash
+        const slashIndex = quality.indexOf('/');
+        const mainQuality = slashIndex > -1 ? quality.substring(0, slashIndex) : quality;
+
+        // Now match chord types in order of specificity (most specific first)
+
+        // Extended chords with alterations
+        if (/maj13/.test(mainQuality)) return 'maj13';
+        if (/13/.test(mainQuality)) return '13';
+        if (/maj11/.test(mainQuality)) return 'maj11';
+        if (/11/.test(mainQuality)) return '11';
+        if (/maj9/.test(mainQuality)) return 'maj9';
+        if (/9/.test(mainQuality)) return '9';
+
+        // Seventh chords
+        if (/maj7b5/.test(mainQuality)) return 'maj7b5';
+        if (/7#5|7\+5|7aug/.test(mainQuality)) return '7aug';
+        if (/7b5/.test(mainQuality)) return '7b5';
+        if (/maj7#5|maj7\+5/.test(mainQuality)) return 'maj7aug';
+        if (/maj7/.test(mainQuality)) return 'maj7';
+        if (/m7b5|min7b5|ø/.test(mainQuality)) return 'min7b5';
+        if (/m7|min7|-7/.test(mainQuality)) return 'min7';
+        if (/7sus4|7sus/.test(mainQuality)) return '7sus4';
+        if (/7/.test(mainQuality)) return '7';
+
+        // Triads with alterations
+        if (/dim7|°7/.test(mainQuality)) return 'dim7';
+        if (/dim|°/.test(mainQuality)) return 'dim';
+        if (/aug\+|aug|augmented|\+/.test(mainQuality)) return 'aug';
+        if (/sus2/.test(mainQuality)) return 'sus2';
+        if (/sus4|sus/.test(mainQuality)) return 'sus4';
+
+        // Basic triads
+        if (/min|m|-/.test(mainQuality)) return 'minor';
+        if (/maj|major|\^|△/.test(mainQuality)) return 'major';
+
+        // Added tone chords
+        if (/add9/.test(mainQuality)) return 'add9';
+        if (/add11/.test(mainQuality)) return 'add11';
+        if (/add13/.test(mainQuality)) return 'add13';
+        if (/add/.test(mainQuality)) return 'add';
+
+        // 6th chords
+        if (/m6|min6|-6/.test(mainQuality)) return 'min6';
+        if (/6/.test(mainQuality)) return '6';
+
+        // If there's no explicit quality and it's just a root note
+        if (mainQuality === '') return 'major';
+
+        // Fallback
+        return 'other';
     }
 
     updateNoteBarsPosition() {
@@ -1434,6 +1505,11 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
 
                 // Mark if currently playing
                 element.classList.toggle('playing', isPlaying);
+                // Mark the text as well
+                const chordNameEl = element.querySelector('.chord-name');
+                if (chordNameEl) {
+                    chordNameEl.classList.toggle('playing', isPlaying);
+                }
             }
         });
     }
@@ -1569,16 +1645,7 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             }
         });
 
-        // Add chord display element
-        this.chordDisplayElement = document.createElement('div');
-        this.chordDisplayElement.className = 'chord-display';
-        this.chordDisplayElement.innerHTML = `
-            <div class="chord-name"></div>
-            <div class="chord-notes"></div>
-            <div class="chord-timing"></div>
-        `;
-        this.chordDisplayElement.style.opacity = '0';
-        this.pianoVisualizationContainer.appendChild(this.chordDisplayElement);
+
     }
 
     createVisualization() {
@@ -2448,8 +2515,7 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             // Update note bars
             this.updateNoteBars();
 
-            // Update chord display
-            this.updateChordDisplay();
+
 
             // Update notation at lower frequency
             if (!this._lastNotationUpdate ||
@@ -2467,323 +2533,6 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         };
 
         this.animationFrameId = requestAnimationFrame(animate);
-    }
-
-    /**
-     * Update the chord display with upcoming chord information
-     * Now separates left and right hand chords based on staff assignment
-     */
-    updateChordDisplay() {
-        // Don't update chords too frequently to avoid flickering
-        const now = performance.now();
-        if (now - this.lastChordUpdateTime < 500) return;
-
-        // Look ahead for upcoming notes
-        const currentPosition = this.scoreModel.currentPosition;
-        const lookAheadStart = currentPosition + 0.2; // Small buffer after current position
-        const lookAheadEnd = currentPosition + this.chordLookAheadTime;
-
-        // Get upcoming notes within the look-ahead window
-        const upcomingNotes = this.scoreModel.getVisibleNotes(lookAheadStart, lookAheadEnd);
-
-        // Skip if no upcoming notes
-        if (!upcomingNotes || upcomingNotes.length < 2) {
-            if (this.upcomingChord) {
-                // Hide chord display if we showed a chord before but no longer have upcoming chords
-                this.fadeOutChordDisplay();
-                this.upcomingChord = null;
-            }
-            return;
-        }
-
-        // Separate notes into left and right hand based on staff information
-        // Staff=1 is treble (right hand), Staff=2 is bass (left hand)
-        // In case staff information is missing, fall back to note number
-        const leftHandNotes = upcomingNotes.filter(note => {
-            // Priority 1: Explicit staff assignment from MusicXML
-            if (note.staff !== undefined) {
-                return note.staff === 2; // Bass staff = left hand
-            }
-            // Priority 2: Fall back to note number (below middle C) only if staff is not specified
-            return note.noteNumber < 60;
-        });
-
-        const rightHandNotes = upcomingNotes.filter(note => {
-            // Priority 1: Explicit staff assignment from MusicXML
-            if (note.staff !== undefined) {
-                return note.staff === 1; // Treble staff = right hand
-            }
-            // Priority 2: Fall back to note number (above or at middle C) only if staff is not specified
-            return note.noteNumber >= 60;
-        });
-
-        // Group notes by their starting times for each hand
-        const groupNotesByTime = (notes) => {
-            const notesByStartTime = {};
-            notes.forEach(note => {
-                // Skip tied continuation notes
-                if (note.isTiedFromPrevious) return;
-
-                // Round to nearest 50ms to group notes that start at almost the same time
-                const roundedStart = Math.round(note.start * 20) / 20;
-                if (!notesByStartTime[roundedStart]) {
-                    notesByStartTime[roundedStart] = [];
-                }
-                notesByStartTime[roundedStart].push(note);
-            });
-            return notesByStartTime;
-        };
-
-        const leftHandNotesByTime = groupNotesByTime(leftHandNotes);
-        const rightHandNotesByTime = groupNotesByTime(rightHandNotes);
-
-        // Find earliest chord for each hand (at least 2 notes)
-        const findEarliestChord = (notesByTime) => {
-            let earliestTime = Infinity;
-            let earliestNotes = null;
-
-            Object.entries(notesByTime).forEach(([startTime, notes]) => {
-                if (notes.length >= 2 && parseFloat(startTime) < earliestTime) {
-                    earliestTime = parseFloat(startTime);
-                    earliestNotes = notes;
-                }
-            });
-
-            return earliestNotes ? { time: earliestTime, notes: earliestNotes } : null;
-        };
-
-        const leftHandChord = findEarliestChord(leftHandNotesByTime);
-        const rightHandChord = findEarliestChord(rightHandNotesByTime);
-
-        // If neither hand has a chord, clear display
-        if (!leftHandChord && !rightHandChord) {
-            if (this.upcomingChord) {
-                this.fadeOutChordDisplay();
-                this.upcomingChord = null;
-            }
-            return;
-        }
-
-        // Detect chords using MusicTheory for each hand
-        const detectChordFromNotes = (notes) => {
-            if (!notes || notes.length < 2) return null;
-
-            // Use MusicTheory to detect the chord
-            const detectedChord = MusicTheory.detectChord(notes);
-
-            // If chord detection failed, just show the notes
-            if (!detectedChord) {
-                // Create a simple representation of the notes
-                const noteNames = notes.map(note => {
-                    const noteName = note.step;
-                    const accidental = note.alter === 1 ? '#' : note.alter === -1 ? 'b' : '';
-                    return `${noteName}${accidental}`;
-                });
-
-                return {
-                    name: "Notes",
-                    notes: [...new Set(noteNames)], // Remove duplicates
-                };
-            }
-
-            return detectedChord;
-        };
-
-        // Process left and right hand chords
-        const leftHandChordData = leftHandChord ? {
-            ...detectChordFromNotes(leftHandChord.notes),
-            time: leftHandChord.time,
-            hand: 'left',
-            // Add debug info
-            staffInfo: leftHandChord.notes.map(n => n.staff || 'unspecified').join(',')
-        } : null;
-
-        const rightHandChordData = rightHandChord ? {
-            ...detectChordFromNotes(rightHandChord.notes),
-            time: rightHandChord.time,
-            hand: 'right',
-            // Add debug info
-            staffInfo: rightHandChord.notes.map(n => n.staff || 'unspecified').join(',')
-        } : null;
-
-        // If neither hand has a chord, clear display
-        if (!leftHandChord && !rightHandChord) {
-            if (this.upcomingChord) {
-                this.fadeOutChordDisplay();
-                this.upcomingChord = null;
-            }
-            return;
-        }
-
-        // Choose which chord(s) to display
-        let chordsToDisplay = [];
-
-        if (leftHandChordData && rightHandChordData) {
-            // If both hands have chords
-            const timeDifference = Math.abs(leftHandChordData.time - rightHandChordData.time);
-
-            // If chords are played at similar times (within 0.2s), display both
-            if (timeDifference < 0.2) {
-                chordsToDisplay = [leftHandChordData, rightHandChordData];
-            } else {
-                // Otherwise, display the earlier chord
-                chordsToDisplay = [leftHandChordData.time < rightHandChordData.time ?
-                    leftHandChordData : rightHandChordData];
-            }
-        } else {
-            // Display whichever hand has a chord
-            chordsToDisplay = leftHandChordData ? [leftHandChordData] :
-                rightHandChordData ? [rightHandChordData] : [];
-        }
-
-        // Skip update if no chords to display
-        if (chordsToDisplay.length === 0) {
-            if (this.upcomingChord) {
-                this.fadeOutChordDisplay();
-                this.upcomingChord = null;
-            }
-            return;
-        }
-
-        // Check if chords have changed
-        const chordSignature = chordsToDisplay.map(c => `${c.hand}-${c.name}-${c.time}`).join('|');
-        const previousSignature = this.upcomingChord ?
-            (Array.isArray(this.upcomingChord) ?
-                this.upcomingChord.map(c => `${c.hand}-${c.name}-${c.time}`).join('|') :
-                `${this.upcomingChord.hand}-${this.upcomingChord.name}-${this.upcomingChord.time}`)
-            : '';
-
-        // Only update display if chord is different
-        if (chordSignature !== previousSignature) {
-            this.upcomingChord = chordsToDisplay.length === 1 ? chordsToDisplay[0] : chordsToDisplay;
-            this.updateChordDisplayContent(this.upcomingChord);
-            this.lastChordUpdateTime = now;
-        }
-    }
-
-    /**
-     * Update the content of the chord display element
-     * Now handles multiple chords (left/right hand)
-     * @param {Object|Array} chord The chord information to display
-     */
-    updateChordDisplayContent(chord) {
-        if (!this.chordDisplayElement) return;
-
-        // Get the HTML elements
-        const nameElement = this.chordDisplayElement.querySelector('.chord-name');
-        const notesElement = this.chordDisplayElement.querySelector('.chord-notes');
-        const timingElement = this.chordDisplayElement.querySelector('.chord-timing');
-
-        if (!nameElement || !notesElement || !timingElement) return;
-
-        // Reset existing hand classes
-        this.chordDisplayElement.classList.remove('left-hand', 'right-hand', 'both-hands');
-
-        // Update with transition effect
-        this.chordDisplayElement.classList.remove('fade-in', 'fade-out');
-        this.chordDisplayElement.classList.add('fade-in');
-
-        // Format chord name with inversion info if needed
-        const formatChordName = (chordData) => {
-            if (!chordData) return "";
-
-            let displayName = chordData.name;
-
-            // Only append inversion info for "Notes" if we have a proper root and type
-            if (displayName === "Notes" && chordData.root && chordData.type) {
-                displayName = `${chordData.root}${chordData.type}`;
-
-                // Add inversion indication if applicable
-                if (chordData.inversion > 0 && chordData.notes && chordData.notes.length > 0) {
-                    const bassNote = chordData.notes[0]; // First note is bass note
-                    displayName += `/${bassNote}`;
-                }
-            }
-
-            return displayName;
-        };
-
-        // If we have an array of chords (both hands)
-        if (Array.isArray(chord) && chord.length === 2) {
-            // Add both-hands class for styling
-            this.chordDisplayElement.classList.add('both-hands');
-
-            const leftChord = chord.find(c => c.hand === 'left') || chord[0];
-            const rightChord = chord.find(c => c.hand === 'right') || chord[1];
-
-            // Display both chords with proper formatting
-            nameElement.innerHTML = `
-                <span class="left-hand-chord">${formatChordName(leftChord)}</span>
-                <span class="chord-separator"> | </span>
-                <span class="right-hand-chord">${formatChordName(rightChord)}</span>
-            `;
-
-            // Display notes from both hands
-            notesElement.innerHTML = `
-                <span class="left-hand-notes">${leftChord.notes.join(' - ')}</span>
-                <span class="notes-separator"> | </span>
-                <span class="right-hand-notes">${rightChord.notes.join(' - ')}</span>
-            `;
-
-            // Use the earlier time for countdown
-            const earliestTime = Math.min(leftChord.time, rightChord.time);
-            const timeUntilChord = earliestTime - this.scoreModel.currentPosition;
-            const timeUntilChordSec = Math.max(0, timeUntilChord.toFixed(1));
-
-            timingElement.textContent = `in ${timeUntilChordSec}s`;
-        } else {
-            // Single chord - could be left or right hand
-            const singleChord = Array.isArray(chord) ? chord[0] : chord;
-
-            // Add hand-specific class for styling
-            if (singleChord.hand) {
-                this.chordDisplayElement.classList.add(`${singleChord.hand}-hand`);
-            }
-
-            // Format the single chord name
-            nameElement.textContent = formatChordName(singleChord);
-
-            // Display the notes
-            notesElement.textContent = singleChord.notes.join(' - ');
-
-            // Calculate time until chord
-            const timeUntilChord = singleChord.time - this.scoreModel.currentPosition;
-            const timeUntilChordSec = Math.max(0, timeUntilChord.toFixed(1));
-
-            timingElement.textContent = `in ${timeUntilChordSec}s`;
-        }
-
-        // Show the element if it was hidden
-        this.chordDisplayElement.style.opacity = '1';
-
-        // Determine time until earliest chord for pulse effect
-        const earliestTime = Array.isArray(chord)
-            ? Math.min(...chord.map(c => c.time))
-            : chord.time;
-        const timeUntilEarliest = earliestTime - this.scoreModel.currentPosition;
-
-        // Add pulse effect if chord is coming soon
-        if (timeUntilEarliest < 0.5) {
-            this.chordDisplayElement.classList.add('pulse');
-        } else {
-            this.chordDisplayElement.classList.remove('pulse');
-        }
-    }
-
-    /**
-     * Fade out the chord display
-     */
-    fadeOutChordDisplay() {
-        if (!this.chordDisplayElement) return;
-
-        this.chordDisplayElement.classList.remove('fade-in', 'pulse');
-        this.chordDisplayElement.classList.add('fade-out');
-
-        setTimeout(() => {
-            if (this.chordDisplayElement) {
-                this.chordDisplayElement.style.opacity = '0';
-            }
-        }, 300);
     }
 
     cleanup() {
@@ -2815,10 +2564,7 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             this.pianoVisualizationContainer = null;
         }
 
-        // Hide chord display
-        if (this.chordDisplayElement) {
-            this.chordDisplayElement.style.opacity = '0';
-        }
+
     }
 
     closePianoVisualization() {

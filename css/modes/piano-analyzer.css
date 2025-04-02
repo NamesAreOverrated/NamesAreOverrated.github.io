@@ -935,264 +935,222 @@ body.disco-mode .note-bar.playing {
     box-shadow: 0 0 5px rgba(0, 150, 215, 0.9);
 }
 
-/* Chord display above piano */
-.chord-display {
-    position: absolute;
-    bottom: 130px;
-    left: 50%;
-    transform: translateX(-50%);
-    background-color: rgba(0, 0, 0, 0.7);
-    color: white;
-    padding: 8px 15px;
-    border-radius: 15px;
-    font-size: 16px;
-    font-weight: bold;
-    text-align: center;
-    z-index: 20;
-    min-width: 150px;
-    box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
-    transition: opacity 0.3s ease;
-    pointer-events: none;
-}
-
-/* Hand-specific styling for chord displays */
-.chord-display.left-hand {
-    border-left: 3px solid #ff5588;
-}
-
-.chord-display.right-hand {
-    border-left: 3px solid var(--accent-color, #64ffda);
-}
-
-.chord-display.both-hands {
-    border-left: 3px solid #ff5588;
-    border-right: 3px solid var(--accent-color, #64ffda);
-    padding-left: 18px;
-    padding-right: 18px;
-}
-
-.chord-display .chord-name {
-    font-size: 20px;
-    color: var(--accent-color);
-    margin-bottom: 3px;
-}
-
-.chord-display.left-hand .chord-name {
-    color: #ff5588;
-}
-
-.chord-display.both-hands .chord-name {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.chord-display .left-hand-chord {
-    color: #ff5588;
-}
-
-.chord-display .right-hand-chord {
-    color: var(--accent-color, #64ffda);
-}
-
-.chord-display .chord-separator,
-.chord-display .notes-separator {
-    color: rgba(255, 255, 255, 0.6);
-    margin: 0 8px;
-}
-
-.chord-display .chord-notes {
-    font-size: 12px;
-    color: rgba(255, 255, 255, 0.8);
-}
-
-.chord-display.both-hands .chord-notes {
-    display: flex;
-    justify-content: space-between;
-    flex-wrap: wrap;
-}
-
-.chord-display .left-hand-notes {
-    color: rgba(255, 200, 210, 0.9);
-}
-
-.chord-display .right-hand-notes {
-    color: rgba(200, 255, 240, 0.9);
-}
-
-.chord-display .chord-timing {
-    font-size: 10px;
-    color: rgba(255, 255, 255, 0.6);
-    margin-top: 3px;
-}
-
-/* Fade transition for chord changes */
-.chord-display.fade-in {
-    animation: chord-fade-in 0.3s forwards;
-}
-
-.chord-display.fade-out {
-    animation: chord-fade-out 0.3s forwards;
-}
-
-@keyframes chord-fade-in {
-    from {
-        opacity: 0;
-        transform: translate(-50%, 10px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translate(-50%, 0);
-    }
-}
-
-@keyframes chord-fade-out {
-    from {
-        opacity: 1;
-        transform: translate(-50%, 0);
-    }
-
-    to {
-        opacity: 0;
-        transform: translate(-50%, -10px);
-    }
-}
-
-/* Pulse animation for upcoming chords */
-.chord-display.pulse {
-    animation: chord-pulse 2s infinite;
-}
-
-@keyframes chord-pulse {
-
-    0%,
-    100% {
-        box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
-    }
-
-    50% {
-        box-shadow: 0 0 20px var(--accent-color, #64ffda);
-    }
-}
-
-/* Disco mode styling for chord display */
-body.disco-mode .chord-display {
-    background-color: rgba(20, 20, 30, 0.8);
-    animation: disco-chord 5.8s steps(1, end) infinite;
-}
-
-@keyframes disco-chord {
-
-    0%,
-    100% {
-        border: 1px solid rgba(255, 0, 110, 0.5);
-        box-shadow: 0 0 15px rgba(255, 0, 110, 0.3);
-    }
-
-    20% {
-        border: 1px solid rgba(0, 229, 255, 0.5);
-        box-shadow: 0 0 15px rgba(0, 229, 255, 0.3);
-    }
-
-    40% {
-        border: 1px solid rgba(174, 0, 255, 0.5);
-        box-shadow: 0 0 15px rgba(174, 0, 255, 0.3);
-    }
-
-    60% {
-        border: 1px solid rgba(255, 221, 0, 0.5);
-        box-shadow: 0 0 15px rgba(255, 221, 0, 0.3);
-    }
-
-    80% {
-        border: 1px solid rgba(0, 255, 136, 0.5);
-        box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
-    }
-}
 
 /* Falling chord visualization */
 .falling-chord {
     position: absolute;
-    width: 100px;
-    min-height: 30px;
-    border-radius: 4px;
+    width: 120px;
+    min-height: 40px;
+    border-radius: 6px;
     color: white;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    padding: 5px;
+    padding: 8px;
     box-sizing: border-box;
-    opacity: 0.85;
+    opacity: 0.95;
     transition: opacity 0.2s ease-out;
     will-change: transform, opacity, height;
     backface-visibility: hidden;
     transform: translate3d(0, 0, 0);
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
     z-index: 5;
     text-align: center;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    /* Ensure fixed positioning on sides */
+    /* Transparent background with thin colored borders */
+    background-color: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(3px);
     top: 0;
 }
 
 /* Left hand chords on left side */
 .falling-chord.left-hand {
-    left: 10px;
-    background-color: rgba(255, 85, 136, 0.7);
-    border-left: 3px solid #ff5588;
+    left: 15px;
+    border: 2px solid #ff5588;
+    box-shadow: 0 0 8px rgba(255, 85, 136, 0.3);
 }
 
 /* Right hand chords on right side */
 .falling-chord.right-hand {
-    right: 10px;
-    background-color: rgba(0, 220, 180, 0.7);
-    border-right: 3px solid var(--accent-color, #64ffda);
+    right: 15px;
+    border: 2px solid var(--accent-color, #64ffda);
+    box-shadow: 0 0 8px rgba(0, 220, 180, 0.3);
 }
 
-/* Chord name styling */
+/* Chord name styling - bigger and more prominent */
 .falling-chord .chord-name {
-    font-size: 18px;
+    font-size: 24px;
     font-weight: bold;
-    margin-bottom: 3px;
-    text-shadow: 0 0 5px rgba(0, 0, 0, 0.7);
+    margin-bottom: 4px;
+    text-shadow: 0 0 6px rgba(0, 0, 0, 0.9);
     letter-spacing: 0.5px;
+}
+
+/* Color coding for different chord types */
+
+/* Major family - teal/cyan colors */
+.falling-chord .chord-name[data-chord-type="major"] {
+    color: var(--accent-color, #64ffda);
+}
+
+.falling-chord .chord-name[data-chord-type="6"] {
+    color: var(--accent-color, #64ffda);
+}
+
+.falling-chord .chord-name[data-chord-type="maj7"] {
+    color: #5eeecd;
+}
+
+.falling-chord .chord-name[data-chord-type="maj9"] {
+    color: #58dfbf;
+}
+
+.falling-chord .chord-name[data-chord-type="maj11"] {
+    color: #52d0b2;
+}
+
+.falling-chord .chord-name[data-chord-type="maj13"] {
+    color: #4cc1a5;
+}
+
+.falling-chord .chord-name[data-chord-type="add9"],
+.falling-chord .chord-name[data-chord-type="add11"],
+.falling-chord .chord-name[data-chord-type="add13"],
+.falling-chord .chord-name[data-chord-type="add"] {
+    color: #70ffda;
+}
+
+/* Minor family - green colors */
+.falling-chord .chord-name[data-chord-type="minor"] {
+    color: #55ff96;
+}
+
+.falling-chord .chord-name[data-chord-type="min7"] {
+    color: #60ee90;
+}
+
+.falling-chord .chord-name[data-chord-type="min6"] {
+    color: #66ff9c;
+}
+
+.falling-chord .chord-name[data-chord-type="min7b5"] {
+    color: #4ad87e;
+}
+
+/* Dominant family - purple/lavender colors */
+.falling-chord .chord-name[data-chord-type="7"] {
+    color: #bb99ff;
+}
+
+.falling-chord .chord-name[data-chord-type="9"] {
+    color: #b28dff;
+}
+
+.falling-chord .chord-name[data-chord-type="11"] {
+    color: #a580ff;
+}
+
+.falling-chord .chord-name[data-chord-type="13"] {
+    color: #9a74fa;
+}
+
+.falling-chord .chord-name[data-chord-type="7sus4"] {
+    color: #c4a5ff;
+}
+
+/* Diminished family - orange colors */
+.falling-chord .chord-name[data-chord-type="dim"] {
+    color: #ff9966;
+}
+
+.falling-chord .chord-name[data-chord-type="dim7"] {
+    color: #ff8c52;
+}
+
+.falling-chord .chord-name[data-chord-type="7b5"] {
+    color: #ffaa7a;
+}
+
+.falling-chord .chord-name[data-chord-type="maj7b5"] {
+    color: #ffb68c;
+}
+
+/* Augmented family - yellow colors */
+.falling-chord .chord-name[data-chord-type="aug"] {
+    color: #ffdd66;
+}
+
+.falling-chord .chord-name[data-chord-type="7aug"] {
+    color: #ffcf4d;
+}
+
+.falling-chord .chord-name[data-chord-type="maj7aug"] {
+    color: #ffe680;
+}
+
+/* Suspended family - blue colors */
+.falling-chord .chord-name[data-chord-type="sus2"] {
+    color: #80d8ff;
+}
+
+.falling-chord .chord-name[data-chord-type="sus4"] {
+    color: #66ccff;
+}
+
+/* Other chord types */
+.falling-chord .chord-name[data-chord-type="other"] {
+    color: #cccccc;
 }
 
 /* Chord notes styling */
 .falling-chord .chord-notes {
-    font-size: 10px;
-    opacity: 0.8;
+    font-size: 12px;
+    opacity: 0.9;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.falling-chord .chord-name.playing {
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.9);
 }
 
 /* Playing state */
 .falling-chord.playing {
     opacity: 1;
-    box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
     z-index: 6;
+
+
 }
 
-/* Different styling for different chord types */
+/* Different styling for different hand playing states */
 .falling-chord.left-hand.playing {
-    background-color: rgba(255, 85, 136, 0.9);
-    box-shadow: 0 0 15px rgba(255, 85, 136, 0.6);
+    border-color: #ff5588;
+    box-shadow: 0 0 12px rgba(255, 85, 136, 0.7);
 }
 
 .falling-chord.right-hand.playing {
-    background-color: rgba(0, 220, 180, 0.9);
-    box-shadow: 0 0 15px rgba(0, 220, 180, 0.6);
+    border-color: var(--accent-color, #64ffda);
+    box-shadow: 0 0 12px rgba(0, 220, 180, 0.7);
+}
+
+/* Media queries for responsive design */
+@media (max-width: 600px) {
+    .falling-chord {
+        width: 80px;
+        min-height: 30px;
+        bottom: 80px;
+    }
+
+    .falling-chord .chord-name {
+        font-size: 16px;
+    }
+
+    .falling-chord .chord-notes {
+        font-size: 9px;
+    }
 }
 
 /* Make sure paused state works for falling chords too */
 .note-bar-container.paused .falling-chord {
     animation-play-state: paused !important;
-}
-
-/* Enhance display in disco mode */
-body.disco-mode .falling-chord {
-    backdrop-filter: blur(5px);
-    animation: disco-chord 5.8s steps(1, end) infinite;
 }
 
 /* Responsive adjustments */
