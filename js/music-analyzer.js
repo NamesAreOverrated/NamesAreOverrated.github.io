@@ -189,11 +189,8 @@ class MusicAnalyzer {
                             <div class="piano-controls">
                                 <input type="file" id="musicxml-input" accept=".xml,.musicxml" style="display:none;">
                                 <button class="open-musicxml">Open MusicXML</button>
-                                <div class="piano-playback-controls" style="display:none;">
-                                    <button class="piano-play-pause">Play</button>
-                                    <input type="range" class="piano-speed" min="60" max="240" step="1" value="120">
-                                    <span class="speed-value">120 BPM</span>
-                                </div>
+                                <button class="reopen-musicxml" style="display:none;">Reopen Score</button>
+                                <!-- Playback controls removed -->
                             </div>
                             <div class="piano-status">Select a MusicXML file to visualize</div>
                         </div>

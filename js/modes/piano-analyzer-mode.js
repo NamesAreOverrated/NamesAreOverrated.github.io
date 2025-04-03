@@ -15,6 +15,7 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         this.pianoVisualization = null;
         this.notationRenderer = null;
         this.currentPosition = 0;
+        this.scoreLoaded = false; // Track if a score is loaded
     }
 
     /**
@@ -22,6 +23,7 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
      */
     initialize() {
         this.setupFileInput();
+        this.setupReopenButton();
         this.setupPlaybackController();
         this.setupScoreModelListeners();
         this.updateResultDisplay();
@@ -54,6 +56,29 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
                     this.loadMusicXMLFile(e.target.files[0]);
                 }
             });
+        }
+    }
+
+    /**
+     * Set up the reopen button
+     */
+    setupReopenButton() {
+        const reopenButton = this.analyzer.container.querySelector('.reopen-musicxml');
+        if (reopenButton) {
+            // Replace with fresh clone to prevent duplicate listeners
+            const newReopenButton = reopenButton.cloneNode(true);
+            reopenButton.parentNode.replaceChild(newReopenButton, reopenButton);
+
+            // Add event listener
+            newReopenButton.addEventListener('click', () => {
+                if (this.scoreLoaded) {
+                    this.createVisualization();
+                    newReopenButton.style.display = 'none';
+                }
+            });
+
+            // Show/hide based on current state
+            newReopenButton.style.display = this.scoreLoaded ? 'inline-block' : 'none';
         }
     }
 
@@ -99,6 +124,13 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         // Score loaded event
         this.scoreModel.addEventListener('loaded', () => {
             console.log("Score model loaded data successfully");
+            this.scoreLoaded = true;
+
+            // Hide reopen button when we load a new score
+            const reopenButton = this.analyzer.container.querySelector('.reopen-musicxml');
+            if (reopenButton) {
+                reopenButton.style.display = 'none';
+            }
         });
     }
 
@@ -221,6 +253,12 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         // Create and attach new listener
         this.keyboardEventHandler = this.handleKeyboardEvent.bind(this);
         document.addEventListener('keydown', this.keyboardEventHandler);
+
+        // Hide reopen button while visualization is open
+        const reopenButton = this.analyzer.container.querySelector('.reopen-musicxml');
+        if (reopenButton) {
+            reopenButton.style.display = 'none';
+        }
     }
 
     /**
@@ -334,6 +372,20 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         // Show analyzer panel
         if (this.analyzer && this.analyzer.panel) {
             this.analyzer.panel.style.display = 'block';
+
+            // Show reopen button if we have a score loaded
+            if (this.scoreLoaded) {
+                const reopenButton = this.analyzer.container.querySelector('.reopen-musicxml');
+                if (reopenButton) {
+                    reopenButton.style.display = 'inline-block';
+                }
+
+                // Update status to indicate reopening is possible
+                const statusElement = this.analyzer.container.querySelector('.piano-status');
+                if (statusElement) {
+                    statusElement.textContent = 'Press "Reopen Score" to view the visualization again.';
+                }
+            }
         }
     }
 
@@ -342,7 +394,6 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
      */
     updateScoreUI() {
         this.updateScoreTitle(this.scoreModel.title);
-        this.playbackController.showPlaybackControls();
         this.createVisualization();
     }
 

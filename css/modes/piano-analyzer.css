@@ -15,7 +15,8 @@
     align-items: center;
 }
 
-.open-musicxml {
+.open-musicxml,
+.reopen-musicxml {
     background-color: var(--accent-color);
     color: #111;
     border: none;
