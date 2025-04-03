@@ -644,25 +644,11 @@ class NotationRenderer {
                         shadowBlur: 4
                     });
 
-                    // Check if this note is currently playing and highlight it
-                    const isPlaying = firstNote.start <= currentPosition &&
-                        firstNote.start + noteDuration > currentPosition;
-
-                    if (isPlaying) {
-                        vfNote.setStyle({
-                            fillStyle: 'rgba(255, 100, 255, 0.9)',
-                            strokeStyle: 'rgba(80, 200, 255, 0.95)',
-                            shadowColor: 'rgba(255, 100, 255, 0.8)',
-                            shadowBlur: 15,
-                            strokeWidth: 2
-                        });
-                    } else {
-                        // Normal styling for non-playing notes
-                        vfNote.setStyle({
-                            fillStyle: 'rgba(255, 255, 255, 0.9)',
-                            strokeStyle: 'rgba(255, 255, 255, 0.9)',
-                        });
-                    }
+                    // Apply consistent styling to all notes (no highlighting based on playing state)
+                    vfNote.setStyle({
+                        fillStyle: 'rgba(255, 255, 255, 0.9)',
+                        strokeStyle: 'rgba(255, 255, 255, 0.9)',
+                    });
 
                     vfNotes.push(vfNote);
                 } catch (e) {
