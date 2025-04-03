@@ -1,6 +1,6 @@
 /**
  * Notation Renderer
- * Handles rendering of musical notation using VexFlow
+ * Handles rendering of musical notation using VexFlow with a scrolling view
  */
 class NotationRenderer {
     constructor(scoreModel, container) {
@@ -8,21 +8,24 @@ class NotationRenderer {
         this.scoreModel = scoreModel;
         this.container = container;
 
-        // Page navigation state
-        this.currentPage = 0;
-        this.measuresPerPage = 2;
-        this.totalPages = 1;
+        // Scrolling view state
+        this.visibleTimeWindow = 8; // 8 seconds of music visible at once
+        this.lookAhead = 6; // How many seconds ahead of current position to show
+        this.lookBehind = 2; // How many seconds behind current position to show
 
-        // Page time bounds
-        this.currentPageStartPosition = 0;
-        this.currentPageEndPosition = 0;
+        // SVG container and elements
+        this.svgContainer = null;
+        // Remove position indicator reference
+        this.infoPanel = null;
 
         // Rendering state
         this._lastFullRender = 0;
-
+        this._maxStaveWidth = 250; // Maximum width for a measure
+        this._minStaveWidth = 120; // Minimum width for a measure
 
         // Bind methods that need 'this'
         this.renderNotation = this.renderNotation.bind(this);
+        // Remove updatePositionIndicator binding
     }
 
     /**
@@ -42,6 +45,55 @@ class NotationRenderer {
             script.onerror = reject;
             document.head.appendChild(script);
         });
+    }
+
+    /**
+     * Update the visible time window based on current position
+     */
+    updateVisibleTimeWindow() {
+        const currentTime = this.scoreModel.currentPosition;
+        this.startTime = Math.max(0, currentTime - this.lookBehind);
+        this.endTime = currentTime + this.lookAhead;
+
+        // Sanity check for valid time window
+        if (this.endTime <= this.startTime) {
+            this.endTime = this.startTime + this.visibleTimeWindow;
+        }
+    }
+
+    /**
+     * Get the indices of measures visible in the current time window
+     * @returns {Array} Array of measure indices
+     */
+    getVisibleMeasureIndices() {
+        if (!this.scoreModel.measures || this.scoreModel.measures.length === 0) {
+            return [];
+        }
+
+        this.updateVisibleTimeWindow();
+
+        const visibleMeasures = [];
+
+        for (let i = 0; i < this.scoreModel.measures.length; i++) {
+            const measureStart = this.scoreModel.measures[i].startPosition;
+            const measureEnd = i < this.scoreModel.measures.length - 1
+                ? this.scoreModel.measures[i + 1].startPosition
+                : measureStart + this.scoreModel.measures[i].durationSeconds;
+
+            // Include the measure if any part of it is visible
+            if ((measureStart >= this.startTime && measureStart < this.endTime) ||
+                (measureEnd > this.startTime && measureEnd <= this.endTime) ||
+                (measureStart <= this.startTime && measureEnd >= this.endTime)) {
+                visibleMeasures.push(i);
+            }
+
+            // We've gone past the end of our window, no need to check further measures
+            if (measureStart > this.endTime) {
+                break;
+            }
+        }
+
+        return visibleMeasures;
     }
 
     /**
@@ -89,313 +141,373 @@ class NotationRenderer {
             const now = performance.now();
             if (!forceRender && this._lastFullRender && now - this._lastFullRender < 500) {
                 // Skip full re-render for performance
+                // Remove position indicator update call
                 return;
             }
             this._lastFullRender = now;
 
+            // Update the visible time window based on current position
+            this.updateVisibleTimeWindow();
+            const visibleMeasureIndices = this.getVisibleMeasureIndices();
+
+            if (visibleMeasureIndices.length === 0) {
+                console.warn("No visible measures found in current time window");
+                return;
+            }
+
             // Clear container
             this.container.innerHTML = '';
 
-            // Create SVG container with improved dimensions
-            const svgContainer = document.createElement('div');
-            svgContainer.className = 'notation-svg-container';
-            svgContainer.style.width = '100%';
-            svgContainer.style.height = '100%';
-            this.container.appendChild(svgContainer);
+            // Create SVG container
+            this.svgContainer = document.createElement('div');
+            this.svgContainer.className = 'notation-svg-container';
+            this.svgContainer.style.width = '100%';
+            this.svgContainer.style.height = '100%';
+            this.container.appendChild(this.svgContainer);
 
             // Initialize VexFlow
             const VF = Vex.Flow;
 
-            // Calculate dimensions based on container size with better margins
+            // Calculate dimensions based on container size
             const containerWidth = this.container.clientWidth;
             const containerHeight = this.container.clientHeight;
 
-            // Use full container width with small margins
-            const width = containerWidth - 40;
-            const height = containerWidth / 6.5;
+            // Adjust visible time window based on container width and number of measures
+            const measuresPerLine = Math.max(4, Math.floor(containerWidth / 200));
 
             // Create renderer with explicit dimensions
-            const renderer = new VF.Renderer(svgContainer, VF.Renderer.Backends.SVG);
-            renderer.resize(width, height);
+            const renderer = new VF.Renderer(this.svgContainer, VF.Renderer.Backends.SVG);
+            const svgWidth = Math.max(containerWidth, visibleMeasureIndices.length * 200);
+            renderer.resize(svgWidth, containerWidth / 6.5);
             const context = renderer.getContext();
             context.setFont("Arial", 10);
 
-            // Get SVG element and set fixed properties
-            const svgElement = svgContainer.querySelector('svg');
+            // Get SVG element and set properties for proper display
+            const svgElement = this.svgContainer.querySelector('svg');
             if (svgElement) {
                 svgElement.setAttribute('width', '100%');
                 svgElement.setAttribute('height', '100%');
                 svgElement.style.display = 'block';
             }
 
-            // Calculate current playback measure
-            let currentMeasureIndex = this.findCurrentMeasureIndex();
+            // Determine line breaks for measures
+            const lines = this.determineMeasureLines(visibleMeasureIndices, measuresPerLine);
 
-            // Calculate optimal measures per page based on tempo and note density
-            this.calculateOptimalMeasuresPerPage(currentMeasureIndex);
+            // Render each line of measures
+            let yOffset = 50; // Start position for first line
 
-            // Calculate total pages
-            this.totalPages = Math.ceil(this.scoreModel.measures.length / this.measuresPerPage);
+            // Collect all notes for the visible measures
+            const visibleNotes = this.getNotesForMeasures(visibleMeasureIndices);
 
-            // Determine the correct page based on current position
-            const targetPage = Math.floor(currentMeasureIndex / this.measuresPerPage);
-            if (this.currentPage !== targetPage) {
-                this.currentPage = targetPage;
-            }
-
-            // Calculate start and end measure indices for current page
-            const startMeasureIndex = this.currentPage * this.measuresPerPage;
-            const endMeasureIndex = Math.min(
-                this.scoreModel.measures.length - 1,
-                startMeasureIndex + this.measuresPerPage - 1
-            );
-
-            // Get time bounds from measure data
-            const startPosition = this.scoreModel.measures[startMeasureIndex].startPosition;
-            const endPosition = endMeasureIndex < this.scoreModel.measures.length - 1
-                ? this.scoreModel.measures[endMeasureIndex + 1].startPosition
-                : startPosition + this.scoreModel.measures[endMeasureIndex].durationSeconds;
-
-            // Store page time bounds for position indicator calculations
-            this.currentPageStartPosition = startPosition;
-            this.currentPageEndPosition = endPosition;
-
-            // Layout settings for a single staff system
-            const staffHeight = 80;
-            const staffDistance = 120; // Distance between treble and bass staves
-            const measureWidth = (width - 60) / this.measuresPerPage;
-
-            // Y position for the single system
-            const systemY = 20;
-            const staves = { treble: [], bass: [], measureIndices: [] };
-
-            // Create a single system with treble and bass staves for each measure
-            for (let measurePos = 0; measurePos < this.measuresPerPage; measurePos++) {
-                const measureIndex = startMeasureIndex + measurePos;
-                if (measureIndex > endMeasureIndex) break;
-
-                const xPosition = 20 + measurePos * measureWidth;
-
-                // Create treble and bass staves for this measure
-                const trebleStave = new VF.Stave(xPosition, systemY, measureWidth);
-                const bassStave = new VF.Stave(xPosition, systemY + staffDistance, measureWidth);
-
-                // Add clefs and time signature only to first measure on the page
-                if (measurePos === 0) {
-                    trebleStave.addClef("treble");
-                    bassStave.addClef("bass");
-
-                    // Add time signature if it changed at this measure or it's the first measure
-                    if (measureIndex === 0 || this.scoreModel.measures[measureIndex].hasTimeChange) {
-                        // Get time signature from the time signatures array
-                        const { numerator, denominator } = this.getTimeSignatureForMeasure(measureIndex);
-
-                        // Only add time signature if we have valid values
-                        if (numerator && denominator) {
-                            const timeSignature = `${numerator}/${denominator}`;
-                            trebleStave.addTimeSignature(timeSignature);
-                            bassStave.addTimeSignature(timeSignature);
-                        }
-                    }
-                } else {
-                    // For internal measures, check if time signature changed
-                    if (this.scoreModel.measures[measureIndex].hasTimeChange) {
-                        // Get time signature from the time signatures array
-                        const { numerator, denominator } = this.getTimeSignatureForMeasure(measureIndex);
-
-                        // Only add time signature if we have valid values
-                        if (numerator && denominator) {
-                            const timeSignature = `${numerator}/${denominator}`;
-                            trebleStave.addTimeSignature(timeSignature);
-                            bassStave.addTimeSignature(timeSignature);
-                        }
-                    }
-                }
-
-                // Connect staves with a brace and line at the beginning of the system
-                if (measurePos === 0) {
-                    const lineLeft = new VF.StaveConnector(trebleStave, bassStave).setType(1);
-                    const braceLeft = new VF.StaveConnector(trebleStave, bassStave).setType(3);
-                    lineLeft.setContext(context).draw();
-                    braceLeft.setContext(context).draw();
-                }
-
-                // Draw the staves
-                trebleStave.setContext(context).draw();
-                bassStave.setContext(context).draw();
-
-                // Store stave references
-                staves.treble.push(trebleStave);
-                staves.bass.push(bassStave);
-                staves.measureIndices.push(measureIndex);
-            }
-
-            // Filter notes for the current page's view window
-            const visibleNotes = this.scoreModel.notes.filter(note => {
-                // Get note duration (consider visual duration for tied notes)
-                const noteDuration = note.visualDuration || note.duration;
-                const noteEnd = note.start + noteDuration;
-
-                // Include a note if:
-                return (
-                    // 1. The note starts within our page's time window
-                    (note.start >= startPosition && note.start < endPosition) ||
-
-                    // 2. The note started before but extends into our window
-                    (note.start < startPosition && noteEnd > startPosition) ||
-
-                    // 3. The note spans across our window
-                    (note.start < endPosition && noteEnd > startPosition)
-                );
-            });
-
-            console.log(`Found ${visibleNotes.length} notes for the current page (from ${startPosition.toFixed(2)}s to ${endPosition.toFixed(2)}s)`);
-
-            // Group notes by measure for more accurate positioning
-            const measureVisibleNotes = [];
-            for (let i = 0; i <= endMeasureIndex - startMeasureIndex; i++) {
-                measureVisibleNotes[i] = [];
-            }
-
-            // Sort notes into measures with better boundary handling
-            visibleNotes.forEach(note => {
-                let assignedToMeasure = false;
-
-                // First, try to find the exact measure this note belongs to
-                for (let i = 0; i <= endMeasureIndex - startMeasureIndex; i++) {
-                    const measureIndex = startMeasureIndex + i;
-                    const measureStartTime = this.scoreModel.measures[measureIndex].startPosition;
-                    const measureEndTime = measureIndex < this.scoreModel.measures.length - 1
-                        ? this.scoreModel.measures[measureIndex + 1].startPosition
-                        : measureStartTime + this.scoreModel.measures[measureIndex].durationSeconds;
-
-                    // Note starts in this measure
-                    if (note.start >= measureStartTime && note.start < measureEndTime) {
-                        measureVisibleNotes[i].push(note);
-                        assignedToMeasure = true;
-                        break;
-                    }
-
-                    // Note started before but extends into this measure
-                    const noteDuration = note.visualDuration || note.duration;
-                    const noteEnd = note.start + noteDuration;
-
-                    if (note.start < measureStartTime && noteEnd > measureStartTime) {
-                        measureVisibleNotes[i].push(note);
-                        assignedToMeasure = true;
-                        break;
-                    }
-                }
-
-                // Fallback: if note wasn't assigned to any measure but is within our time range,
-                // put it in the first measure (this prevents notes from disappearing)
-                if (!assignedToMeasure && note.start >= startPosition && note.start < endPosition) {
-                    measureVisibleNotes[0].push(note);
-                }
-            });
-
-            // Process each measure and draw the notes
-            staves.measureIndices.forEach((measureIndex, measurePosition) => {
-                // Get notes for this measure
-                const measureNotesIndex = measureIndex - startMeasureIndex;
-                if (measureNotesIndex < 0 || measureNotesIndex >= measureVisibleNotes.length) return;
-
-                const measureNotes = measureVisibleNotes[measureNotesIndex];
-                console.log(`Measure ${measureIndex}: ${measureNotes.length} notes`);
-
-                // Skip if no notes in this measure
-                if (!measureNotes || !measureNotes.length) return;
-
-                // Separate notes into treble and bass
-                const trebleNotes = measureNotes.filter(note => note.noteNumber >= 60 || note.staff === 1);
-                const bassNotes = measureNotes.filter(note => note.noteNumber < 60 || note.staff === 2);
-
-                // Get measure start and end time
-                const measureStartTime = this.scoreModel.measures[measureIndex].startPosition;
-                const measureEndTime = measureIndex < this.scoreModel.measures.length - 1
-                    ? this.scoreModel.measures[measureIndex + 1].startPosition
-                    : measureStartTime + this.scoreModel.measures[measureIndex].durationSeconds;
-
-                // Get the staves for this measure position
-                const trebleStave = staves.treble[measurePosition];
-                const bassStave = staves.bass[measurePosition];
-
-                if (!trebleStave || !bassStave) {
-                    console.warn(`Missing stave for measure ${measureIndex} at position ${measurePosition}`);
-                    return;
-                }
-
-                // Group notes by time for chord formation
-                const trebleNotesByTime = this.groupNotesByTime(trebleNotes);
-                const bassNotesByTime = this.groupNotesByTime(bassNotes);
-
-                console.log(`Treble chord groups: ${trebleNotesByTime.length}, Bass chord groups: ${bassNotesByTime.length}`);
-
-                // Create VexFlow notes
-                const trebleStaveNotes = this.createVexFlowNotes(
-                    trebleNotesByTime, "treble", measureStartTime, measureEndTime
+            // Create staff systems for each line
+            for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+                const measureIndicesInLine = lines[lineIndex];
+                const staves = this.createStaveSystem(
+                    context,
+                    measureIndicesInLine,
+                    20, // x-offset
+                    yOffset,
+                    containerWidth - 40, // width
+                    visibleNotes
                 );
 
-                const bassStaveNotes = this.createVexFlowNotes(
-                    bassNotesByTime, "bass", measureStartTime, measureEndTime
-                );
+                yOffset += 200; // Space between systems
+            }
 
-                // Get time signature for this measure
-                const { numerator, denominator } = this.getTimeSignatureForMeasure(measureIndex);
+            // Add info panel only (removed position indicator)
+            this.addNotationOverlays();
 
-                // Format and draw voices for treble stave if we have notes
-                if (trebleStaveNotes.length > 0) {
-                    try {
-                        const trebleVoice = new VF.Voice({
-                            num_beats: numerator,
-                            beat_value: denominator,
-                            resolution: VF.RESOLUTION
-                        }).setMode(VF.Voice.Mode.SOFT);
+            // Adjust scroll position to follow current playback
+            this.scrollToCurrentPosition();
 
-                        trebleVoice.addTickables(trebleStaveNotes);
+            // Add scrolling behavior
+            this.handleScroll();
 
-                        new VF.Formatter()
-                            .joinVoices([trebleVoice])
-                            .format([trebleVoice], measureWidth - 30);
-
-                        trebleVoice.draw(context, trebleStave);
-                    } catch (e) {
-                        console.error("Error rendering treble notes:", e);
-                    }
-                }
-
-                // Format and draw voices for bass stave if we have notes
-                if (bassStaveNotes.length > 0) {
-                    try {
-                        const bassVoice = new VF.Voice({
-                            num_beats: numerator,
-                            beat_value: denominator,
-                            resolution: VF.RESOLUTION
-                        }).setMode(VF.Voice.Mode.SOFT);
-
-                        bassVoice.addTickables(bassStaveNotes);
-
-                        new VF.Formatter()
-                            .joinVoices([bassVoice])
-                            .format([bassVoice], measureWidth - 30);
-
-                        bassVoice.draw(context, bassStave);
-                    } catch (e) {
-                        console.error("Error rendering bass notes:", e);
-                    }
-                }
-            });
-
-
-            // Add position and info overlay
-            this.addNotationOverlays(svgContainer, startPosition, endPosition);
-
-            return { startPosition, endPosition };
         } catch (error) {
             console.error('Error rendering notation:', error);
             // Fallback to simpler notation
             this.renderSimpleNotation();
-            return null;
+        }
+    }
+
+    /**
+     * Determine how measures should be organized into lines
+     * @param {Array} measureIndices Array of measure indices
+     * @param {number} measuresPerLine Maximum measures per line
+     * @returns {Array} Array of arrays, each containing measure indices for a line
+     */
+    determineMeasureLines(measureIndices, measuresPerLine) {
+        const lines = [];
+        let currentLine = [];
+
+        for (let i = 0; i < measureIndices.length; i++) {
+            currentLine.push(measureIndices[i]);
+
+            // Start new line if we've reached max measures per line
+            if (currentLine.length >= measuresPerLine || i === measureIndices.length - 1) {
+                lines.push(currentLine);
+                currentLine = [];
+            }
+        }
+
+        return lines;
+    }
+
+    /**
+     * Get notes that belong to the specified measures
+     * @param {Array} measureIndices Array of measure indices
+     * @returns {Array} Array of notes in those measures
+     */
+    getNotesForMeasures(measureIndices) {
+        if (!measureIndices.length) return [];
+
+        // Get time bounds for all specified measures
+        let startTime = Infinity;
+        let endTime = -Infinity;
+
+        measureIndices.forEach(index => {
+            const measure = this.scoreModel.measures[index];
+            const measureStart = measure.startPosition;
+            const measureEnd = index < this.scoreModel.measures.length - 1
+                ? this.scoreModel.measures[index + 1].startPosition
+                : measureStart + measure.durationSeconds;
+
+            startTime = Math.min(startTime, measureStart);
+            endTime = Math.max(endTime, measureEnd);
+        });
+
+        // Get all notes in the time range
+        return this.scoreModel.notes.filter(note => {
+            // Filter out tied continuation notes
+            if (note.isTiedFromPrevious) return false;
+
+            const noteDuration = note.visualDuration || note.duration;
+            const noteEnd = note.start + noteDuration;
+
+            // Include note if any part of it falls within our time window
+            return (note.start >= startTime && note.start < endTime) ||  // Note starts in window
+                (note.start < startTime && noteEnd > startTime);      // Note overlaps start of window
+        });
+    }
+
+    /**
+     * Create a system of treble and bass staves for a line of measures
+     * @param {Object} context The VexFlow rendering context
+     * @param {Array} measureIndices Array of measure indices for this line
+     * @param {number} x X position to start drawing
+     * @param {number} y Y position to start drawing
+     * @param {number} availableWidth Width available for drawing
+     * @param {Array} allNotes Array of notes to render
+     * @returns {Object} Object containing stave references
+     */
+    createStaveSystem(context, measureIndices, x, y, availableWidth, allNotes) {
+        if (!measureIndices.length) return null;
+
+        const VF = Vex.Flow;
+        const staffHeight = 80;
+        const staffDistance = 120;
+
+        // Calculate width per measure (will adjust based on note density later)
+        let baseWidth = availableWidth / measureIndices.length;
+        const staves = { treble: [], bass: [], measureIndices: [] };
+
+        // We'll need to know where each measure starts and ends in time
+        const measureTimeBounds = measureIndices.map(index => {
+            const measure = this.scoreModel.measures[index];
+            const start = measure.startPosition;
+            const end = index < this.scoreModel.measures.length - 1
+                ? this.scoreModel.measures[index + 1].startPosition
+                : start + measure.durationSeconds;
+            return { start, end, index };
+        });
+
+        // Calculate note density for each measure to adjust widths
+        const notesByMeasure = measureIndices.map(index => {
+            const bounds = measureTimeBounds.find(b => b.index === index);
+            const notesInMeasure = allNotes.filter(note =>
+                (note.start >= bounds.start && note.start < bounds.end) ||
+                (note.start < bounds.start && note.start + (note.visualDuration || note.duration) > bounds.start)
+            );
+            return {
+                index,
+                noteCount: notesInMeasure.length,
+                notes: notesInMeasure
+            };
+        });
+
+        // Adjust widths based on note density
+        const totalNotes = notesByMeasure.reduce((sum, m) => sum + m.noteCount, 0);
+        const averageNotesPerMeasure = totalNotes / measureIndices.length;
+
+        let currentX = x;
+
+        // Create staves for each measure
+        for (let i = 0; i < measureIndices.length; i++) {
+            const measureIndex = measureIndices[i];
+            const measureNotes = notesByMeasure.find(m => m.index === measureIndex);
+
+            // Adjust width based on note density compared to average
+            let measureWidth = baseWidth;
+            if (totalNotes > 0 && measureNotes) {
+                const density = measureNotes.noteCount / averageNotesPerMeasure;
+                measureWidth = Math.max(
+                    this._minStaveWidth,
+                    Math.min(this._maxStaveWidth, baseWidth * (0.8 + (density * 0.4)))
+                );
+            }
+
+            // Create treble and bass staves
+            const trebleStave = new VF.Stave(currentX, y, measureWidth);
+            const bassStave = new VF.Stave(currentX, y + staffDistance, measureWidth);
+
+            // Add clefs and time signature to first measure in line
+            if (i === 0) {
+                trebleStave.addClef("treble");
+                bassStave.addClef("bass");
+
+                // Add time signature if it's the first measure or there was a change
+                if (measureIndex === 0 || this.scoreModel.measures[measureIndex].hasTimeChange) {
+                    const { numerator, denominator } = this.getTimeSignatureForMeasure(measureIndex);
+                    const timeSignature = `${numerator}/${denominator}`;
+                    trebleStave.addTimeSignature(timeSignature);
+                    bassStave.addTimeSignature(timeSignature);
+                }
+
+                // Connect staves with a brace and line
+                const lineLeft = new VF.StaveConnector(trebleStave, bassStave).setType(1);
+                const braceLeft = new VF.StaveConnector(trebleStave, bassStave).setType(3);
+                lineLeft.setContext(context).draw();
+                braceLeft.setContext(context).draw();
+            } else if (this.scoreModel.measures[measureIndex].hasTimeChange) {
+                // Add time signature for internal measures if there's a change
+                const { numerator, denominator } = this.getTimeSignatureForMeasure(measureIndex);
+                const timeSignature = `${numerator}/${denominator}`;
+                trebleStave.addTimeSignature(timeSignature);
+                bassStave.addTimeSignature(timeSignature);
+            }
+
+            // Draw the staves
+            trebleStave.setContext(context).draw();
+            bassStave.setContext(context).draw();
+
+            // Store stave references
+            staves.treble.push(trebleStave);
+            staves.bass.push(bassStave);
+            staves.measureIndices.push(measureIndex);
+
+            // If this is the last measure, add a final bar line
+            if (i === measureIndices.length - 1) {
+                const lineRight = new VF.StaveConnector(trebleStave, bassStave).setType(1);
+                lineRight.setContext(context).draw();
+            }
+
+            // Draw notes for this measure if we have them
+            if (measureNotes && measureNotes.notes.length > 0) {
+                this.drawNotesForMeasure(
+                    context,
+                    measureIndex,
+                    measureNotes.notes,
+                    trebleStave,
+                    bassStave,
+                    measureTimeBounds.find(b => b.index === measureIndex)
+                );
+            }
+
+            // Move to next measure position
+            currentX += measureWidth;
+        }
+
+        return staves;
+    }
+
+    /**
+     * Draw notes for a specific measure
+     * @param {Object} context The VexFlow rendering context
+     * @param {number} measureIndex The index of the measure
+     * @param {Array} notes Array of notes to render
+     * @param {Object} trebleStave The treble stave for this measure
+     * @param {Object} bassStave The bass stave for this measure
+     * @param {Object} timeBounds Start and end time for the measure
+     */
+    drawNotesForMeasure(context, measureIndex, notes, trebleStave, bassStave, timeBounds) {
+        const VF = Vex.Flow;
+
+        // Separate notes into treble and bass
+        const trebleNotes = notes.filter(note =>
+            note.staff === 1 || (note.staff === undefined && note.noteNumber >= 60)
+        );
+
+        const bassNotes = notes.filter(note =>
+            note.staff === 2 || (note.staff === undefined && note.noteNumber < 60)
+        );
+
+        // Group notes by time for chord formation
+        const trebleNotesByTime = this.groupNotesByTime(trebleNotes);
+        const bassNotesByTime = this.groupNotesByTime(bassNotes);
+
+        // Get measure time bounds
+        const { start: measureStartTime, end: measureEndTime } = timeBounds;
+
+        // Get time signature for this measure
+        const { numerator, denominator } = this.getTimeSignatureForMeasure(measureIndex);
+
+        // Create VexFlow notes for each stave
+        const trebleStaveNotes = this.createVexFlowNotes(
+            trebleNotesByTime,
+            "treble",
+            measureStartTime,
+            measureEndTime,
+            this.scoreModel.currentPosition
+        );
+
+        const bassStaveNotes = this.createVexFlowNotes(
+            bassNotesByTime,
+            "bass",
+            measureStartTime,
+            measureEndTime,
+            this.scoreModel.currentPosition
+        );
+
+        // Format and draw for treble stave if we have notes
+        if (trebleStaveNotes.length > 0) {
+            try {
+                const trebleVoice = new VF.Voice({
+                    num_beats: numerator,
+                    beat_value: denominator,
+                    resolution: VF.RESOLUTION
+                }).setMode(VF.Voice.Mode.SOFT);
+
+                trebleVoice.addTickables(trebleStaveNotes);
+
+                new VF.Formatter()
+                    .joinVoices([trebleVoice])
+                    .format([trebleVoice], trebleStave.getWidth() - 30);
+
+                trebleVoice.draw(context, trebleStave);
+            } catch (e) {
+                console.error("Error rendering treble notes:", e);
+            }
+        }
+
+        // Format and draw for bass stave if we have notes
+        if (bassStaveNotes.length > 0) {
+            try {
+                const bassVoice = new VF.Voice({
+                    num_beats: numerator,
+                    beat_value: denominator,
+                    resolution: VF.RESOLUTION
+                }).setMode(VF.Voice.Mode.SOFT);
+
+                bassVoice.addTickables(bassStaveNotes);
+
+                new VF.Formatter()
+                    .joinVoices([bassVoice])
+                    .format([bassVoice], bassStave.getWidth() - 30);
+
+                bassVoice.draw(context, bassStave);
+            } catch (e) {
+                console.error("Error rendering bass notes:", e);
+            }
         }
     }
 
@@ -405,9 +517,10 @@ class NotationRenderer {
      * @param {string} clef The clef (treble/bass)
      * @param {number} measureStartTime Measure start time
      * @param {number} measureEndTime Measure end time
+     * @param {number} currentPosition Current playback position
      * @returns {Array} Array of VexFlow StaveNote objects
      */
-    createVexFlowNotes(groupedNotes, clef, measureStartTime, measureEndTime) {
+    createVexFlowNotes(groupedNotes, clef, measureStartTime, measureEndTime, currentPosition) {
         if (!groupedNotes || groupedNotes.length === 0) return [];
 
         const vfNotes = [];
@@ -522,14 +635,34 @@ class NotationRenderer {
                     if (firstNote.accent) vfNote.addArticulation(0, new VF.Articulation('a>').setPosition(3));
                     if (firstNote.tenuto) vfNote.addArticulation(0, new VF.Articulation('a-').setPosition(3));
 
-                    // Apply style to make notes stand out
-                    vfNote.setStyle({
-                        fillStyle: 'rgba(255, 100, 255, 0.9)',      // Brighter pink/purple fill
-                        strokeStyle: 'rgba(80, 200, 255, 0.95)',    // Brighter blue stroke
-                        shadowColor: 'rgba(255, 100, 255, 0.8)',    // Matching shadow
-                        shadowBlur: 15,                             // Blur amount for glow effect
-                        strokeWidth: 2                              // Thicker stroke for better visibility
+                    // Enhance ledger lines
+                    vfNote.setLedgerLineStyle({
+                        strokeStyle: 'rgba(255, 255, 255, 0.95)',
+                        lineWidth: 2.5,
+                        lineCap: 'round',
+                        shadowColor: 'rgba(255, 255, 255, 0.7)',
+                        shadowBlur: 4
                     });
+
+                    // Check if this note is currently playing and highlight it
+                    const isPlaying = firstNote.start <= currentPosition &&
+                        firstNote.start + noteDuration > currentPosition;
+
+                    if (isPlaying) {
+                        vfNote.setStyle({
+                            fillStyle: 'rgba(255, 100, 255, 0.9)',
+                            strokeStyle: 'rgba(80, 200, 255, 0.95)',
+                            shadowColor: 'rgba(255, 100, 255, 0.8)',
+                            shadowBlur: 15,
+                            strokeWidth: 2
+                        });
+                    } else {
+                        // Normal styling for non-playing notes
+                        vfNote.setStyle({
+                            fillStyle: 'rgba(255, 255, 255, 0.9)',
+                            strokeStyle: 'rgba(255, 255, 255, 0.9)',
+                        });
+                    }
 
                     vfNotes.push(vfNote);
                 } catch (e) {
@@ -556,8 +689,9 @@ class NotationRenderer {
         if (!notes || notes.length === 0) return [];
 
         const notesByTime = new Map();
+        const EPSILON = 0.02; // 20ms tolerance for chord grouping
 
-        // Group notes by similar start times
+        // First pass: Group notes by exact times
         notes.forEach(note => {
             if (!note) return;
 
@@ -569,10 +703,84 @@ class NotationRenderer {
             notesByTime.get(timeKey).push(note);
         });
 
+        // Second pass: Merge groups that are very close in time
+        const mergedGroups = new Map();
+        const processedKeys = new Set();
+
+        Array.from(notesByTime.keys()).forEach(timeKey => {
+            if (processedKeys.has(timeKey)) return;
+
+            const time = parseFloat(timeKey);
+            const notesAtTime = notesByTime.get(timeKey);
+            let mergedNotes = [...notesAtTime];
+
+            // Look for nearby groups to merge
+            Array.from(notesByTime.keys()).forEach(otherKey => {
+                if (otherKey === timeKey || processedKeys.has(otherKey)) return;
+
+                const otherTime = parseFloat(otherKey);
+                if (Math.abs(time - otherTime) < EPSILON) {
+                    mergedNotes = [...mergedNotes, ...notesByTime.get(otherKey)];
+                    processedKeys.add(otherKey);
+                }
+            });
+
+            processedKeys.add(timeKey);
+            mergedGroups.set(timeKey, mergedNotes);
+        });
+
         // Convert map to sorted array of note groups
-        return Array.from(notesByTime.entries())
+        return Array.from(mergedGroups.entries())
             .sort((a, b) => parseFloat(a[0]) - parseFloat(b[0]))
             .map(entry => entry[1]);
+    }
+
+    /**
+     * Add info panel to the notation container (removed position indicator)
+     */
+    addNotationOverlays() {
+        // Remove position indicator creation code
+
+        // Determine current measure and beat
+        let currentMeasure = 1;
+        let currentBeat = 1;
+        const safePosition = Math.max(0, this.scoreModel.currentPosition);
+
+        for (const measure of this.scoreModel.measures) {
+            if (safePosition >= measure.startPosition) {
+                currentMeasure = measure.number;
+
+                if (measure.startPosition <= safePosition) {
+                    const nextMeasureStart = measure.index < this.scoreModel.measures.length - 1
+                        ? this.scoreModel.measures[measure.index + 1].startPosition
+                        : measure.startPosition + measure.durationSeconds;
+
+                    const posInMeasure = (safePosition - measure.startPosition) /
+                        (nextMeasureStart - measure.startPosition);
+
+                    const { numerator } = this.getTimeSignatureForMeasure(measure.index);
+                    currentBeat = Math.floor(posInMeasure * numerator) + 1;
+
+                    if (currentBeat > numerator || !isFinite(currentBeat)) {
+                        currentBeat = numerator;
+                    }
+                }
+            } else {
+                break;
+            }
+        }
+
+        // Add info panel
+        this.infoPanel = document.createElement('div');
+        this.infoPanel.className = 'notation-info-panel';
+        this.infoPanel.innerHTML = `
+            <div class="position-info">Position: ${safePosition.toFixed(1)}s</div>
+            <div class="measure-info">Measure: ${currentMeasure}, Beat: ${currentBeat}</div>
+            <div class="speed-info">Tempo: ${this.scoreModel.bpm} BPM</div>
+            <div class="playback-status">${this.scoreModel.isPlaying ? 'Playing' : 'Paused'}</div>
+        `;
+
+        this.svgContainer.appendChild(this.infoPanel);
     }
 
     /**
@@ -588,41 +796,20 @@ class NotationRenderer {
         const simpleNotation = document.createElement('div');
         simpleNotation.className = 'simple-notation';
 
-        // Calculate current page bounds
-        const startMeasureIndex = this.currentPage * this.measuresPerPage;
-        const endMeasureIndex = Math.min(
-            this.scoreModel.measures.length - 1,
-            startMeasureIndex + this.measuresPerPage - 1
-        );
-
-        const startPosition = this.scoreModel.measures[startMeasureIndex].startPosition;
-        const endPosition = endMeasureIndex < this.scoreModel.measures.length - 1
-            ? this.scoreModel.measures[endMeasureIndex + 1].startPosition
-            : startPosition + this.scoreModel.measures[endMeasureIndex].durationSeconds;
-
-        this.currentPageStartPosition = startPosition;
-        this.currentPageEndPosition = endPosition;
-
-        // Add page info
-        const pageInfo = document.createElement('div');
-        pageInfo.className = 'simple-page-info';
-        pageInfo.innerHTML = `<span>Page ${this.currentPage + 1} of ${this.totalPages}</span>`;
+        this.updateVisibleTimeWindow();
 
         // Add header with position info
         simpleNotation.innerHTML = `
-            <h3>Notes for Measures ${startMeasureIndex + 1}-${endMeasureIndex + 1}</h3>
+            <h3>Notes from ${this.startTime.toFixed(2)}s to ${this.endTime.toFixed(2)}s</h3>
             <div class="position-info">Position: ${this.scoreModel.currentPosition.toFixed(2)}s</div>
             <div class="playback-status">${this.scoreModel.isPlaying ? 'Playing' : 'Paused'}</div>
         `;
 
-        // Add the page info
-        simpleNotation.appendChild(pageInfo);
-
-        // Filter notes for this page
+        // Filter notes for this time window
         const visibleNotes = this.scoreModel.notes.filter(note => {
             const noteDuration = note.visualDuration || note.duration;
-            return (note.start >= startPosition && note.start < endPosition) ||
-                (note.start < startPosition && note.start + noteDuration > startPosition);
+            return (note.start >= this.startTime && note.start < this.endTime) ||
+                (note.start < this.startTime && note.start + noteDuration > this.startTime);
         }).sort((a, b) => a.start - b.start);
 
         // Create list of notes
@@ -645,217 +832,81 @@ class NotationRenderer {
 
         simpleNotation.appendChild(notesList);
         this.container.appendChild(simpleNotation);
-
-        return { startPosition, endPosition };
     }
 
     /**
-     * Find the current measure index based on playback position
-     * @returns {number} Current measure index
+     * Scroll to follow current playback position
      */
-    findCurrentMeasureIndex() {
-        let currentMeasureIndex = 0;
-        const currentPosition = this.scoreModel.currentPosition;
+    scrollToCurrentPosition() {
+        if (!this.svgContainer || !this.scoreModel.isPlaying) return;
 
-        for (let i = 0; i < this.scoreModel.measures.length; i++) {
-            if (currentPosition >= this.scoreModel.measures[i].startPosition) {
-                currentMeasureIndex = i;
-            } else {
-                break;
-            }
-        }
-
-        return currentMeasureIndex;
-    }
-
-    /**
-     * Calculate optimal number of measures to show per page
-     * @param {number} currentMeasureIndex Index of the current measure
-     * @returns {number} Optimal measures per page
-     */
-    calculateOptimalMeasuresPerPage(currentMeasureIndex) {
-        let optimalMeasures = 2;
-
-        const containerWidth = this.container?.clientWidth || 800;
-
-        const basePerPage = Math.max(1, Math.floor(containerWidth / 300));
-
-        try {
-            const startMeasure = currentMeasureIndex;
-            const endMeasure = Math.min(this.scoreModel.measures.length - 1, startMeasure + 4);
-
-            let totalNotes = 0;
-            let totalMeasures = 0;
-
-            for (let i = startMeasure; i <= endMeasure; i++) {
-                const measureStart = this.scoreModel.measures[i].startPosition;
-                const measureEnd = i < this.scoreModel.measures.length - 1
-                    ? this.scoreModel.measures[i + 1].startPosition
-                    : measureStart + this.scoreModel.measures[i].durationSeconds;
-
-                const notesInMeasure = this.scoreModel.notes.filter(note =>
-                    (note.start >= measureStart && note.start < measureEnd) ||
-                    (note.start < measureStart && note.start + (note.visualDuration || note.duration) > measureStart)
-                ).length;
-
-                totalNotes += notesInMeasure;
-                totalMeasures++;
-            }
-
-            const averageNotesPerMeasure = totalMeasures > 0 ? totalNotes / totalMeasures : 0;
-
-            if (averageNotesPerMeasure > 16) {
-                optimalMeasures = Math.max(1, basePerPage - 1);
-            } else if (averageNotesPerMeasure > 8) {
-                optimalMeasures = basePerPage;
-            } else {
-                optimalMeasures = basePerPage + 1;
-            }
-
-            const currentTempo = this.scoreModel.bpm;
-            if (currentTempo > 160) {
-                optimalMeasures = Math.max(1, optimalMeasures - 1);
-            } else if (currentTempo < 80) {
-                optimalMeasures = optimalMeasures + 1;
-            }
-
-            optimalMeasures = Math.min(6, Math.max(1, optimalMeasures));
-
-        } catch (error) {
-            console.warn('Error calculating optimal measures per page', error);
-        }
-
-        this.measuresPerPage = optimalMeasures;
-        return optimalMeasures;
-    }
-
-    /**
-     * Navigate to the next page of notation
-     */
-    goToNextPage() {
-        if (this.currentPage < this.totalPages - 1) {
-            this.currentPage++;
-            this.renderNotation(true);
-
-            const measureIndex = this.currentPage * this.measuresPerPage;
-            if (measureIndex < this.scoreModel.measures.length) {
-                return this.scoreModel.measures[measureIndex].startPosition;
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Navigate to the previous page of notation
-     */
-    goToPreviousPage() {
-        if (this.currentPage > 0) {
-            this.currentPage--;
-            this.renderNotation(true);
-
-            const measureIndex = this.currentPage * this.measuresPerPage;
-            if (measureIndex < this.scoreModel.measures.length) {
-                return this.scoreModel.measures[measureIndex].startPosition;
-            }
-        }
-        return null;
-    }
-
-    /**
- * Add position indicator to the notation container
- * @param {HTMLElement} svgContainer The container for the notation
- * @param {number} startPosition Start position of visible window
- * @param {number} endPosition End position of visible window
- */
-    addNotationOverlays(svgContainer, startPosition, endPosition) {
-        let currentMeasure = 1;
-        let currentBeat = 1;
-
-        // Add safety check for the current position
-        const safePosition = isNaN(this.scoreModel.currentPosition) || !isFinite(this.scoreModel.currentPosition) ?
-            0 : Math.max(0, this.scoreModel.currentPosition);
-
-        for (const measure of this.scoreModel.measures) {
-            if (safePosition >= measure.startPosition) {
-                currentMeasure = measure.number;
-
-                if (measure.startPosition <= safePosition) {
-                    const nextMeasureStart = measure.index < this.scoreModel.measures.length - 1
-                        ? this.scoreModel.measures[measure.index + 1].startPosition
-                        : measure.startPosition + measure.durationSeconds;
-
-                    const posInMeasure = (safePosition - measure.startPosition) /
-                        (nextMeasureStart - measure.startPosition);
-
-                    // Get time signature numerator for this measure
-                    const { numerator } = this.getTimeSignatureForMeasure(measure.index);
-
-                    currentBeat = Math.floor(posInMeasure * numerator) + 1;
-
-                    // Ensure beat number is valid
-                    if (currentBeat > numerator || !isFinite(currentBeat)) {
-                        currentBeat = numerator;
-                    }
-                }
-            } else {
-                break;
-            }
-        }
-
-        // Add position indicator that moves smoothly with playback
-        const positionIndicator = document.createElement('div');
-        positionIndicator.className = 'notation-position-indicator';
-        svgContainer.appendChild(positionIndicator);
-        this.updatePositionIndicator(safePosition);
-
-        const infoPanel = document.createElement('div');
-        infoPanel.className = 'notation-info-panel';
-        infoPanel.innerHTML = `
-        <div class="position-info">Position: ${safePosition.toFixed(1)}s</div>
-        <div class="measure-info">Measure: ${currentMeasure}, Beat: ${currentBeat}</div>
-        <div class="speed-info">Tempo: ${this.scoreModel.bpm} BPM</div>
-        <div class="playback-status">${this.scoreModel.isPlaying ? 'Playing' : 'Paused'}</div>
-        <div class="view-info">Page: ${this.currentPage + 1}/${this.totalPages}</div>
-    `;
-
-        svgContainer.appendChild(infoPanel);
-    }
-    /**
-     * Get the page time bounds for position indicator
-     * @returns {Object} Object with startPosition and endPosition
-     */
-    getPageTimeBounds() {
-        return {
-            startPosition: this.currentPageStartPosition,
-            endPosition: this.currentPageEndPosition
-        };
-    }
-
-    /**
- * Update position indicator without redrawing the entire notation
- * @param {number} currentPosition Current playback position
- */
-    updatePositionIndicator(currentPosition) {
-        if (!this.container) return;
-
-        const svgContainer = this.container.querySelector('.notation-svg-container');
-        if (!svgContainer) return;
-
-        const positionIndicator = svgContainer.querySelector('.notation-position-indicator');
-        if (!positionIndicator) return;
-
-        const { startPosition, endPosition } = this.getPageTimeBounds();
-        const timeRange = endPosition - startPosition;
+        // Get current position relative to the visible time window
+        this.updateVisibleTimeWindow();
+        const timeRange = this.endTime - this.startTime;
 
         if (timeRange > 0) {
-            const positionRatio = (currentPosition - startPosition) / timeRange;
-            const containerWidth = svgContainer.clientWidth;
-            const xPosition = Math.max(0, Math.min(containerWidth, positionRatio * containerWidth));
+            const positionRatio = (this.scoreModel.currentPosition - this.startTime) / timeRange;
+            const containerWidth = this.container.clientWidth;
+            const targetScrollLeft = positionRatio * this.svgContainer.scrollWidth - containerWidth / 2;
 
-
-            positionIndicator.style.left = `${xPosition}px`;
-
+            // Scroll container to keep current position centered
+            this.container.scrollTo({
+                left: Math.max(0, targetScrollLeft),
+                behavior: 'smooth'
+            });
         }
+    }
+
+    /**
+     * Handle scroll events to control playback
+     */
+    handleScroll() {
+        // Set up scroll interaction
+        let scrollTimeout;
+
+        this.container.addEventListener('scroll', () => {
+            clearTimeout(scrollTimeout);
+
+            // When scrolling stops, update the visible window
+            scrollTimeout = setTimeout(() => {
+                if (!this.scoreModel.isPlaying) {
+                    // Only update window if not playing
+                    const visibleTimeWindow = this.calculateVisibleTimeFromScroll();
+                    if (visibleTimeWindow) {
+                        this.startTime = visibleTimeWindow.startTime;
+                        this.endTime = visibleTimeWindow.endTime;
+                    }
+                }
+            }, 100);
+        });
+    }
+
+    /**
+     * Calculate visible time window based on current scroll position
+     * @returns {Object|null} Object with startTime and endTime
+     */
+    calculateVisibleTimeFromScroll() {
+        if (!this.svgContainer) return null;
+
+        const containerRect = this.container.getBoundingClientRect();
+        const svgRect = this.svgContainer.querySelector('svg')?.getBoundingClientRect();
+
+        if (!svgRect) return null;
+
+        const scrollRatio = this.container.scrollLeft / (svgRect.width - containerRect.width);
+
+        // Calculate the visible time window based on scroll position
+        const totalMeasureTime = this.scoreModel.measures[this.scoreModel.measures.length - 1].startPosition +
+            this.scoreModel.measures[this.scoreModel.measures.length - 1].durationSeconds;
+
+        const visibleTimeWindow = this.visibleTimeWindow;
+        const scrollStartTime = Math.max(0, scrollRatio * totalMeasureTime - (visibleTimeWindow / 2));
+        const scrollEndTime = scrollStartTime + visibleTimeWindow;
+
+        return {
+            startTime: scrollStartTime,
+            endTime: scrollEndTime
+        };
     }
 }
 

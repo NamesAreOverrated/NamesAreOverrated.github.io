@@ -144,21 +144,66 @@
     animation-play-state: paused !important;
 }
 
-/* Notation container at top of the screen */
+/* Updated notation container for scrolling view */
 .notation-container {
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
-    overflow: visible;
+    height: auto;
+    overflow-x: auto;
+    overflow-y: hidden;
     background-color: transparent;
     padding: 10px;
     cursor: pointer;
     z-index: 10;
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
+    /* Changed from center to allow horizontal scrolling */
     padding-bottom: 40px;
+    -webkit-overflow-scrolling: touch;
+    /* Smooth scrolling on iOS */
+}
+
+/* Update notation SVG container to work with scrolling */
+.notation-svg-container {
+    width: 100%;
+    min-width: 100%;
+    height: 100%;
+    position: relative;
+    display: flex;
+    justify-content: flex-start;
+    /* Changed from center to allow horizontal scrolling */
+    align-items: center;
+    padding: 5px;
+    background-color: transparent;
+    overflow: visible;
+}
+
+/* Add a fade effect to indicate scrollable content */
+.notation-container::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 100%;
+    width: 30px;
+    background: linear-gradient(to right, transparent, rgba(0, 0, 0, 0.5));
+    pointer-events: none;
+    z-index: 2;
+}
+
+.notation-container::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 30px;
+    background: linear-gradient(to left, transparent, rgba(0, 0, 0, 0.5));
+    pointer-events: none;
+    z-index: 2;
 }
 
 /* Remove notation-instructions styles as it's removed from HTML */
@@ -240,32 +285,23 @@
     vector-effect: non-scaling-stroke;
 }
 
-/* Improved notation position indicator with smoother animation */
+/* Remove all position indicator styles */
+/* 
 .notation-position-indicator {
     position: absolute;
     top: 0;
     height: 100%;
     width: 2px;
     background-color: #FF5722;
-    /* Bright orange color */
-    z-index: 10;
+    z-index: 11;
     pointer-events: none;
     box-shadow: 0 0 4px rgba(255, 87, 34, 0.7);
-    /* transition: transform 0.016s linear; */
-    /* 60fps update rate */
-    /* will-change: transform; */
-    /* transform: translateZ(0); */
-    /* Force hardware acceleration */
-    /* left: 0; */
-    /* Start at left, will be moved with transform */
 }
 
-/* Add a highlight at the top of the position indicator for better visibility */
 .notation-position-indicator::after {
     content: "";
     position: absolute;
     top: 0;
-    /* left: -4px; */
     width: 10px;
     height: 10px;
     background-color: #FF5722;
@@ -273,7 +309,6 @@
     box-shadow: 0 0 5px rgba(255, 87, 34, 0.9);
 }
 
-/* Add a pulse animation to make the indicator more noticeable */
 @keyframes position-pulse {
     0% {
         box-shadow: 0 0 3px rgba(255, 87, 34, 0.7);
@@ -288,10 +323,31 @@
     }
 }
 
-/* Apply the pulse animation when playing */
 .piano-visualization-container:not(.paused) .notation-position-indicator::after {
     animation: position-pulse 2s infinite;
 }
+*/
+
+/* Remove navigation mode position indicator styles */
+/*
+.notation-container.navigation-mode .notation-position-indicator {
+    background-color: rgba(0, 150, 215, 0.8);
+    box-shadow: 0 0 8px rgba(0, 150, 215, 0.6);
+}
+
+.notation-container.navigation-mode .notation-position-indicator::after {
+    background-color: rgba(0, 150, 215, 0.8);
+    box-shadow: 0 0 5px rgba(0, 150, 215, 0.9);
+}
+*/
+
+/* Improved notation position indicator with smoother animation */
+
+/* Add a highlight at the top of the position indicator for better visibility */
+
+/* Add a pulse animation to make the indicator more noticeable */
+
+/* Apply the pulse animation when playing */
 
 /* Info panel styling */
 .notation-info-panel {
@@ -301,6 +357,14 @@
     color: #fff;
     font-size: 12px;
     line-height: 1.4;
+    position: fixed;
+    /* Change from absolute to fixed */
+    top: 10px;
+    right: 15px;
+    z-index: 20;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(2px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
 }
 
 .position-info,
@@ -783,55 +847,13 @@ body.disco-mode .note-bar.playing {
     fill: rgba(255, 255, 255, 0.95);
 }
 
-
 /* Style playhead indicator */
-.notation-position-indicator {
-    position: absolute;
-    top: 0;
-    height: 100%;
-    width: 2px;
-    background-color: #FF5722;
-    z-index: 10;
-    pointer-events: none;
-    box-shadow: 0 0 3px rgba(255, 87, 34, 0.7);
-    transition: transform 0.1s linear, opacity 0.2s ease;
-    will-change: transform;
-    transform: translateZ(0);
-    /* Force hardware acceleration */
-}
 
 /* Add a highlight at the top of the position indicator for better visibility */
-.notation-position-indicator::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: -4px;
-    width: 10px;
-    height: 10px;
-    background-color: #FF5722;
-    border-radius: 50%;
-    box-shadow: 0 0 5px rgba(255, 87, 34, 0.9);
-}
 
 /* Add a pulse animation to make the indicator more noticeable */
-@keyframes position-pulse {
-    0% {
-        box-shadow: 0 0 3px rgba(255, 87, 34, 0.7);
-    }
-
-    50% {
-        box-shadow: 0 0 8px rgba(255, 87, 34, 0.9);
-    }
-
-    100% {
-        box-shadow: 0 0 3px rgba(255, 87, 34, 0.7);
-    }
-}
 
 /* Apply the pulse animation when playing */
-.piano-visualization-container:not(.paused) .notation-position-indicator::after {
-    animation: position-pulse 2s infinite;
-}
 
 /* Enhanced info panel styling */
 .notation-info-panel {
@@ -928,16 +950,6 @@ body.disco-mode .note-bar.playing {
 }
 
 /* Optional: Change the look of the position indicator in navigation mode */
-.notation-container.navigation-mode .notation-position-indicator {
-    background-color: rgba(0, 150, 215, 0.8);
-    box-shadow: 0 0 8px rgba(0, 150, 215, 0.6);
-}
-
-.notation-container.navigation-mode .notation-position-indicator::after {
-    background-color: rgba(0, 150, 215, 0.8);
-    box-shadow: 0 0 5px rgba(0, 150, 215, 0.9);
-}
-
 
 /* Falling chord visualization */
 .falling-chord {
