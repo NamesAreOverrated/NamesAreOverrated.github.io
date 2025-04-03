@@ -948,6 +948,17 @@ class NotationRenderer {
         const chordSegments = this.detectChordProgression(visibleNotes, this.startTime, this.endTime);
         if (!chordSegments.length) return;
 
+        // Align chord progression container exactly with SVG container
+        if (this.svgContainer) {
+            const svgRect = this.svgContainer.getBoundingClientRect();
+            const containerRect = this.container.getBoundingClientRect();
+
+            // Position and size the chord container to match the SVG
+            this.chordProgressionContainer.style.left = `${svgRect.left - containerRect.left}px`;
+            this.chordProgressionContainer.style.width = `${svgRect.width}px`;
+            this.chordProgressionContainer.style.position = 'absolute';
+        }
+
         // Create a document fragment for better performance
         const fragment = document.createDocumentFragment();
 
@@ -955,8 +966,8 @@ class NotationRenderer {
         for (const chord of chordSegments) {
             if (!chord) continue;
 
-            // Calculate position and width based on measure positions
-            const positionData = this.calculateChordBlockPosition(chord);
+            // Calculate position using the same approach as position indicator
+            const positionData = this.getChordPositionFromMeasures(chord);
             if (!positionData) continue;
 
             const { left, width } = positionData;
@@ -995,6 +1006,102 @@ class NotationRenderer {
     }
 
     /**
+     * Get chord position using measure positions directly (like position indicator)
+     * @param {Object} chord Chord data with timing info
+     * @returns {Object|null} Position data with left and width properties
+     */
+    getChordPositionFromMeasures(chord) {
+        if (!chord || !this.measurePositions.size) return null;
+
+        // Find start position using same method as position indicator
+        let startLeft = null;
+        for (const [measureIndex, measureData] of this.measurePositions.entries()) {
+            const { startTime, endTime, x, width } = measureData;
+
+            if (chord.startTime >= startTime && chord.startTime <= endTime) {
+                // Use exact same calculation as position indicator
+                const measureProgress = (chord.startTime - startTime) / (endTime - startTime);
+                startLeft = x + (width * measureProgress);
+                break;
+            }
+        }
+
+        // Find end position using same method
+        let endLeft = null;
+        for (const [measureIndex, measureData] of this.measurePositions.entries()) {
+            const { startTime, endTime, x, width } = measureData;
+
+            if (chord.endTime >= startTime && chord.endTime <= endTime) {
+                const measureProgress = (chord.endTime - startTime) / (endTime - startTime);
+                endLeft = x + (width * measureProgress);
+                break;
+            }
+        }
+
+        // Handle cases where chord might span multiple measures
+        if (startLeft === null || endLeft === null) {
+            // For spanning chords, find the closest measures
+            const measures = Array.from(this.measurePositions.entries());
+            measures.sort(([, a], [, b]) => a.startTime - b.startTime);
+
+            if (startLeft === null) {
+                // Find measure containing or closest before chord start
+                for (let i = measures.length - 1; i >= 0; i--) {
+                    const [, measureData] = measures[i];
+                    if (measureData.startTime <= chord.startTime) {
+                        const clampedTime = Math.min(chord.startTime, measureData.endTime);
+                        const progress = (clampedTime - measureData.startTime) /
+                            (measureData.endTime - measureData.startTime);
+                        startLeft = measureData.x + (measureData.width * progress);
+                        break;
+                    }
+                }
+
+                // Fallback for chord before first measure
+                if (startLeft === null && measures.length > 0) {
+                    const [, firstMeasure] = measures[0];
+                    startLeft = firstMeasure.x;
+                }
+            }
+
+            if (endLeft === null) {
+                // Find measure containing or closest after chord end
+                for (let i = 0; i < measures.length; i++) {
+                    const [, measureData] = measures[i];
+                    if (measureData.endTime >= chord.endTime) {
+                        const clampedTime = Math.max(chord.endTime, measureData.startTime);
+                        const progress = (clampedTime - measureData.startTime) /
+                            (measureData.endTime - measureData.startTime);
+                        endLeft = measureData.x + (measureData.width * progress);
+                        break;
+                    }
+                }
+
+                // Fallback for chord after last measure
+                if (endLeft === null && measures.length > 0) {
+                    const [, lastMeasure] = measures[measures.length - 1];
+                    endLeft = lastMeasure.x + lastMeasure.width;
+                }
+            }
+        }
+
+        // If still can't determine positions, return null
+        if (startLeft === null || endLeft === null) return null;
+
+        // Calculate width, ensuring it's at least 30px wide
+        const width = Math.max(30, endLeft - startLeft);
+
+        // Ensure the chord doesn't extend beyond the rightmost measure
+        const rightmostEdge = Array.from(this.measurePositions.values())
+            .reduce((max, pos) => Math.max(max, pos.x + pos.width), 0);
+
+        // Final position calculation
+        const left = Math.min(startLeft, rightmostEdge - width);
+
+        return { left, width };
+    }
+
+    /**
      * Detect chord progression from visible notes
      * @param {Array} notes Array of notes
      * @param {number} startTime Beginning of time window
@@ -1009,7 +1116,7 @@ class NotationRenderer {
 
         // Group notes into potential chord segments
         const timeSegments = new Map();
-        const TIME_THRESHOLD = 0.05; // 50ms threshold for chord grouping
+        const TIME_THRESHOLD = 0.08; // Increased from 0.05 to 0.08 (80ms) for better grouping
 
         // Create chord segments at every note boundary
         for (const note of sortedNotes) {
@@ -1027,7 +1134,7 @@ class NotationRenderer {
             for (const [timeKey, segmentNotes] of timeSegments.entries()) {
                 const [segStart, segEnd] = timeKey.split('-').map(Number);
 
-                // Check for significant overlap
+                // Check for significant overlap - more forgiving time threshold
                 if ((noteStart >= segStart - TIME_THRESHOLD && noteStart <= segEnd + TIME_THRESHOLD) ||
                     (noteEnd >= segStart - TIME_THRESHOLD && noteEnd <= segEnd + TIME_THRESHOLD) ||
                     (noteStart <= segStart && noteEnd >= segEnd)) {
@@ -1045,6 +1152,7 @@ class NotationRenderer {
                 // Add note to existing segments
                 for (const timeKey of overlappingKeys) {
                     const segmentNotes = timeSegments.get(timeKey);
+                    // Don't add duplicate notes (same note number)
                     if (!segmentNotes.some(n => n.noteNumber === note.noteNumber)) {
                         segmentNotes.push(note);
                     }
@@ -1052,16 +1160,99 @@ class NotationRenderer {
             }
         }
 
-        // Process segments into chords
+        // Process segments into chords - now merging close segments to avoid fragmentation
         const chords = [];
 
-        for (const [timeKey, segmentNotes] of timeSegments.entries()) {
-            // Only consider as chord if we have at least 3 notes
-            if (segmentNotes.length >= 3) {
-                const [segStart, segEnd] = timeKey.split('-').map(Number);
+        // First pass: identify segments that should be merged
+        const segmentsToMerge = new Map();
+        const processedSegments = new Set();
+        const segmentKeys = Array.from(timeSegments.keys()).sort((a, b) => {
+            return parseFloat(a.split('-')[0]) - parseFloat(b.split('-')[0]);
+        });
 
+        // Merge segments that are very close in time and have similar note content
+        for (let i = 0; i < segmentKeys.length; i++) {
+            const keyA = segmentKeys[i];
+            if (processedSegments.has(keyA)) continue;
+
+            const notesA = timeSegments.get(keyA);
+            const [startA, endA] = keyA.split('-').map(Number);
+            const mergeGroup = [keyA];
+            processedSegments.add(keyA);
+
+            // Compare with all subsequent segments
+            for (let j = i + 1; j < segmentKeys.length; j++) {
+                const keyB = segmentKeys[j];
+                if (processedSegments.has(keyB)) continue;
+
+                const notesB = timeSegments.get(keyB);
+                const [startB, endB] = keyB.split('-').map(Number);
+
+                // Check if segments are close in time (within 200ms)
+                const closeInTime = Math.abs(startB - endA) < 0.2;
+
+                // Check if they share common notes
+                let sharedNotes = 0;
+                for (const noteA of notesA) {
+                    if (notesB.some(noteB => noteB.noteNumber === noteA.noteNumber)) {
+                        sharedNotes++;
+                    }
+                }
+
+                // If segments are close and share notes, merge them
+                if (closeInTime && (sharedNotes > 0 || notesA.length + notesB.length >= 3)) {
+                    mergeGroup.push(keyB);
+                    processedSegments.add(keyB);
+                }
+            }
+
+            // Store merge group if there's anything to merge
+            if (mergeGroup.length > 1) {
+                segmentsToMerge.set(keyA, mergeGroup);
+            }
+        }
+
+        // Second pass: create chord objects from segments (merged or individual)
+        for (const [timeKey, segmentNotes] of timeSegments.entries()) {
+            // Skip if this segment is part of a merge group (but not the lead segment)
+            if (processedSegments.has(timeKey) &&
+                !segmentsToMerge.has(timeKey) &&
+                Array.from(segmentsToMerge.values()).some(group =>
+                    group.includes(timeKey) && group[0] !== timeKey)) {
+                continue;
+            }
+
+            // Handle merged segments
+            let allNotes = [...segmentNotes];
+            let segStart = parseFloat(timeKey.split('-')[0]);
+            let segEnd = parseFloat(timeKey.split('-')[1]);
+
+            if (segmentsToMerge.has(timeKey)) {
+                const mergeGroup = segmentsToMerge.get(timeKey);
+
+                // Skip the first one since we already included it
+                for (let i = 1; i < mergeGroup.length; i++) {
+                    const mergeKey = mergeGroup[i];
+                    const mergeNotes = timeSegments.get(mergeKey);
+                    const [mergeStart, mergeEnd] = mergeKey.split('-').map(Number);
+
+                    // Update time bounds
+                    segStart = Math.min(segStart, mergeStart);
+                    segEnd = Math.max(segEnd, mergeEnd);
+
+                    // Add unique notes from the merged segment
+                    for (const note of mergeNotes) {
+                        if (!allNotes.some(n => n.noteNumber === note.noteNumber)) {
+                            allNotes.push(note);
+                        }
+                    }
+                }
+            }
+
+            // Only consider as chord if we have at least 3 notes (restored original threshold)
+            if (allNotes.length >= 3) {
                 // Detect chord using MusicTheory
-                const detectedChord = MusicTheory.detectChord(segmentNotes);
+                const detectedChord = MusicTheory.detectChord(allNotes);
 
                 if (detectedChord && detectedChord.name) {
                     chords.push({
@@ -1069,7 +1260,7 @@ class NotationRenderer {
                         startTime: segStart,
                         endTime: segEnd,
                         duration: segEnd - segStart,
-                        notes: segmentNotes
+                        notes: allNotes
                     });
                 }
             }
@@ -1077,65 +1268,6 @@ class NotationRenderer {
 
         // Sort chords by start time
         return chords.sort((a, b) => a.startTime - b.startTime);
-    }
-
-    /**
-     * Calculate position for chord block based on measure positions
-     * @param {Object} chord Chord data with timing info
-     * @returns {Object|null} Position data or null if cannot be positioned
-     */
-    calculateChordBlockPosition(chord) {
-        if (!chord || !this.measurePositions.size) return null;
-
-        let startPosition = null;
-        let endPosition = null;
-        let foundStart = false;
-        let foundEnd = false;
-
-        // Find measures containing chord start and end
-        for (const [measureIndex, measureData] of this.measurePositions.entries()) {
-            const { startTime, endTime, x, width } = measureData;
-
-            // Find start position
-            if (!foundStart && chord.startTime >= startTime && chord.startTime <= endTime) {
-                const progress = (chord.startTime - startTime) / (endTime - startTime);
-                startPosition = x + (width * progress);
-                foundStart = true;
-            }
-
-            // Find end position
-            if (!foundEnd && chord.endTime >= startTime && chord.endTime <= endTime) {
-                const progress = (chord.endTime - startTime) / (endTime - startTime);
-                endPosition = x + (width * progress);
-                foundEnd = true;
-            }
-
-            if (foundStart && foundEnd) break;
-        }
-
-        // If we couldn't find positions, use measure boundaries
-        if (!foundStart || !foundEnd) {
-            // First try to use the first measure that overlaps
-            for (const [measureIndex, measureData] of this.measurePositions.entries()) {
-                const { startTime, endTime, x, width } = measureData;
-
-                if (chord.startTime <= endTime && chord.endTime >= startTime) {
-                    // Chord overlaps this measure
-                    startPosition = !foundStart ? x : startPosition;
-                    endPosition = !foundEnd ? x + width : endPosition;
-                    foundStart = foundStart || true;
-                    foundEnd = foundEnd || true;
-                    break;
-                }
-            }
-        }
-
-        if (foundStart && foundEnd) {
-            const width = Math.max(30, endPosition - startPosition);
-            return { left: startPosition, width };
-        }
-
-        return null;
     }
 
     /**

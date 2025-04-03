@@ -710,6 +710,9 @@
     overflow: visible;
     z-index: 12;
     pointer-events: none;
+    /* Add padding to account for notation margin */
+    padding-left: 10px;
+    box-sizing: border-box;
 }
 
 .chord-block {
@@ -730,8 +733,13 @@
     text-shadow: 0 0 2px rgba(255, 255, 255, 0.7);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
     transition: opacity 0.2s ease;
+    /* Add min-width to prevent tiny chord blocks */
+    min-width: 30px;
+    /* Add max-width to prevent overly large blocks */
+    max-width: 100px;
 }
 
+/* Improve highlighting of current chord */
 .chord-block.current {
     opacity: 1;
     box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
