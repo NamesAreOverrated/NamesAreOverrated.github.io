@@ -100,6 +100,13 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             onVisualizationUpdate: this.updateVisualization.bind(this),
             onNotationUpdate: this.updateNotation.bind(this)
         });
+
+        // Add position indicator update callback
+        this.playbackController.setPositionIndicatorUpdateCallback(() => {
+            if (this.notationRenderer) {
+                this.notationRenderer.updatePositionIndicator();
+            }
+        });
     }
 
     /**

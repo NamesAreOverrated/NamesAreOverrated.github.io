@@ -193,6 +193,11 @@ class PlaybackController {
                 this.onVisualizationUpdate(timestamp);
             }
 
+            // Update position indicator on every frame for smooth movement
+            if (this.onPositionIndicatorUpdate) {
+                this.onPositionIndicatorUpdate(timestamp);
+            }
+
             // Update notation less frequently
             if (!this._lastNotationUpdate || timestamp - this._lastNotationUpdate > 500) {
                 if (typeof this.onNotationUpdate === 'function') {
@@ -206,6 +211,14 @@ class PlaybackController {
         };
 
         this.animationFrameId = requestAnimationFrame(animate);
+    }
+
+    /**
+     * Register a callback for position indicator updates
+     * @param {Function} callback Function to call for position indicator updates
+     */
+    setPositionIndicatorUpdateCallback(callback) {
+        this.onPositionIndicatorUpdate = callback;
     }
 
     /**

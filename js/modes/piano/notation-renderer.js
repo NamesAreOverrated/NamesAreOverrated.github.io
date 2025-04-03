@@ -23,6 +23,10 @@ class NotationRenderer {
         this.svgContainer = null;
         this.infoPanel = null;
 
+        // Position indicator
+        this.positionIndicator = null;
+        this.measurePositions = new Map(); // Store measure positions for indicator updates
+
         // Rendering state
         this._lastFullRender = 0;
         this._maxStaveWidth = 250;
@@ -30,6 +34,7 @@ class NotationRenderer {
 
         // Bind methods
         this.renderNotation = this.renderNotation.bind(this);
+        this.updatePositionIndicator = this.updatePositionIndicator.bind(this);
     }
 
     /**
@@ -141,6 +146,55 @@ class NotationRenderer {
     }
 
     /**
+     * Create and add position indicator to the notation
+     */
+    createPositionIndicator() {
+        // Remove any existing indicator
+        if (this.positionIndicator) {
+            this.positionIndicator.remove();
+        }
+
+        // Create position indicator element
+        this.positionIndicator = document.createElement('div');
+        this.positionIndicator.className = 'notation-position-indicator';
+        this.container.appendChild(this.positionIndicator);
+    }
+
+    /**
+     * Update position indicator location based on current playback position
+     * @param {boolean} forceUpdate Force update even if not playing
+     */
+    updatePositionIndicator(forceUpdate = false) {
+        if (!this.positionIndicator || (!this.scoreModel.isPlaying && !forceUpdate)) {
+            return;
+        }
+
+        const currentTime = this.scoreModel.currentPosition;
+        let indicatorPosition = null;
+
+        // Find the appropriate measure based on current time
+        for (const [measureIndex, measureData] of this.measurePositions.entries()) {
+            const { startTime, endTime, x, width } = measureData;
+
+            if (currentTime >= startTime && currentTime <= endTime) {
+                // Calculate position within the measure
+                const measureProgress = (currentTime - startTime) / (endTime - startTime);
+                indicatorPosition = x + (width * measureProgress);
+                break;
+            }
+        }
+
+        // If we found a valid position, update the indicator
+        if (indicatorPosition !== null) {
+            this.positionIndicator.style.left = `${indicatorPosition}px`;
+            this.positionIndicator.style.display = 'block';
+        } else {
+            // Hide indicator if position is outside visible range
+            this.positionIndicator.style.display = 'none';
+        }
+    }
+
+    /**
      * Render notation using VexFlow
      * @param {boolean} forceRender Whether to force a full re-render
      * @returns {Promise} Promise that resolves when rendering is complete
@@ -158,6 +212,8 @@ class NotationRenderer {
             if (!forceRender && this._lastFullRender &&
                 now - this._lastFullRender < 500 &&
                 !this.pageRefreshNeeded) {
+                // Just update position indicator without re-rendering
+                this.updatePositionIndicator();
                 return;
             }
 
@@ -205,6 +261,9 @@ class NotationRenderer {
             // Get notes for visible measures
             const visibleNotes = this.getNotesForMeasures(visibleMeasureIndices);
 
+            // Reset measure positions for position indicator
+            this.measurePositions.clear();
+
             // Create staff systems for each line
             let yOffset = 50;
             for (const measureIndicesInLine of lines) {
@@ -219,6 +278,10 @@ class NotationRenderer {
 
                 yOffset += 200; // Space between systems
             }
+
+            // Create position indicator
+            this.createPositionIndicator();
+            this.updatePositionIndicator(true);
 
             // Add info panel
             this.addNotationOverlays();
@@ -350,6 +413,17 @@ class NotationRenderer {
             const measureIndex = measureIndices[i];
             const measureNotes = notesByMeasure.find(m => m.index === measureIndex);
             const measureWidth = Math.max(70, finalWidths[i]);
+
+            // Store measure position data for position indicator
+            const timeBounds = measureTimeBounds.find(b => b.index === measureIndex);
+            if (timeBounds) {
+                this.measurePositions.set(measureIndex, {
+                    startTime: timeBounds.start,
+                    endTime: timeBounds.end,
+                    x: currentX,
+                    width: measureWidth
+                });
+            }
 
             // Create treble and bass staves
             const trebleStave = new VF.Stave(currentX, y, measureWidth);
@@ -747,6 +821,17 @@ class NotationRenderer {
             }
             this.infoPanel = null;
         }
+
+        // Clear position indicator
+        if (this.positionIndicator) {
+            if (this.positionIndicator.parentNode) {
+                this.positionIndicator.parentNode.removeChild(this.positionIndicator);
+            }
+            this.positionIndicator = null;
+        }
+
+        // Clear measure positions
+        this.measurePositions.clear();
 
         // Clear container
         if (this.container) {
