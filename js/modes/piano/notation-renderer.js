@@ -172,13 +172,13 @@ class NotationRenderer {
             const containerWidth = this.container.clientWidth;
             const containerHeight = this.container.clientHeight;
 
-            // Adjust visible time window based on container width and number of measures
-            const measuresPerLine = Math.max(4, Math.floor(containerWidth / 200));
+            // Calculate measures per line to fill the width appropriately
+            // Adjust the divisor (200) to control how many measures appear per line
+            const measuresPerLine = Math.max(2, Math.floor(containerWidth / 180));
 
-            // Create renderer with explicit dimensions
+            // Create renderer with explicit dimensions - use container width exactly
             const renderer = new VF.Renderer(this.svgContainer, VF.Renderer.Backends.SVG);
-            const svgWidth = Math.max(containerWidth, visibleMeasureIndices.length * 200);
-            renderer.resize(svgWidth, containerWidth / 6.5);
+            renderer.resize(containerWidth, containerWidth / 6.5);
             const context = renderer.getContext();
             context.setFont("Arial", 10);
 
@@ -205,9 +205,9 @@ class NotationRenderer {
                 const staves = this.createStaveSystem(
                     context,
                     measureIndicesInLine,
-                    20, // x-offset
+                    10, // Reduced x-offset to use more horizontal space
                     yOffset,
-                    containerWidth - 40, // width
+                    containerWidth - 20, // Use full width with minimal padding
                     visibleNotes
                 );
 
@@ -307,7 +307,7 @@ class NotationRenderer {
         const staffHeight = 80;
         const staffDistance = 120;
 
-        // Calculate width per measure (will adjust based on note density later)
+        // Calculate base width for each measure, ensuring we use the full width
         let baseWidth = availableWidth / measureIndices.length;
         const staves = { treble: [], bass: [], measureIndices: [] };
 
@@ -335,9 +335,24 @@ class NotationRenderer {
             };
         });
 
-        // Adjust widths based on note density
+        // Calculate note density adjustment factors without exceeding min/max bounds
         const totalNotes = notesByMeasure.reduce((sum, m) => sum + m.noteCount, 0);
-        const averageNotesPerMeasure = totalNotes / measureIndices.length;
+        const averageNotesPerMeasure = Math.max(1, totalNotes / measureIndices.length);
+
+        // Calculate density-adjusted widths while preserving total width
+        let totalAdjustedWidth = 0;
+        const initialWidths = notesByMeasure.map(measure => {
+            const density = measure.noteCount / averageNotesPerMeasure;
+            // Less extreme density adjustment (0.8 to 1.2 range)
+            const widthFactor = 0.9 + (density * 0.2);
+            const adjustedWidth = baseWidth * widthFactor;
+            totalAdjustedWidth += adjustedWidth;
+            return adjustedWidth;
+        });
+
+        // Scale all widths to ensure total width matches available width
+        const scaleFactor = availableWidth / totalAdjustedWidth;
+        const finalWidths = initialWidths.map(width => width * scaleFactor);
 
         let currentX = x;
 
@@ -346,15 +361,8 @@ class NotationRenderer {
             const measureIndex = measureIndices[i];
             const measureNotes = notesByMeasure.find(m => m.index === measureIndex);
 
-            // Adjust width based on note density compared to average
-            let measureWidth = baseWidth;
-            if (totalNotes > 0 && measureNotes) {
-                const density = measureNotes.noteCount / averageNotesPerMeasure;
-                measureWidth = Math.max(
-                    this._minStaveWidth,
-                    Math.min(this._maxStaveWidth, baseWidth * (0.8 + (density * 0.4)))
-                );
-            }
+            // Use the calculated width for this measure
+            const measureWidth = Math.max(70, finalWidths[i]); // Ensure minimum usable width
 
             // Create treble and bass staves
             const trebleStave = new VF.Stave(currentX, y, measureWidth);
