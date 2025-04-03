@@ -832,3 +832,112 @@ body.disco-mode .piano-key.active {
         font-size: 8px;
     }
 }
+
+/* ===== CHORD PROGRESSION BAR ===== */
+.chord-progression-container {
+    position: absolute;
+    top: 15px;
+    left: 0;
+    right: 0;
+    height: 30px;
+    display: flex;
+    overflow: visible;
+    z-index: 12;
+    pointer-events: none;
+}
+
+.chord-block {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: black;
+    font-weight: bold;
+    border-radius: 3px;
+    margin-right: 1px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13px;
+    font-family: 'Arial', sans-serif;
+    opacity: 0.9;
+    text-shadow: 0 0 2px rgba(255, 255, 255, 0.7);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    transition: opacity 0.2s ease;
+}
+
+.chord-block.current {
+    opacity: 1;
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    z-index: 2;
+}
+
+/* Color coding - reusing existing styles but with higher opacity */
+.chord-block[data-chord-type="major"] {
+    background-color: rgba(100, 255, 218, 0.85);
+}
+
+.chord-block[data-chord-type="6"] {
+    background-color: rgba(100, 255, 218, 0.85);
+}
+
+.chord-block[data-chord-type="maj7"] {
+    background-color: rgba(94, 238, 205, 0.85);
+}
+
+.chord-block[data-chord-type="maj9"] {
+    background-color: rgba(88, 223, 191, 0.85);
+}
+
+.chord-block[data-chord-type="minor"] {
+    background-color: rgba(85, 255, 150, 0.85);
+}
+
+.chord-block[data-chord-type="min7"] {
+    background-color: rgba(96, 238, 144, 0.85);
+}
+
+.chord-block[data-chord-type="min6"] {
+    background-color: rgba(102, 255, 156, 0.85);
+}
+
+.chord-block[data-chord-type="7"] {
+    background-color: rgba(187, 153, 255, 0.85);
+}
+
+.chord-block[data-chord-type="9"] {
+    background-color: rgba(178, 141, 255, 0.85);
+}
+
+.chord-block[data-chord-type="11"] {
+    background-color: rgba(165, 128, 255, 0.85);
+}
+
+.chord-block[data-chord-type="13"] {
+    background-color: rgba(154, 116, 250, 0.85);
+}
+
+.chord-block[data-chord-type="dim"] {
+    background-color: rgba(255, 153, 102, 0.85);
+}
+
+.chord-block[data-chord-type="dim7"] {
+    background-color: rgba(255, 140, 82, 0.85);
+}
+
+.chord-block[data-chord-type="aug"] {
+    background-color: rgba(255, 221, 102, 0.85);
+}
+
+.chord-block[data-chord-type="sus2"] {
+    background-color: rgba(128, 216, 255, 0.85);
+}
+
+.chord-block[data-chord-type="sus4"] {
+    background-color: rgba(102, 204, 255, 0.85);
+}
+
+.chord-block[data-chord-type="other"] {
+    background-color: rgba(204, 204, 204, 0.85);
+}

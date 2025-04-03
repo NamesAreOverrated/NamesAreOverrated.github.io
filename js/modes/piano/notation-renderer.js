@@ -35,6 +35,59 @@ class NotationRenderer {
         // Bind methods
         this.renderNotation = this.renderNotation.bind(this);
         this.updatePositionIndicator = this.updatePositionIndicator.bind(this);
+
+        // Chord progression data
+        this.chordProgressionContainer = null;
+        this.detectedChords = [];
+        this.chordBlockElements = new Map(); // Track chord block elements
+
+        // Add previous position tracking
+        this.lastRecordedPosition = 0;
+
+        // Set up event listeners for the score model
+        this.setupScoreModelListeners();
+    }
+
+    /**
+     * Set up event listeners for score model events
+     */
+    setupScoreModelListeners() {
+        // Listen for play event to detect restarts
+        this.scoreModel.addEventListener('play', (data) => {
+            // Check if we're starting from the beginning or close to it
+            if (this.scoreModel.currentPosition < 0.1) {
+                this.resetPageView();
+            }
+        });
+
+        // Listen for stop events to reset the view
+        this.scoreModel.addEventListener('stop', () => {
+            this.resetPageView();
+        });
+
+        // Listen for seek events to potentially reset the view
+        this.scoreModel.addEventListener('positionchange', (data) => {
+            // If position changed dramatically (seeking)
+            if (Math.abs(this.lastRecordedPosition - data.position) > 1.0) {
+                this.pageRefreshNeeded = true;
+            }
+            this.lastRecordedPosition = data.position;
+        });
+    }
+
+    /**
+     * Reset the page view to start from the current position
+     */
+    resetPageView() {
+        this.currentPageStartTime = 0;
+        this.currentPageEndTime = 0;
+        this.pageRefreshNeeded = true;
+        this.startTime = 0;
+        this.endTime = 0;
+        this._lastFullRender = 0;
+
+        // Force a full render on next frame
+        requestAnimationFrame(() => this.renderNotation(true));
     }
 
     /**
@@ -60,6 +113,11 @@ class NotationRenderer {
      */
     updateVisibleTimeWindow() {
         const currentTime = this.scoreModel.currentPosition;
+
+        // Handle playback restart or seek to beginning
+        if (currentTime < 0.1 && this.currentPageStartTime > 0) {
+            this.resetPageView();
+        }
 
         // Check if we need to flip to the next page
         if (this.currentPageEndTime > 0) {
@@ -192,6 +250,9 @@ class NotationRenderer {
             // Hide indicator if position is outside visible range
             this.positionIndicator.style.display = 'none';
         }
+
+        // Also update chord highlighting
+        this.updateCurrentChordHighlight();
     }
 
     /**
@@ -201,6 +262,12 @@ class NotationRenderer {
      */
     async renderNotation(forceRender = false) {
         if (!this.scoreModel.notes.length || !this.container) return;
+
+        // Force render if at beginning of score and we have a previous render
+        const isAtBeginning = this.scoreModel.currentPosition < 0.1;
+        if (isAtBeginning && this._lastFullRender > 0) {
+            forceRender = true;
+        }
 
         try {
             // Ensure VexFlow is loaded
@@ -228,6 +295,12 @@ class NotationRenderer {
 
             // Clear container and create SVG container
             this.container.innerHTML = '';
+
+            // Create chord progression container first
+            this.chordProgressionContainer = document.createElement('div');
+            this.chordProgressionContainer.className = 'chord-progression-container';
+            this.container.appendChild(this.chordProgressionContainer);
+
             this.svgContainer = document.createElement('div');
             this.svgContainer.className = 'notation-svg-container';
             this.svgContainer.style.width = '100%';
@@ -282,6 +355,9 @@ class NotationRenderer {
             // Create position indicator
             this.createPositionIndicator();
             this.updatePositionIndicator(true);
+
+            // Create chord progression bar
+            this.createChordProgressionBar(visibleNotes);
 
             // Add info panel
             this.addNotationOverlays();
@@ -814,6 +890,15 @@ class NotationRenderer {
             this.svgContainer = null;
         }
 
+        // Clear chord progression container
+        if (this.chordProgressionContainer) {
+            while (this.chordProgressionContainer.firstChild) {
+                this.chordProgressionContainer.firstChild.remove();
+            }
+            this.chordProgressionContainer = null;
+        }
+        this.chordBlockElements.clear();
+
         // Clear info panel (keeping this check for cleanup purposes)
         if (this.infoPanel) {
             if (this.infoPanel.parentNode) {
@@ -843,6 +928,304 @@ class NotationRenderer {
         this.currentPageEndTime = 0;
         this.pageRefreshNeeded = true;
         this._lastFullRender = 0;
+    }
+
+    /**
+     * Create the chord progression bar
+     * @param {Array} visibleNotes Notes currently visible in the notation
+     */
+    createChordProgressionBar(visibleNotes) {
+        if (!this.chordProgressionContainer || !visibleNotes?.length || !this.measurePositions.size) return;
+
+        // Clear previous chord blocks
+        this.chordProgressionContainer.innerHTML = '';
+        this.chordBlockElements.clear();
+
+        // Detect chords from visible notes
+        const chordSegments = this.detectChordProgression(visibleNotes, this.startTime, this.endTime);
+        if (!chordSegments.length) return;
+
+        // Create a document fragment for better performance
+        const fragment = document.createDocumentFragment();
+
+        // Create chord blocks
+        for (const chord of chordSegments) {
+            if (!chord) continue;
+
+            // Calculate position and width based on measure positions
+            const positionData = this.calculateChordBlockPosition(chord);
+            if (!positionData) continue;
+
+            const { left, width } = positionData;
+
+            // Create chord block element
+            const chordBlock = document.createElement('div');
+            chordBlock.className = 'chord-block';
+            chordBlock.textContent = chord.name || '';
+            chordBlock.dataset.chordType = this.getChordType(chord);
+            chordBlock.dataset.startTime = chord.startTime.toFixed(3);
+            chordBlock.dataset.endTime = chord.endTime.toFixed(3);
+
+            // Add tooltip for additional info
+            const notesList = chord.notes.map(note =>
+                `${note.step}${note.alter === 1 ? '#' : note.alter === -1 ? 'b' : ''}${note.octave}`
+            ).join(', ');
+            chordBlock.title = `${chord.name || 'Unknown'}: ${notesList}`;
+
+            // Apply positioning
+            chordBlock.style.position = 'absolute';
+            chordBlock.style.left = `${left}px`;
+            chordBlock.style.width = `${width}px`;
+
+            // Store reference
+            this.chordBlockElements.set(chord.startTime.toFixed(3), chordBlock);
+
+            // Add to fragment
+            fragment.appendChild(chordBlock);
+        }
+
+        // Add all blocks to container
+        this.chordProgressionContainer.appendChild(fragment);
+
+        // Update current chord highlighting
+        this.updateCurrentChordHighlight();
+    }
+
+    /**
+     * Detect chord progression from visible notes
+     * @param {Array} notes Array of notes
+     * @param {number} startTime Beginning of time window
+     * @param {number} endTime End of time window
+     * @returns {Array} Array of chord segments with timing info
+     */
+    detectChordProgression(notes, startTime, endTime) {
+        if (!notes?.length) return [];
+
+        // First, sort notes by start time
+        const sortedNotes = [...notes].sort((a, b) => a.start - b.start);
+
+        // Group notes into potential chord segments
+        const timeSegments = new Map();
+        const TIME_THRESHOLD = 0.05; // 50ms threshold for chord grouping
+
+        // Create chord segments at every note boundary
+        for (const note of sortedNotes) {
+            // Skip tied continuation notes
+            if (note.isTiedFromPrevious) continue;
+
+            const noteStart = Math.max(startTime, note.start);
+            const noteDuration = note.visualDuration || note.duration;
+            const noteEnd = Math.min(endTime, note.start + noteDuration);
+
+            // Find existing segments this note overlaps with
+            const overlappingKeys = [];
+            let createNewSegment = true;
+
+            for (const [timeKey, segmentNotes] of timeSegments.entries()) {
+                const [segStart, segEnd] = timeKey.split('-').map(Number);
+
+                // Check for significant overlap
+                if ((noteStart >= segStart - TIME_THRESHOLD && noteStart <= segEnd + TIME_THRESHOLD) ||
+                    (noteEnd >= segStart - TIME_THRESHOLD && noteEnd <= segEnd + TIME_THRESHOLD) ||
+                    (noteStart <= segStart && noteEnd >= segEnd)) {
+
+                    overlappingKeys.push(timeKey);
+                    createNewSegment = false;
+                }
+            }
+
+            if (createNewSegment) {
+                // Create a new chord segment
+                const timeKey = `${noteStart}-${noteEnd}`;
+                timeSegments.set(timeKey, [note]);
+            } else {
+                // Add note to existing segments
+                for (const timeKey of overlappingKeys) {
+                    const segmentNotes = timeSegments.get(timeKey);
+                    if (!segmentNotes.some(n => n.noteNumber === note.noteNumber)) {
+                        segmentNotes.push(note);
+                    }
+                }
+            }
+        }
+
+        // Process segments into chords
+        const chords = [];
+
+        for (const [timeKey, segmentNotes] of timeSegments.entries()) {
+            // Only consider as chord if we have at least 3 notes
+            if (segmentNotes.length >= 3) {
+                const [segStart, segEnd] = timeKey.split('-').map(Number);
+
+                // Detect chord using MusicTheory
+                const detectedChord = MusicTheory.detectChord(segmentNotes);
+
+                if (detectedChord && detectedChord.name) {
+                    chords.push({
+                        ...detectedChord,
+                        startTime: segStart,
+                        endTime: segEnd,
+                        duration: segEnd - segStart,
+                        notes: segmentNotes
+                    });
+                }
+            }
+        }
+
+        // Sort chords by start time
+        return chords.sort((a, b) => a.startTime - b.startTime);
+    }
+
+    /**
+     * Calculate position for chord block based on measure positions
+     * @param {Object} chord Chord data with timing info
+     * @returns {Object|null} Position data or null if cannot be positioned
+     */
+    calculateChordBlockPosition(chord) {
+        if (!chord || !this.measurePositions.size) return null;
+
+        let startPosition = null;
+        let endPosition = null;
+        let foundStart = false;
+        let foundEnd = false;
+
+        // Find measures containing chord start and end
+        for (const [measureIndex, measureData] of this.measurePositions.entries()) {
+            const { startTime, endTime, x, width } = measureData;
+
+            // Find start position
+            if (!foundStart && chord.startTime >= startTime && chord.startTime <= endTime) {
+                const progress = (chord.startTime - startTime) / (endTime - startTime);
+                startPosition = x + (width * progress);
+                foundStart = true;
+            }
+
+            // Find end position
+            if (!foundEnd && chord.endTime >= startTime && chord.endTime <= endTime) {
+                const progress = (chord.endTime - startTime) / (endTime - startTime);
+                endPosition = x + (width * progress);
+                foundEnd = true;
+            }
+
+            if (foundStart && foundEnd) break;
+        }
+
+        // If we couldn't find positions, use measure boundaries
+        if (!foundStart || !foundEnd) {
+            // First try to use the first measure that overlaps
+            for (const [measureIndex, measureData] of this.measurePositions.entries()) {
+                const { startTime, endTime, x, width } = measureData;
+
+                if (chord.startTime <= endTime && chord.endTime >= startTime) {
+                    // Chord overlaps this measure
+                    startPosition = !foundStart ? x : startPosition;
+                    endPosition = !foundEnd ? x + width : endPosition;
+                    foundStart = foundStart || true;
+                    foundEnd = foundEnd || true;
+                    break;
+                }
+            }
+        }
+
+        if (foundStart && foundEnd) {
+            const width = Math.max(30, endPosition - startPosition);
+            return { left: startPosition, width };
+        }
+
+        return null;
+    }
+
+    /**
+     * Update highlighting on the current chord
+     */
+    updateCurrentChordHighlight() {
+        if (!this.chordBlockElements.size) return;
+
+        const currentTime = this.scoreModel.currentPosition;
+
+        // Remove current class from all chord blocks
+        for (const chordBlock of this.chordBlockElements.values()) {
+            chordBlock.classList.remove('current');
+        }
+
+        // Find and highlight the current chord
+        for (const chordBlock of this.chordBlockElements.values()) {
+            const startTime = parseFloat(chordBlock.dataset.startTime);
+            const endTime = parseFloat(chordBlock.dataset.endTime);
+
+            if (currentTime >= startTime && currentTime < endTime) {
+                chordBlock.classList.add('current');
+                break;
+            }
+        }
+    }
+
+    /**
+     * Extract chord type from chord name with improved pattern matching
+     * @param {Object} chord The chord object
+     * @returns {string} The chord type for styling
+     */
+    getChordType(chord) {
+        if (!chord || !chord.name) return 'other';
+
+        // Convert to lowercase and remove all spaces for consistent processing
+        const name = chord.name.toLowerCase().replace(/\s+/g, '');
+
+        // First extract the root note to avoid confusion
+        const rootPattern = /^[a-g][#b]?/;
+        const rootMatch = name.match(rootPattern);
+
+        // Get just the chord quality part (without the root note)
+        const quality = rootMatch ? name.substring(rootMatch[0].length) : name;
+
+        // Handle slash chords - extract just the quality before the slash
+        const slashIndex = quality.indexOf('/');
+        const mainQuality = slashIndex > -1 ? quality.substring(0, slashIndex) : quality;
+
+        // Map of regex patterns to chord types for more maintainable matching
+        const chordPatterns = [
+            { pattern: /maj13/, type: 'maj13' },
+            { pattern: /13/, type: '13' },
+            { pattern: /maj11/, type: 'maj11' },
+            { pattern: /11/, type: '11' },
+            { pattern: /maj9/, type: 'maj9' },
+            { pattern: /9/, type: '9' },
+            { pattern: /maj7b5/, type: 'maj7b5' },
+            { pattern: /7#5|7\+5|7aug/, type: '7aug' },
+            { pattern: /7b5/, type: '7b5' },
+            { pattern: /maj7#5|maj7\+5/, type: 'maj7aug' },
+            { pattern: /maj7/, type: 'maj7' },
+            { pattern: /m7b5|min7b5|ø/, type: 'min7b5' },
+            { pattern: /m7|min7|-7/, type: 'min7' },
+            { pattern: /7sus4|7sus/, type: '7sus4' },
+            { pattern: /7/, type: '7' },
+            { pattern: /dim7|°7/, type: 'dim7' },
+            { pattern: /dim|°/, type: 'dim' },
+            { pattern: /aug\+|aug|augmented|\+/, type: 'aug' },
+            { pattern: /sus2/, type: 'sus2' },
+            { pattern: /sus4|sus/, type: 'sus4' },
+            { pattern: /min|m|-/, type: 'minor' },
+            { pattern: /maj|major|\^|△/, type: 'major' },
+            { pattern: /add9/, type: 'add9' },
+            { pattern: /add11/, type: 'add11' },
+            { pattern: /add13/, type: 'add13' },
+            { pattern: /add/, type: 'add' },
+            { pattern: /m6|min6|-6/, type: 'min6' },
+            { pattern: /6/, type: '6' }
+        ];
+
+        // Find the first matching pattern
+        for (const { pattern, type } of chordPatterns) {
+            if (pattern.test(mainQuality)) {
+                return type;
+            }
+        }
+
+        // If there's no explicit quality and it's just a root note
+        if (mainQuality === '') return 'major';
+
+        // Fallback
+        return 'other';
     }
 }
 
