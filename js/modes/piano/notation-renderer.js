@@ -15,7 +15,6 @@ class NotationRenderer {
 
         // SVG container and elements
         this.svgContainer = null;
-        // Remove position indicator reference
         this.infoPanel = null;
 
         // Rendering state
@@ -23,9 +22,14 @@ class NotationRenderer {
         this._maxStaveWidth = 250; // Maximum width for a measure
         this._minStaveWidth = 120; // Minimum width for a measure
 
+        // Page-like behavior properties
+        this.currentPageStartTime = 0;
+        this.currentPageEndTime = 0;
+        this.pageFlipThreshold = 0.75; // Flip page when position reaches 75% of the current page
+        this.pageRefreshNeeded = true;
+
         // Bind methods that need 'this'
         this.renderNotation = this.renderNotation.bind(this);
-        // Remove updatePositionIndicator binding
     }
 
     /**
@@ -52,12 +56,27 @@ class NotationRenderer {
      */
     updateVisibleTimeWindow() {
         const currentTime = this.scoreModel.currentPosition;
-        this.startTime = Math.max(0, currentTime - this.lookBehind);
-        this.endTime = currentTime + this.lookAhead;
 
-        // Sanity check for valid time window
-        if (this.endTime <= this.startTime) {
-            this.endTime = this.startTime + this.visibleTimeWindow;
+        // Check if we need to flip to the next page
+        if (this.currentPageEndTime > 0 &&
+            currentTime > this.currentPageStartTime +
+            (this.currentPageEndTime - this.currentPageStartTime) * this.pageFlipThreshold) {
+            // We've reached the threshold to flip to next page
+            this.pageRefreshNeeded = true;
+            this.currentPageStartTime = currentTime;
+        }
+
+        // If this is first render or we need to refresh the page
+        if (this.currentPageEndTime === 0 || this.pageRefreshNeeded) {
+            this.startTime = Math.max(0, currentTime);
+            this.endTime = currentTime + this.visibleTimeWindow;
+            this.currentPageStartTime = this.startTime;
+            this.currentPageEndTime = this.endTime;
+            this.pageRefreshNeeded = false;
+        } else {
+            // Keep using the current page boundaries
+            this.startTime = this.currentPageStartTime;
+            this.endTime = this.currentPageEndTime;
         }
     }
 
@@ -139,14 +158,17 @@ class NotationRenderer {
             await this.loadVexFlow();
 
             const now = performance.now();
-            if (!forceRender && this._lastFullRender && now - this._lastFullRender < 500) {
+
+            // Check if we need to re-render
+            if (!forceRender && this._lastFullRender && now - this._lastFullRender < 500 &&
+                !this.pageRefreshNeeded) {
                 // Skip full re-render for performance
-                // Remove position indicator update call
                 return;
             }
+
             this._lastFullRender = now;
 
-            // Update the visible time window based on current position
+            // Update the visible time window based on current position (with page behavior)
             this.updateVisibleTimeWindow();
             const visibleMeasureIndices = this.getVisibleMeasureIndices();
 
@@ -214,14 +236,8 @@ class NotationRenderer {
                 yOffset += 200; // Space between systems
             }
 
-            // Add info panel only (removed position indicator)
+            // Add info panel
             this.addNotationOverlays();
-
-            // Adjust scroll position to follow current playback
-            this.scrollToCurrentPosition();
-
-            // Add scrolling behavior
-            this.handleScroll();
 
         } catch (error) {
             console.error('Error rendering notation:', error);
@@ -730,11 +746,9 @@ class NotationRenderer {
     }
 
     /**
-     * Add info panel to the notation container (removed position indicator)
+     * Add info panel to the notation container
      */
     addNotationOverlays() {
-        // Remove position indicator creation code
-
         // Determine current measure and beat
         let currentMeasure = 1;
         let currentBeat = 1;
@@ -764,7 +778,7 @@ class NotationRenderer {
             }
         }
 
-        // Add info panel
+        // Add info panel with page information
         this.infoPanel = document.createElement('div');
         this.infoPanel.className = 'notation-info-panel';
         this.infoPanel.innerHTML = `
@@ -772,6 +786,7 @@ class NotationRenderer {
             <div class="measure-info">Measure: ${currentMeasure}, Beat: ${currentBeat}</div>
             <div class="speed-info">Tempo: ${this.scoreModel.bpm} BPM</div>
             <div class="playback-status">${this.scoreModel.isPlaying ? 'Playing' : 'Paused'}</div>
+            <div class="view-info">Page: ${this.currentPageStartTime.toFixed(1)}s - ${this.currentPageEndTime.toFixed(1)}s</div>
         `;
 
         this.svgContainer.appendChild(this.infoPanel);
@@ -832,47 +847,14 @@ class NotationRenderer {
      * Scroll to follow current playback position
      */
     scrollToCurrentPosition() {
-        if (!this.svgContainer || !this.scoreModel.isPlaying) return;
-
-        // Get current position relative to the visible time window
-        this.updateVisibleTimeWindow();
-        const timeRange = this.endTime - this.startTime;
-
-        if (timeRange > 0) {
-            const positionRatio = (this.scoreModel.currentPosition - this.startTime) / timeRange;
-            const containerWidth = this.container.clientWidth;
-            const targetScrollLeft = positionRatio * this.svgContainer.scrollWidth - containerWidth / 2;
-
-            // Scroll container to keep current position centered
-            this.container.scrollTo({
-                left: Math.max(0, targetScrollLeft),
-                behavior: 'smooth'
-            });
-        }
+        // Page-like behavior doesn't need continuous scrolling
     }
 
     /**
      * Handle scroll events to control playback
      */
     handleScroll() {
-        // Set up scroll interaction
-        let scrollTimeout;
-
-        this.container.addEventListener('scroll', () => {
-            clearTimeout(scrollTimeout);
-
-            // When scrolling stops, update the visible window
-            scrollTimeout = setTimeout(() => {
-                if (!this.scoreModel.isPlaying) {
-                    // Only update window if not playing
-                    const visibleTimeWindow = this.calculateVisibleTimeFromScroll();
-                    if (visibleTimeWindow) {
-                        this.startTime = visibleTimeWindow.startTime;
-                        this.endTime = visibleTimeWindow.endTime;
-                    }
-                }
-            }, 100);
-        });
+        // Page-like behavior doesn't need continuous scrolling
     }
 
     /**
@@ -880,27 +862,7 @@ class NotationRenderer {
      * @returns {Object|null} Object with startTime and endTime
      */
     calculateVisibleTimeFromScroll() {
-        if (!this.svgContainer) return null;
-
-        const containerRect = this.container.getBoundingClientRect();
-        const svgRect = this.svgContainer.querySelector('svg')?.getBoundingClientRect();
-
-        if (!svgRect) return null;
-
-        const scrollRatio = this.container.scrollLeft / (svgRect.width - containerRect.width);
-
-        // Calculate the visible time window based on scroll position
-        const totalMeasureTime = this.scoreModel.measures[this.scoreModel.measures.length - 1].startPosition +
-            this.scoreModel.measures[this.scoreModel.measures.length - 1].durationSeconds;
-
-        const visibleTimeWindow = this.visibleTimeWindow;
-        const scrollStartTime = Math.max(0, scrollRatio * totalMeasureTime - (visibleTimeWindow / 2));
-        const scrollEndTime = scrollStartTime + visibleTimeWindow;
-
-        return {
-            startTime: scrollStartTime,
-            endTime: scrollEndTime
-        };
+        return null; // Not needed for page-like behavior
     }
 }
 
