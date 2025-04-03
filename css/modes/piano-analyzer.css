@@ -240,21 +240,24 @@
     vector-effect: non-scaling-stroke;
 }
 
-/* Notation position indicator */
+/* Improved notation position indicator with smoother animation */
 .notation-position-indicator {
     position: absolute;
     top: 0;
     height: 100%;
     width: 2px;
     background-color: #FF5722;
+    /* Bright orange color */
     z-index: 10;
     pointer-events: none;
-    box-shadow: 0 0 3px rgba(255, 87, 34, 0.7);
-    transition: transform 1ms linear;
-    will-change: transform;
-    transform: translateZ(0), translateX(0px);
-    left: 0;
+    box-shadow: 0 0 4px rgba(255, 87, 34, 0.7);
+    /* transition: transform 0.016s linear; */
+    /* 60fps update rate */
+    /* will-change: transform; */
+    /* transform: translateZ(0); */
     /* Force hardware acceleration */
+    /* left: 0; */
+    /* Start at left, will be moved with transform */
 }
 
 /* Add a highlight at the top of the position indicator for better visibility */
@@ -262,13 +265,12 @@
     content: "";
     position: absolute;
     top: 0;
-    left: -4px;
+    /* left: -4px; */
     width: 10px;
     height: 10px;
     background-color: #FF5722;
     border-radius: 50%;
     box-shadow: 0 0 5px rgba(255, 87, 34, 0.9);
-    transform: translateZ(0);
 }
 
 /* Add a pulse animation to make the indicator more noticeable */
@@ -780,6 +782,7 @@ body.disco-mode .note-bar.playing {
 .notation-svg-container .vf-articulation {
     fill: rgba(255, 255, 255, 0.95);
 }
+
 
 /* Style playhead indicator */
 .notation-position-indicator {

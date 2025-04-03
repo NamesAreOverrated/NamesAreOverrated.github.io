@@ -386,6 +386,7 @@ class NotationRenderer {
                 }
             });
 
+
             // Add position and info overlay
             this.addNotationOverlays(svgContainer, startPosition, endPosition);
 
@@ -761,11 +762,11 @@ class NotationRenderer {
     }
 
     /**
-     * Add overlays with information about current playback
-     * @param {HTMLElement} svgContainer The SVG container element
-     * @param {number} startPosition Start position of visible window
-     * @param {number} endPosition End position of visible window
-     */
+ * Add position indicator to the notation container
+ * @param {HTMLElement} svgContainer The container for the notation
+ * @param {number} startPosition Start position of visible window
+ * @param {number} endPosition End position of visible window
+ */
     addNotationOverlays(svgContainer, startPosition, endPosition) {
         let currentMeasure = 1;
         let currentBeat = 1;
@@ -801,19 +802,24 @@ class NotationRenderer {
             }
         }
 
+        // Add position indicator that moves smoothly with playback
+        const positionIndicator = document.createElement('div');
+        positionIndicator.className = 'notation-position-indicator';
+        svgContainer.appendChild(positionIndicator);
+        this.updatePositionIndicator(safePosition);
+
         const infoPanel = document.createElement('div');
         infoPanel.className = 'notation-info-panel';
         infoPanel.innerHTML = `
-            <div class="position-info">Position: ${safePosition.toFixed(1)}s</div>
-            <div class="measure-info">Measure: ${currentMeasure}, Beat: ${currentBeat}</div>
-            <div class="speed-info">Tempo: ${this.scoreModel.bpm} BPM</div>
-            <div class="playback-status">${this.scoreModel.isPlaying ? 'Playing' : 'Paused'}</div>
-            <div class="view-info">Page: ${this.currentPage + 1}/${this.totalPages}</div>
-        `;
+        <div class="position-info">Position: ${safePosition.toFixed(1)}s</div>
+        <div class="measure-info">Measure: ${currentMeasure}, Beat: ${currentBeat}</div>
+        <div class="speed-info">Tempo: ${this.scoreModel.bpm} BPM</div>
+        <div class="playback-status">${this.scoreModel.isPlaying ? 'Playing' : 'Paused'}</div>
+        <div class="view-info">Page: ${this.currentPage + 1}/${this.totalPages}</div>
+    `;
 
         svgContainer.appendChild(infoPanel);
     }
-
     /**
      * Get the page time bounds for position indicator
      * @returns {Object} Object with startPosition and endPosition
@@ -823,6 +829,33 @@ class NotationRenderer {
             startPosition: this.currentPageStartPosition,
             endPosition: this.currentPageEndPosition
         };
+    }
+
+    /**
+ * Update position indicator without redrawing the entire notation
+ * @param {number} currentPosition Current playback position
+ */
+    updatePositionIndicator(currentPosition) {
+        if (!this.container) return;
+
+        const svgContainer = this.container.querySelector('.notation-svg-container');
+        if (!svgContainer) return;
+
+        const positionIndicator = svgContainer.querySelector('.notation-position-indicator');
+        if (!positionIndicator) return;
+
+        const { startPosition, endPosition } = this.getPageTimeBounds();
+        const timeRange = endPosition - startPosition;
+
+        if (timeRange > 0) {
+            const positionRatio = (currentPosition - startPosition) / timeRange;
+            const containerWidth = svgContainer.clientWidth;
+            const xPosition = Math.max(0, Math.min(containerWidth, positionRatio * containerWidth));
+
+
+            positionIndicator.style.left = `${xPosition}px`;
+
+        }
     }
 }
 

@@ -116,6 +116,9 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         // Highlight piano keys
         const playingNotes = this.scoreModel.getCurrentlyPlayingNotes();
         this.pianoVisualization.highlightPianoKeys(playingNotes);
+
+        // Just update the position indicator for smoother tracking
+        this.notationRenderer.updatePositionIndicator(this.scoreModel.currentPosition);
     }
 
     /**
@@ -123,7 +126,9 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
      */
     updateNotation(timestamp) {
         if (this.notationRenderer) {
-            this.notationRenderer.renderNotation();
+
+            this.notationRenderer.renderNotation()
+
         }
     }
 
