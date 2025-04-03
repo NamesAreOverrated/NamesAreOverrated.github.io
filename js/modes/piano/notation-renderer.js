@@ -673,46 +673,8 @@ class NotationRenderer {
      * Add info panel to the notation container
      */
     addNotationOverlays() {
-        // Get current measure and beat info
-        const safePosition = Math.max(0, this.scoreModel.currentPosition);
-        let currentMeasure = 1, currentBeat = 1;
-
-        for (const measure of this.scoreModel.measures) {
-            if (safePosition >= measure.startPosition) {
-                currentMeasure = measure.number;
-
-                if (measure.startPosition <= safePosition) {
-                    const nextMeasureStart = measure.index < this.scoreModel.measures.length - 1
-                        ? this.scoreModel.measures[measure.index + 1].startPosition
-                        : measure.startPosition + measure.durationSeconds;
-
-                    const posInMeasure = (safePosition - measure.startPosition) /
-                        (nextMeasureStart - measure.startPosition);
-
-                    const { numerator } = this.getTimeSignatureForMeasure(measure.index);
-                    currentBeat = Math.floor(posInMeasure * numerator) + 1;
-
-                    if (currentBeat > numerator || !isFinite(currentBeat)) {
-                        currentBeat = numerator;
-                    }
-                }
-            } else {
-                break;
-            }
-        }
-
-        // Create and add info panel
-        this.infoPanel = document.createElement('div');
-        this.infoPanel.className = 'notation-info-panel';
-        this.infoPanel.innerHTML = `
-            <div class="position-info">Position: ${safePosition.toFixed(1)}s</div>
-            <div class="measure-info">Measure: ${currentMeasure}, Beat: ${currentBeat}</div>
-            <div class="speed-info">Tempo: ${this.scoreModel.bpm} BPM</div>
-            <div class="playback-status">${this.scoreModel.isPlaying ? 'Playing' : 'Paused'}</div>
-            <div class="view-info">Page: ${this.currentPageStartTime.toFixed(1)}s - ${this.currentPageEndTime.toFixed(1)}s</div>
-        `;
-
-        this.svgContainer.appendChild(this.infoPanel);
+        // Remove this method's content - don't add the info panel
+        // We'll keep the empty method to avoid breaking any calls to it
     }
 
     /**
@@ -758,6 +720,44 @@ class NotationRenderer {
 
         simpleNotation.appendChild(notesList);
         this.container.appendChild(simpleNotation);
+    }
+
+    /**
+     * Clean up resources to prevent memory leaks
+     */
+    cleanup() {
+        // Cancel any pending animation frames
+        if (this.animationFrameId) {
+            cancelAnimationFrame(this.animationFrameId);
+            this.animationFrameId = null;
+        }
+
+        // Clear SVG container
+        if (this.svgContainer) {
+            while (this.svgContainer.firstChild) {
+                this.svgContainer.firstChild.remove();
+            }
+            this.svgContainer = null;
+        }
+
+        // Clear info panel (keeping this check for cleanup purposes)
+        if (this.infoPanel) {
+            if (this.infoPanel.parentNode) {
+                this.infoPanel.parentNode.removeChild(this.infoPanel);
+            }
+            this.infoPanel = null;
+        }
+
+        // Clear container
+        if (this.container) {
+            this.container.innerHTML = '';
+        }
+
+        // Reset state
+        this.currentPageStartTime = 0;
+        this.currentPageEndTime = 0;
+        this.pageRefreshNeeded = true;
+        this._lastFullRender = 0;
     }
 }
 

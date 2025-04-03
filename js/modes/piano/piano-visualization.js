@@ -26,14 +26,18 @@ class PianoVisualization {
      * Setup window resize handler
      */
     setupResizeHandler() {
-        window.addEventListener('resize', () => {
-            if (this.pianoVisualizationContainer.style.display !== 'none') {
+        // Store reference to bound handler for later removal
+        this._resizeHandler = () => {
+            if (this.pianoVisualizationContainer &&
+                this.pianoVisualizationContainer.style.display !== 'none') {
                 this.updateNoteBarsPosition();
                 if (typeof this.onResizeCallback === 'function') {
                     this.onResizeCallback();
                 }
             }
-        });
+        };
+
+        window.addEventListener('resize', this._resizeHandler);
     }
 
     /**
@@ -44,6 +48,9 @@ class PianoVisualization {
         if (!keyboard) return;
 
         keyboard.innerHTML = '';
+
+        // Create a document fragment for better performance
+        const fragment = document.createDocumentFragment();
 
         for (let i = 21; i <= 108; i++) {
             const isBlackKey = [1, 3, 6, 8, 10].includes(i % 12);
@@ -60,8 +67,10 @@ class PianoVisualization {
                 keyElement.appendChild(label);
             }
 
-            keyboard.appendChild(keyElement);
+            fragment.appendChild(keyElement);
         }
+
+        keyboard.appendChild(fragment);
     }
 
     /**
@@ -92,11 +101,46 @@ class PianoVisualization {
      * Cleanup resources
      */
     cleanup() {
+        // Cancel any animation frames
+        if (this.animationFrameId) {
+            cancelAnimationFrame(this.animationFrameId);
+            this.animationFrameId = null;
+        }
+
+        // Remove the resize event listener
+        window.removeEventListener('resize', this._resizeHandler);
+
         // Clear all visual elements
         if (this.noteBarContainer) {
             this.noteBarContainer.innerHTML = '';
+
+            // Clear references to DOM elements in note bars
+            if (this.noteBars) {
+                this.noteBars.forEach(bar => {
+                    if (bar.element && bar.element.parentNode) {
+                        bar.element.parentNode.removeChild(bar.element);
+                    }
+                    bar.element = null;
+                    bar.keyElement = null;
+                });
+            }
             this.noteBars = [];
+
+            // Clear falling chords references
+            if (this.fallingChords) {
+                this.fallingChords.forEach(chord => {
+                    if (chord.element && chord.element.parentNode) {
+                        chord.element.parentNode.removeChild(chord.element);
+                    }
+                    chord.element = null;
+                });
+            }
             this.fallingChords = [];
+        }
+
+        // Clear keyboard container
+        if (this.keyboardContainer) {
+            this.keyboardContainer.innerHTML = '';
         }
 
         // Remove container from DOM if it exists
@@ -104,6 +148,13 @@ class PianoVisualization {
             this.pianoVisualizationContainer.parentNode.removeChild(this.pianoVisualizationContainer);
             this.pianoVisualizationContainer = null;
         }
+
+        // Clear callback references
+        this.onResizeCallback = null;
+
+        // Clear piano containers
+        this.keyboardContainer = null;
+        this.noteBarContainer = null;
     }
 
     /**
@@ -114,7 +165,7 @@ class PianoVisualization {
         if (!this.pianoVisualizationContainer) return;
 
         // Remove all active highlights first
-        const keys = this.pianoVisualizationContainer.querySelectorAll('.piano-key');
+        const keys = this.pianoVisualizationContainer.querySelectorAll('.piano-key.active');
         keys.forEach(key => key.classList.remove('active'));
 
         // Exit if no notes to highlight
@@ -169,6 +220,10 @@ class PianoVisualization {
     createMissingNoteBars(visibleNotes) {
         if (!visibleNotes?.length) return;
 
+        // Use document fragment for better performance
+        const fragment = document.createDocumentFragment();
+        let newBars = 0;
+
         for (const note of visibleNotes) {
             const noteId = `${note.id}-${note.start.toFixed(6)}`;
 
@@ -176,7 +231,28 @@ class PianoVisualization {
             if (this.noteBars.some(bar => bar.noteId === noteId)) continue;
 
             // Create a new note bar
-            this.createEnhancedNoteBar(note, noteId);
+            const barElement = this.createNoteBarElement(note, noteId);
+            if (barElement) {
+                fragment.appendChild(barElement.element);
+                this.noteBars.push(barElement);
+                newBars++;
+            }
+        }
+
+        // Only update DOM if we have new bars
+        if (newBars > 0) {
+            this.noteBarContainer.appendChild(fragment);
+
+            // Now fade in the new bars after they're in the DOM
+            requestAnimationFrame(() => {
+                for (let i = this.noteBars.length - newBars; i < this.noteBars.length; i++) {
+                    const bar = this.noteBars[i];
+                    if (bar.element) {
+                        bar.element.style.transition = 'opacity 0.2s ease-out';
+                        bar.element.style.opacity = '0.7';  // Default opacity for note bars
+                    }
+                }
+            });
         }
     }
 
@@ -184,16 +260,20 @@ class PianoVisualization {
      * Create a visual note bar element
      * @param {Object} note The note to visualize
      * @param {string} noteId Unique ID for the note bar
+     * @return {Object|null} Object containing the element and note data or null
      */
-    createEnhancedNoteBar(note, noteId) {
+    createNoteBarElement(note, noteId) {
         const keyElement = this.pianoVisualizationContainer.querySelector(
             `.piano-key[data-note="${note.noteNumber}"]`
         );
-        if (!keyElement) return;
+        if (!keyElement) return null;
 
         // Create note bar element
         const noteBar = document.createElement('div');
         noteBar.className = 'note-bar';
+
+        // Set initial styles to prevent flickering
+        noteBar.style.opacity = '0';
         noteBar.style.transition = 'none';
 
         // Add styles based on note properties
@@ -204,13 +284,52 @@ class PianoVisualization {
         const isRightHand = note.staff === 1 || (note.staff === undefined && note.noteNumber >= 60);
         noteBar.classList.add(isRightHand ? 'right-hand' : 'left-hand');
 
-        // Add articulation classes
-        if (note.staccato) noteBar.classList.add('staccato');
-        if (note.accent) noteBar.classList.add('accent');
-        if (note.tenuto) noteBar.classList.add('tenuto');
-        if (note.fermata) noteBar.classList.add('fermata');
-        if (note.hasTie) noteBar.classList.add('tied');
-        if (note.isTiedFromPrevious) noteBar.classList.add('tied-continuation');
+        // Pre-calculate initial position to prevent flickering
+        const containerHeight = this.noteBarContainer.clientHeight;
+        const currentTime = this.scoreModel.currentPosition;
+        const timeToPixelRatio = containerHeight / this.noteBarLookAhead;
+        const keyRect = keyElement.getBoundingClientRect();
+        const noteBarContainerRect = this.noteBarContainer.getBoundingClientRect();
+        const keyPosition = {
+            left: keyRect.left - noteBarContainerRect.left + (keyRect.width / 2),
+            width: keyRect.width
+        };
+
+        // Calculate initial position based on timing
+        const noteStart = note.start;
+        const noteDuration = note.visualDuration || note.duration;
+        const noteHeight = Math.max(8, noteDuration * timeToPixelRatio);
+        let topPosition = 0;
+
+        if (noteStart > currentTime) {
+            // Upcoming note
+            const timeToStart = noteStart - currentTime;
+            topPosition = containerHeight - (timeToStart * timeToPixelRatio) - noteHeight;
+        } else {
+            // Currently playing note
+            const elapsedTime = currentTime - noteStart;
+            const remainingDuration = Math.max(0, noteDuration - elapsedTime);
+            topPosition = containerHeight - (remainingDuration * timeToPixelRatio);
+        }
+
+        // Apply initial positioning directly
+        noteBar.style.transform = `translate3d(${keyPosition.left - (keyPosition.width / 2)}px, ${topPosition}px, 0)`;
+        noteBar.style.width = `${keyPosition.width}px`;
+        noteBar.style.height = `${note.staccato ? noteHeight * 0.7 : noteHeight}px`;
+
+        // Add articulation classes with a more concise approach
+        const articulations = {
+            staccato: note.staccato,
+            accent: note.accent,
+            tenuto: note.tenuto,
+            fermata: note.fermata,
+            tied: note.hasTie,
+            'tied-continuation': note.isTiedFromPrevious
+        };
+
+        Object.entries(articulations).forEach(([className, condition]) => {
+            if (condition) noteBar.classList.add(className);
+        });
 
         // Add data attributes
         noteBar.dataset.noteId = noteId;
@@ -227,9 +346,7 @@ class PianoVisualization {
             (note.alter === 1 ? '#' : note.alter === -1 ? 'b' : '');
         noteBar.appendChild(noteNameElement);
 
-        // Add to container and track in array
-        this.noteBarContainer.appendChild(noteBar);
-        this.noteBars.push({ noteId, element: noteBar, note, keyElement });
+        return { noteId, element: noteBar, note, keyElement };
     }
 
     /**
@@ -293,10 +410,7 @@ class PianoVisualization {
         }
 
         // Apply staccato visual effect
-        let finalHeight = noteHeight;
-        if (note.staccato) {
-            finalHeight = noteHeight * 0.7;
-        }
+        let finalHeight = note.staccato ? noteHeight * 0.7 : noteHeight;
 
         return {
             display: 'block',
@@ -321,7 +435,6 @@ class PianoVisualization {
         const MIN_NOTE_HEIGHT = 8;
 
         // Cache container rect and key positions
-        const containerRect = this.noteBarContainer.getBoundingClientRect();
         const keyPositions = new Map();
 
         // Calculate all updates before applying to DOM
@@ -331,21 +444,19 @@ class PianoVisualization {
             containerHeight,
             timeToPixelRatio,
             minHeight: MIN_NOTE_HEIGHT,
-            containerRect,
             keyPositions
         };
 
+        // Process note bars
         for (const bar of this.noteBars) {
             if (!bar.element || !bar.keyElement) continue;
-
-            // Calculate position but don't update DOM yet
             const noteData = this.calculateNoteBarPosition(bar, params);
             if (noteData) {
                 updates.push({ element: bar.element, data: noteData });
             }
         }
 
-        // Apply all DOM updates in one batch for better performance
+        // Apply all DOM updates in one batch
         if (updates.length > 0) {
             requestAnimationFrame(() => {
                 for (const { element, data } of updates) {
@@ -371,41 +482,40 @@ class PianoVisualization {
      */
     cleanupInvisibleNoteBars(startTime) {
         const cleanupThreshold = startTime - 1.0;
-        const removeList = [];
+
+        // Use a single pass approach to clean up both note bars and chords
+        this.cleanupElements(this.noteBars, cleanupThreshold);
+        this.cleanupElements(this.fallingChords, cleanupThreshold);
+    }
+
+    /**
+     * Helper method to clean up any visualization elements
+     * @param {Array} elements Array of elements to clean
+     * @param {number} threshold Time threshold for cleanup
+     */
+    cleanupElements(elements, threshold) {
+        if (!elements || elements.length === 0) return;
 
         // Identify elements to remove
-        for (let i = 0; i < this.noteBars.length; i++) {
-            const { note, element } = this.noteBars[i];
-            const noteDuration = note.visualDuration || note.duration;
+        const removeList = [];
 
-            if (note.start + noteDuration < cleanupThreshold) {
+        for (let i = 0; i < elements.length; i++) {
+            const item = elements[i];
+            const itemStart = item.startTime || (item.note && item.note.start) || 0;
+            const itemDuration = item.duration ||
+                (item.note && (item.note.visualDuration || item.note.duration)) || 0;
+
+            if (itemStart + itemDuration < threshold) {
                 removeList.push(i);
-                if (element?.parentNode) {
-                    element.parentNode.removeChild(element);
+                if (item.element?.parentNode) {
+                    item.element.parentNode.removeChild(item.element);
                 }
             }
         }
 
         // Remove from array in reverse to maintain indices
         for (let i = removeList.length - 1; i >= 0; i--) {
-            this.noteBars.splice(removeList[i], 1);
-        }
-
-        // Clean up falling chords
-        const chordsToRemove = [];
-        for (let i = 0; i < this.fallingChords.length; i++) {
-            const { startTime, duration, element } = this.fallingChords[i];
-            if (startTime + duration < cleanupThreshold) {
-                chordsToRemove.push(i);
-                if (element?.parentNode) {
-                    element.parentNode.removeChild(element);
-                }
-            }
-        }
-
-        // Remove chords in reverse order
-        for (let i = chordsToRemove.length - 1; i >= 0; i--) {
-            this.fallingChords.splice(chordsToRemove[i], 1);
+            elements.splice(removeList[i], 1);
         }
     }
 
@@ -504,14 +614,42 @@ class PianoVisualization {
         const chordElement = document.createElement('div');
         chordElement.className = `falling-chord ${hand}-hand`;
 
+        // Set initial styles to prevent flickering at top-left corner
+        chordElement.style.opacity = '0';
+
+        // Pre-position based on hand
+        if (hand === 'left') {
+            chordElement.style.left = '15px';
+            chordElement.style.right = 'auto';
+        } else {
+            chordElement.style.right = '15px';
+            chordElement.style.left = 'auto';
+        }
+
+        // Calculate initial position
+        const containerHeight = this.noteBarContainer.clientHeight;
+        const currentTime = this.scoreModel.currentPosition;
+        const timeToPixelRatio = containerHeight / this.noteBarLookAhead;
+
         // Calculate duration based on the longest note in the chord
-        let maxDuration = 0;
-        notes.forEach(note => {
-            const noteDuration = note.visualDuration || note.duration;
-            if (noteDuration > maxDuration) {
-                maxDuration = noteDuration;
-            }
-        });
+        const maxDuration = Math.max(...notes.map(note => note.visualDuration || note.duration));
+
+        // Calculate height & position
+        const height = Math.max(30, maxDuration * timeToPixelRatio);
+        let topPosition;
+
+        if (startTime > currentTime) {
+            const timeToStart = startTime - currentTime;
+            topPosition = containerHeight - (timeToStart * timeToPixelRatio) - height;
+        } else {
+            const elapsedTime = currentTime - startTime;
+            const remainingDuration = Math.max(0, maxDuration - elapsedTime);
+            topPosition = containerHeight - (remainingDuration * timeToPixelRatio);
+        }
+
+        // Apply initial positioning
+        chordElement.style.transform = `translate3d(0, ${topPosition}px, 0)`;
+        chordElement.style.height = `${height}px`;
 
         // Add chord information
         const chordNameEl = document.createElement('div');
@@ -543,6 +681,11 @@ class PianoVisualization {
         // Add to the container and track in our array
         this.noteBarContainer.appendChild(chordElement);
         this.fallingChords.push(chordData);
+
+        // Fade in with a small delay to ensure positioning is applied first
+        requestAnimationFrame(() => {
+            chordElement.style.opacity = '0.95';
+        });
     }
 
     /**
@@ -567,47 +710,44 @@ class PianoVisualization {
         const slashIndex = quality.indexOf('/');
         const mainQuality = slashIndex > -1 ? quality.substring(0, slashIndex) : quality;
 
-        // Now match chord types in order of specificity (most specific first)
+        // Map of regex patterns to chord types for more maintainable matching
+        const chordPatterns = [
+            { pattern: /maj13/, type: 'maj13' },
+            { pattern: /13/, type: '13' },
+            { pattern: /maj11/, type: 'maj11' },
+            { pattern: /11/, type: '11' },
+            { pattern: /maj9/, type: 'maj9' },
+            { pattern: /9/, type: '9' },
+            { pattern: /maj7b5/, type: 'maj7b5' },
+            { pattern: /7#5|7\+5|7aug/, type: '7aug' },
+            { pattern: /7b5/, type: '7b5' },
+            { pattern: /maj7#5|maj7\+5/, type: 'maj7aug' },
+            { pattern: /maj7/, type: 'maj7' },
+            { pattern: /m7b5|min7b5|ø/, type: 'min7b5' },
+            { pattern: /m7|min7|-7/, type: 'min7' },
+            { pattern: /7sus4|7sus/, type: '7sus4' },
+            { pattern: /7/, type: '7' },
+            { pattern: /dim7|°7/, type: 'dim7' },
+            { pattern: /dim|°/, type: 'dim' },
+            { pattern: /aug\+|aug|augmented|\+/, type: 'aug' },
+            { pattern: /sus2/, type: 'sus2' },
+            { pattern: /sus4|sus/, type: 'sus4' },
+            { pattern: /min|m|-/, type: 'minor' },
+            { pattern: /maj|major|\^|△/, type: 'major' },
+            { pattern: /add9/, type: 'add9' },
+            { pattern: /add11/, type: 'add11' },
+            { pattern: /add13/, type: 'add13' },
+            { pattern: /add/, type: 'add' },
+            { pattern: /m6|min6|-6/, type: 'min6' },
+            { pattern: /6/, type: '6' }
+        ];
 
-        // Extended chords with alterations
-        if (/maj13/.test(mainQuality)) return 'maj13';
-        if (/13/.test(mainQuality)) return '13';
-        if (/maj11/.test(mainQuality)) return 'maj11';
-        if (/11/.test(mainQuality)) return '11';
-        if (/maj9/.test(mainQuality)) return 'maj9';
-        if (/9/.test(mainQuality)) return '9';
-
-        // Seventh chords
-        if (/maj7b5/.test(mainQuality)) return 'maj7b5';
-        if (/7#5|7\+5|7aug/.test(mainQuality)) return '7aug';
-        if (/7b5/.test(mainQuality)) return '7b5';
-        if (/maj7#5|maj7\+5/.test(mainQuality)) return 'maj7aug';
-        if (/maj7/.test(mainQuality)) return 'maj7';
-        if (/m7b5|min7b5|ø/.test(mainQuality)) return 'min7b5';
-        if (/m7|min7|-7/.test(mainQuality)) return 'min7';
-        if (/7sus4|7sus/.test(mainQuality)) return '7sus4';
-        if (/7/.test(mainQuality)) return '7';
-
-        // Triads with alterations
-        if (/dim7|°7/.test(mainQuality)) return 'dim7';
-        if (/dim|°/.test(mainQuality)) return 'dim';
-        if (/aug\+|aug|augmented|\+/.test(mainQuality)) return 'aug';
-        if (/sus2/.test(mainQuality)) return 'sus2';
-        if (/sus4|sus/.test(mainQuality)) return 'sus4';
-
-        // Basic triads
-        if (/min|m|-/.test(mainQuality)) return 'minor';
-        if (/maj|major|\^|△/.test(mainQuality)) return 'major';
-
-        // Added tone chords
-        if (/add9/.test(mainQuality)) return 'add9';
-        if (/add11/.test(mainQuality)) return 'add11';
-        if (/add13/.test(mainQuality)) return 'add13';
-        if (/add/.test(mainQuality)) return 'add';
-
-        // 6th chords
-        if (/m6|min6|-6/.test(mainQuality)) return 'min6';
-        if (/6/.test(mainQuality)) return '6';
+        // Find the first matching pattern
+        for (const { pattern, type } of chordPatterns) {
+            if (pattern.test(mainQuality)) {
+                return type;
+            }
+        }
 
         // If there's no explicit quality and it's just a root note
         if (mainQuality === '') return 'major';
@@ -622,10 +762,11 @@ class PianoVisualization {
      * @param {number} currentTime Current playback position
      */
     updateFallingChordPositions(containerHeight, currentTime) {
-        if (!this.fallingChords || this.fallingChords.length === 0) return;
+        if (!this.fallingChords?.length) return;
 
         // Calculate positions for chords
         const timeToPixelRatio = containerHeight / this.noteBarLookAhead;
+        const updates = [];
 
         this.fallingChords.forEach(chordData => {
             const element = chordData.element;
@@ -642,48 +783,63 @@ class PianoVisualization {
             const isPassed = chordEnd <= currentTime && chordEnd > currentTime - 0.5;
             const isVisible = isPlaying || isUpcoming || isPartiallyVisible || isPassed;
 
-            element.style.display = isVisible ? 'block' : 'none';
-
-            if (isVisible) {
-                // Position logic similar to note bars
-                let topPosition = 0;
-                let height = Math.max(30, chordDuration * timeToPixelRatio);
-                let opacity = 1;
-
-                if (isPlaying) {
-                    const elapsedTime = currentTime - chordStart;
-                    const remainingDuration = Math.max(0, chordDuration - elapsedTime);
-                    const remainingHeight = remainingDuration * timeToPixelRatio;
-                    topPosition = containerHeight - remainingHeight;
-                } else if (isUpcoming) {
-                    const timeToStart = chordStart - currentTime;
-                    const distanceFromBottom = timeToStart * timeToPixelRatio;
-                    topPosition = containerHeight - distanceFromBottom - height;
-                } else if (isPartiallyVisible) {
-                    const elapsedTime = currentTime - chordStart;
-                    const remainingDuration = Math.max(0, chordDuration - elapsedTime);
-                    const remainingHeight = remainingDuration * timeToPixelRatio;
-                    topPosition = containerHeight - remainingHeight;
-                } else if (isPassed) {
-                    const timeSinceEnd = currentTime - chordEnd;
-                    opacity = Math.max(0, 0.5 - timeSinceEnd);
-                    topPosition = containerHeight;
-                }
-
-                // Use translate3d for hardware acceleration like note bars
-                element.style.transform = `translate3d(0, ${topPosition}px, 0)`;
-                element.style.height = `${height}px`;
-                element.style.opacity = opacity;
-
-                // Mark if currently playing
-                element.classList.toggle('playing', isPlaying);
-                // Mark the text as well
-                const chordNameEl = element.querySelector('.chord-name');
-                if (chordNameEl) {
-                    chordNameEl.classList.toggle('playing', isPlaying);
-                }
+            if (!isVisible) {
+                updates.push({ element, display: 'none' });
+                return;
             }
+
+            // Position logic similar to note bars
+            let topPosition = 0;
+            let height = Math.max(30, chordDuration * timeToPixelRatio);
+            let opacity = 0.95;
+
+            if (isPlaying) {
+                const elapsedTime = currentTime - chordStart;
+                const remainingDuration = Math.max(0, chordDuration - elapsedTime);
+                topPosition = containerHeight - (remainingDuration * timeToPixelRatio);
+            } else if (isUpcoming) {
+                const timeToStart = chordStart - currentTime;
+                topPosition = containerHeight - (timeToStart * timeToPixelRatio) - height;
+            } else if (isPartiallyVisible) {
+                const elapsedTime = currentTime - chordStart;
+                const remainingDuration = Math.max(0, chordDuration - elapsedTime);
+                topPosition = containerHeight - (remainingDuration * timeToPixelRatio);
+            } else if (isPassed) {
+                opacity = Math.max(0, 0.5 - (currentTime - chordEnd));
+                topPosition = containerHeight;
+            }
+
+            updates.push({
+                element,
+                display: 'block',
+                transform: `translate3d(0, ${topPosition}px, 0)`,
+                height: `${height}px`,
+                opacity,
+                isPlaying
+            });
         });
+
+        // Batch DOM updates for better performance
+        if (updates.length > 0) {
+            requestAnimationFrame(() => {
+                for (const update of updates) {
+                    update.element.style.display = update.display;
+
+                    if (update.display === 'block') {
+                        update.element.style.transform = update.transform;
+                        update.element.style.height = update.height;
+                        update.element.style.opacity = update.opacity;
+                        update.element.classList.toggle('playing', update.isPlaying);
+
+                        // Update chord name element
+                        const chordNameEl = update.element.querySelector('.chord-name');
+                        if (chordNameEl) {
+                            chordNameEl.classList.toggle('playing', update.isPlaying);
+                        }
+                    }
+                }
+            });
+        }
     }
 
     /**

@@ -1,6 +1,6 @@
 /* Piano Analyzer Mode Styles */
 
-/* Piano analysis panel in the music analyzer */
+/* ===== ANALYZER PANEL CONTROLS ===== */
 .piano-analysis {
     padding: 15px 0;
     display: flex;
@@ -27,17 +27,13 @@
     transition: all 0.2s ease;
 }
 
-.open-musicxml:hover {
-    background-color: #b3ffed;
-    transform: translateY(-2px);
-}
-
 .piano-status {
     font-size: 14px;
     color: #ccc;
     margin-top: 5px;
 }
 
+/* ===== PLAYBACK CONTROLS ===== */
 .piano-playback-controls {
     display: flex;
     gap: 10px;
@@ -54,7 +50,7 @@
     transition: all 0.2s ease;
 }
 
-.piano-play-pause:hover {
+.piano-play-pause.playing {
     background-color: #555;
 }
 
@@ -69,14 +65,13 @@
     min-width: 60px;
 }
 
-/* Piano Visualization Container - now covers the full screen */
+/* ===== VISUALIZATION CONTAINER ===== */
 .piano-visualization-container {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    /* Slightly transparent background */
     z-index: 999;
     display: flex;
     flex-direction: column;
@@ -85,9 +80,27 @@
     /* Hidden by default */
 }
 
-/* Remove piano-visualization-header styles as it's removed from HTML */
+/* Close button */
+.piano-close-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background-color: rgba(0, 0, 0, 0.5);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 20;
+    transition: all 0.2s ease;
+}
 
-/* Rearrange layout - keyboard at bottom, notation container above, falling notes in between */
+/* ===== PIANO KEYBOARD ===== */
 .piano-keyboard-container {
     position: absolute;
     bottom: 0;
@@ -96,119 +109,24 @@
     height: 120px;
     border-top: 1px solid #333;
     background-color: transparent;
-    /* Changed from #222 to transparent */
     overflow-x: auto;
-    /* Center the piano keyboard */
     display: flex;
     justify-content: center;
     z-index: 10;
-    /* Above the note bars */
 }
 
 .piano-keyboard {
     width: auto;
-    /* Changed from 100% to auto */
     height: 100%;
-    /* Full height */
     overflow-x: auto;
-    /* Allow horizontal scrolling */
     background-color: transparent;
-    /* Changed from #222 to transparent */
     display: flex;
     flex-direction: row;
-    /* Horizontal layout */
     flex-shrink: 0;
-    /* Center indicators */
     position: relative;
     min-width: min-content;
-    /* Ensures keyboard is at least as wide as its content */
 }
 
-/* Note bar container now covers the whole viewport - make it completely transparent */
-.note-bar-container {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 120px;
-    /* Leave space for keyboard at bottom */
-    pointer-events: none;
-    /* Allow clicks to pass through to piano keys */
-    overflow: hidden;
-    background-color: transparent;
-    /* Completely transparent */
-}
-
-/* Add animation pause class */
-.note-bar-container.paused .note-bar {
-    animation-play-state: paused !important;
-}
-
-/* Updated notation container for scrolling view */
-.notation-container {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: auto;
-    overflow-x: auto;
-    overflow-y: hidden;
-    background-color: transparent;
-    padding: 10px;
-    cursor: pointer;
-    z-index: 10;
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    /* Changed from center to allow horizontal scrolling */
-    padding-bottom: 40px;
-    -webkit-overflow-scrolling: touch;
-    /* Smooth scrolling on iOS */
-}
-
-/* Update notation SVG container to work with scrolling */
-.notation-svg-container {
-    width: 100%;
-    min-width: 100%;
-    height: 100%;
-    position: relative;
-    display: flex;
-    justify-content: flex-start;
-    /* Changed from center to allow horizontal scrolling */
-    align-items: center;
-    padding: 5px;
-    background-color: transparent;
-    overflow: visible;
-}
-
-/* Add a fade effect to indicate scrollable content */
-.notation-container::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    right: 0;
-    height: 100%;
-    width: 30px;
-    background: linear-gradient(to right, transparent, rgba(0, 0, 0, 0.5));
-    pointer-events: none;
-    z-index: 2;
-}
-
-.notation-container::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    height: 100%;
-    width: 30px;
-    background: linear-gradient(to left, transparent, rgba(0, 0, 0, 0.5));
-    pointer-events: none;
-    z-index: 2;
-}
-
-/* Remove notation-instructions styles as it's removed from HTML */
-
-/* Piano keyboard styling */
 .piano-key {
     position: relative;
     border-right: 1px solid #444;
@@ -219,14 +137,12 @@
     width: 24px;
     height: 100%;
     background-color: rgba(240, 240, 240, 0.9);
-    /* Slightly transparent white keys */
 }
 
 .black-key {
     width: 16px;
     height: 60%;
     background-color: rgba(34, 34, 34, 0.9);
-    /* Slightly transparent black keys */
     z-index: 2;
     margin-left: -8px;
     margin-right: -8px;
@@ -251,18 +167,141 @@
     background-color: #00ccaa;
 }
 
-/* Notation SVG styling - fix height issues */
+/* ===== NOTE BAR CONTAINER ===== */
+.note-bar-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 120px;
+    /* Leave space for keyboard at bottom */
+    pointer-events: none;
+    overflow: hidden;
+    background-color: transparent;
+}
+
+/* Vertical grid lines */
+.note-bar-container::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 100% 100px;
+    pointer-events: none;
+}
+
+/* Note bars paused state */
+.note-bar-container.paused .note-bar,
+.note-bar-container.paused .falling-chord {
+    animation-play-state: paused !important;
+}
+
+/* ===== NOTE BARS ===== */
+.note-bar {
+    position: absolute;
+    background-color: var(--accent-color);
+    opacity: 0.7;
+    border-radius: 3px 3px 0 0;
+    box-shadow: 0 0 5px rgba(0, 255, 200, 0.4);
+    transform-origin: top center;
+    transition: transform 0.2s ease-out, opacity 0.3s ease-out, height 0.2s ease-out;
+    will-change: transform, opacity, height;
+    backface-visibility: hidden;
+    transform: translate3d(0, 0, 0);
+    border: 1px solid rgba(0, 0, 0, 0.4);
+    box-sizing: border-box;
+    /* Prevent text wrapping that might cause layout shifts */
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+/* Note name inside note bar */
+.note-bar .note-name {
+    position: absolute;
+    color: rgb(0, 0, 0);
+    font-size: 18px;
+    font-weight: 900;
+    width: 100%;
+    text-align: center;
+    top: 5px;
+    pointer-events: none;
+    user-select: none;
+    text-shadow:
+        0 0 3px rgba(255, 255, 255, 1),
+        0 0 5px rgba(255, 255, 255, 1),
+        0 0 7px rgba(255, 255, 255, 0.8);
+}
+
+/* Note bar that's currently playing */
+.note-bar.playing {
+    opacity: 1;
+    box-shadow: 0 0 10px rgba(0, 255, 200, 0.7);
+    border: 1px solid rgba(0, 0, 0, 0.6);
+}
+
+/* Different colors for different hand parts in piano music */
+.note-bar.right-hand {
+    background-color: var(--accent-color);
+    border-color: rgba(0, 50, 50, 0.5);
+}
+
+.note-bar.left-hand {
+    background-color: #ff5588;
+    border-color: rgba(50, 0, 20, 0.5);
+}
+
+.note-bar.black-note.left-hand {
+    background-color: #ff3366;
+    border-color: rgba(50, 0, 20, 0.6);
+}
+
+/* ===== NOTATION CONTAINER ===== */
+.notation-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: auto;
+    overflow-x: auto;
+    overflow-y: hidden;
+    background-color: transparent;
+    padding: 10px;
+    cursor: default;
+    /* Changed from pointer to default */
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding-bottom: 40px;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Cursor states - removing pointer styling */
+.notation-container.navigation-mode {
+    cursor: default;
+    /* Changed from pointer to default */
+}
+
+.notation-container:not(.navigation-mode) {
+    cursor: default;
+    /* Changed from pointer to default */
+}
+
+/* ===== NOTATION SVG ===== */
 .notation-svg-container {
     width: 100%;
+    min-width: 100%;
     height: 100%;
-    /* Increased from 180px to better fit the staves */
     position: relative;
     display: flex;
-    justify-content: center;
+    justify-content: flex-start;
     align-items: center;
     padding: 5px;
     background-color: transparent;
-
+    overflow: visible;
 }
 
 /* Ensure SVG scales properly */
@@ -272,85 +311,59 @@
     display: block;
 }
 
-/* Ensure SVG elements respect container dimensions */
+/* VexFlow element styling */
 .notation-svg-container .vf-stave {
-    max-width: 100%;
+    stroke: rgba(255, 255, 255, 0.666);
+    stroke-width: 1.2px;
+    opacity: 0.95;
 }
 
-/* Make VexFlow elements respect the SVG boundaries */
-.notation-svg-container .vf-stave,
-.notation-svg-container .vf-note,
-.notation-svg-container .vf-stem,
-.notation-svg-container .vf-stavenote {
-    vector-effect: non-scaling-stroke;
+.notation-svg-container .vf-clef {
+    fill: rgba(191, 255, 0, 0.85);
+    stroke: rgba(255, 255, 255, 0.3);
 }
 
-/* Remove all position indicator styles */
-/* 
-.notation-position-indicator {
-    position: absolute;
-    top: 0;
-    height: 100%;
-    width: 2px;
-    background-color: #FF5722;
-    z-index: 11;
-    pointer-events: none;
-    box-shadow: 0 0 4px rgba(255, 87, 34, 0.7);
+.notation-svg-container .vf-timesignature {
+    fill: rgba(255, 255, 255, 0.7);
 }
 
-.notation-position-indicator::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    width: 10px;
-    height: 10px;
-    background-color: #FF5722;
-    border-radius: 50%;
-    box-shadow: 0 0 5px rgba(255, 87, 34, 0.9);
+.notation-svg-container .vf-bar,
+.notation-svg-container .vf-bar-line {
+    stroke: rgba(255, 255, 255, 0.9);
+    stroke-width: 1.5px;
 }
 
-@keyframes position-pulse {
-    0% {
-        box-shadow: 0 0 3px rgba(255, 87, 34, 0.7);
-    }
-
-    50% {
-        box-shadow: 0 0 8px rgba(255, 87, 34, 0.9);
-    }
-
-    100% {
-        box-shadow: 0 0 3px rgba(255, 87, 34, 0.7);
-    }
+.notation-svg-container .vf-note .vf-notehead {
+    fill: rgba(255, 255, 255, 0.9);
+    stroke: rgba(0, 0, 0, 0.8);
+    stroke-width: 1.5px;
 }
 
-.piano-visualization-container:not(.paused) .notation-position-indicator::after {
-    animation: position-pulse 2s infinite;
-}
-*/
-
-/* Remove navigation mode position indicator styles */
-/*
-.notation-container.navigation-mode .notation-position-indicator {
-    background-color: rgba(0, 150, 215, 0.8);
-    box-shadow: 0 0 8px rgba(0, 150, 215, 0.6);
+.notation-svg-container .vf-note .vf-stem {
+    stroke: rgba(255, 255, 255, 0.9);
+    stroke-width: 1.5px;
 }
 
-.notation-container.navigation-mode .notation-position-indicator::after {
-    background-color: rgba(0, 150, 215, 0.8);
-    box-shadow: 0 0 5px rgba(0, 150, 215, 0.9);
+.notation-svg-container .vf-note .vf-flag {
+    fill: rgba(255, 255, 255, 0.9);
+    stroke: rgba(0, 0, 0, 0.5);
 }
-*/
 
-/* Improved notation position indicator with smoother animation */
+.notation-svg-container .vf-accidental {
+    fill: rgba(255, 255, 255, 0.95);
+    stroke: rgba(0, 0, 0, 0.2);
+    font-weight: bold;
+}
 
-/* Add a highlight at the top of the position indicator for better visibility */
+.notation-svg-container .vf-articulation {
+    fill: rgba(255, 255, 255, 0.95);
+}
 
-/* Add a pulse animation to make the indicator more noticeable */
-
-/* Apply the pulse animation when playing */
-
-/* Info panel styling */
+/* ===== INFO PANEL ===== */
+/* Hiding the info panel completely */
 .notation-info-panel {
+    display: none;
+    /* Add this to hide the panel */
     background-color: rgba(0, 0, 0, 0.6);
     padding: 8px 12px;
     border-radius: 4px;
@@ -358,7 +371,6 @@
     font-size: 12px;
     line-height: 1.4;
     position: fixed;
-    /* Change from absolute to fixed */
     top: 10px;
     right: 15px;
     z-index: 20;
@@ -369,28 +381,39 @@
 
 .position-info,
 .speed-info,
-.playback-status {
+.playback-status,
+.notation-info-panel .measure-info,
+.notation-info-panel .view-info {
     margin-bottom: 4px;
+}
+
+.notation-info-panel .measure-info {
+    color: var(--accent-color);
+    font-weight: bold;
 }
 
 .playback-status {
     color: var(--accent-color);
 }
 
-/* Simple notation fallback styling */
+.nav-info {
+    margin-top: 4px;
+    font-style: italic;
+    color: rgba(0, 150, 215, 0.9);
+    font-size: 10px;
+}
+
+/* ===== SIMPLE NOTATION FALLBACK ===== */
 .simple-notation {
     background-color: rgba(40, 40, 50, 0.2);
-    /* Very transparent */
     padding: 15px;
     border-radius: 4px;
     max-height: 300px;
     overflow-y: auto;
     font-family: 'Courier New', monospace;
     color: #fff;
-    /* Brighter text for readability */
     margin-top: 10px;
     border: 1px solid rgba(80, 80, 100, 0.1);
-    /* Nearly invisible border */
 }
 
 .simple-notation h3 {
@@ -444,514 +467,7 @@
     margin-bottom: 10px;
 }
 
-/* Responsive adjustments */
-@media (max-height: 700px) {
-    .notation-container {
-        height: 200px;
-        /* Reduced for smaller screens */
-    }
-
-    .notation-svg-container {
-        height: 180px;
-    }
-}
-
-@media (max-height: 500px) {
-    .notation-container {
-        height: 180px;
-        /* Even smaller for very small screens */
-    }
-
-    .notation-svg-container {
-        height: 160px;
-    }
-}
-
-@media (max-width: 600px) {
-    .piano-keyboard-container {
-        height: 80px;
-    }
-
-    .note-bar-container {
-        bottom: 80px;
-    }
-
-    .white-key {
-        width: 20px;
-    }
-
-    .black-key {
-        width: 14px;
-        margin-left: -7px;
-        margin-right: -7px;
-    }
-}
-
-/* Add new responsive styles to ensure proper layout on different screen sizes */
-@media (max-width: 768px) {
-    .piano-visualization-container {
-        height: 350px;
-    }
-
-    .piano-roll-container {
-        height: 55%;
-    }
-
-    .notation-container {
-        height: 45%;
-    }
-
-    /* Ensure keyboard remains centered on mobile */
-    .piano-keyboard {
-        margin: 0 auto;
-    }
-}
-
-/* Adjust for very small screens */
-@media (max-width: 480px) {
-    .piano-keyboard {
-        width: 40px;
-    }
-
-    .piano-roll {
-        width: calc(100% - 40px);
-    }
-}
-
-/* Tooltip hints for interactive controls */
-.piano-roll:after,
-.notation-container:after {
-    content: "";
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    width: 16px;
-    height: 16px;
-    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" opacity="0.5"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>');
-    background-repeat: no-repeat;
-    background-size: contain;
-    opacity: 0.5;
-    transition: opacity 0.3s ease;
-}
-
-.piano-roll:hover:after,
-.notation-container:hover:after {
-    opacity: 0.8;
-}
-
-/* Adjust hover hint for notation container without the header */
-.notation-container::after {
-    content: "Press ESC to close";
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    font-size: 10px;
-    /* color: rgba(255, 255, 255, 0.5);
-    background-color: rgba(0, 0, 0, 0.5); */
-    padding: 3px 6px;
-    border-radius: 3px;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    pointer-events: none;
-}
-
-.notation-container:hover::after {
-    opacity: 1;
-}
-
-/* Remove the click to play/pause tooltip */
-.notation-container::before {
-    display: none;
-    /* Hide the tooltip completely */
-}
-
-/* Disco mode styles */
-body.disco-mode .piano-visualization-container {
-    border-top: 1px solid rgba(255, 255, 255, 0.2);
-    animation: panel-pulse 5.8s ease-in-out infinite;
-}
-
-/* body.disco-mode .piano-visualization-header {
-    background-color: rgba(25, 25, 35, 0.8);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-} */
-
-body.disco-mode .piano-keyboard-container {
-    background-color: transparent;
-    /* Changed from rgba to transparent */
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    /* Keep just the border */
-}
-
-/* body.disco-mode .notation-container {
-    background-color: rgba(20, 20, 30, 0.8);
-} */
-
-/* Pulsing animation for active keys in disco mode */
-body.disco-mode .piano-key.active {
-    animation: piano-key-pulse 1s infinite alternate;
-}
-
-@keyframes piano-key-pulse {
-    0% {
-        box-shadow: 0 0 5px var(--accent-color);
-    }
-
-    100% {
-        box-shadow: 0 0 15px var(--accent-color), 0 0 5px #fff;
-    }
-}
-
-/* New styles for falling note bars */
-.note-bar {
-    position: absolute;
-    background-color: var(--accent-color);
-    opacity: 0.7;
-    border-radius: 3px 3px 0 0;
-    box-shadow: 0 0 5px rgba(0, 255, 200, 0.4);
-    transform-origin: top center;
-    transition: opacity 0.2s ease-out;
-    will-change: transform, opacity, height;
-    backface-visibility: hidden;
-    transform: translate3d(0, 0, 0);
-    /* Add borders to distinguish between adjacent notes */
-    border: 1px solid rgba(0, 0, 0, 0.4);
-    box-sizing: border-box;
-    /* Updated from bottom border radius to top */
-}
-
-/* Note name inside note bar */
-.note-bar .note-name {
-    position: absolute;
-    color: rgb(0, 0, 0);
-    font-size: 18px;
-    /* Increased from 15px */
-    font-weight: 900;
-    /* Extra bold */
-    width: 100%;
-    text-align: center;
-    top: 5px;
-    pointer-events: none;
-    user-select: none;
-    /* Improved contrast with stronger outline */
-    text-shadow:
-        0 0 3px rgba(255, 255, 255, 1),
-        0 0 5px rgba(255, 255, 255, 1),
-        0 0 7px rgba(255, 255, 255, 0.8);
-
-}
-
-/* Note bar that's currently playing */
-.note-bar.playing {
-    opacity: 1;
-    box-shadow: 0 0 10px rgba(0, 255, 200, 0.7);
-    /* Stronger border when playing */
-    border: 1px solid rgba(0, 0, 0, 0.6);
-}
-
-/* Different colors for different hand parts in piano music */
-.note-bar.right-hand {
-    background-color: var(--accent-color);
-    /* Add specific border color that works with teal/cyan */
-    border-color: rgba(0, 50, 50, 0.5);
-}
-
-.note-bar.left-hand {
-    background-color: #ff5588;
-    /* Add specific border color that works with pink/red */
-    border-color: rgba(50, 0, 20, 0.5);
-}
-
-.note-bar.black-note.left-hand {
-    background-color: #ff3366;
-    /* Darker border for black notes of left hand */
-    border-color: rgba(50, 0, 20, 0.6);
-}
-
-/* Add falling animation effect */
-@keyframes note-fall {
-    from {
-        transform: translateY(-100%);
-    }
-
-    to {
-        transform: translateY(0);
-    }
-}
-
-/* Disco mode styles for note bars
-body.disco-mode .note-bar {
-    animation: disco-note-color 5.8s steps(1, end) infinite;
-}
-
-body.disco-mode .note-bar.playing {
-    animation: disco-note-pulse 1s infinite alternate;
-} */
-
-@keyframes disco-note-color {
-
-    0%,
-    100% {
-        background-color: rgba(255, 0, 110, 0.7);
-    }
-
-    20% {
-        background-color: rgba(0, 229, 255, 0.7);
-    }
-
-    40% {
-        background-color: rgba(174, 0, 255, 0.7);
-    }
-
-    60% {
-        background-color: rgba(255, 221, 0, 0.7);
-    }
-
-    80% {
-        background-color: rgba(0, 255, 136, 0.7);
-    }
-}
-
-@keyframes disco-note-pulse {
-    0% {
-        box-shadow: 0 0 5px var(--accent-color);
-        opacity: 0.8;
-    }
-
-    100% {
-        box-shadow: 0 0 15px var(--accent-color), 0 0 5px #fff;
-        opacity: 1;
-    }
-}
-
-/* Update vertical grid lines to be subtler */
-.note-bar-container::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-    /* More subtle lines */
-    background-size: 100% 100px;
-    pointer-events: none;
-}
-
-/* Add close button since we now take up the entire screen */
-.piano-close-btn {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    background-color: rgba(0, 0, 0, 0.5);
-    color: white;
-    border: none;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    font-size: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    z-index: 20;
-    transition: all 0.2s ease;
-}
-
-.piano-close-btn:hover {
-    background-color: rgba(255, 0, 0, 0.5);
-    transform: scale(1.1);
-}
-
-/* Ensure SVG scales properly */
-.notation-svg-container svg {
-    width: 100%;
-    height: 100%;
-    display: block;
-}
-
-/* Better visual styles for notation elements */
-.notation-svg-container .vf-stave {
-    stroke-width: 1px;
-    opacity: 0.95;
-}
-
-/* Enhance measure lines and bar lines */
-.notation-svg-container .vf-bar,
-.notation-svg-container .vf-bar-line {
-    stroke-width: 1px;
-}
-
-/* Enhance note display */
-.notation-svg-container .vf-note .vf-notehead,
-.notation-svg-container .vf-note .vf-stem {
-    stroke-width: 1.2px;
-}
-
-/* Enhance highlighted notes */
-.notation-svg-container .vf-note[style*="rgb(0, 150, 215)"] .vf-notehead,
-.notation-svg-container .vf-note[style*="rgb(0, 150, 215)"] .vf-stem {
-    stroke-width: 1.5px;
-}
-
-/* Improved stave styling */
-.notation-svg-container .vf-stave {
-    stroke: rgba(255, 255, 255, 0.666);
-    stroke-width: 1.2px;
-}
-
-/* Enhance clefs and other notation elements */
-.notation-svg-container .vf-clef {
-    fill: rgba(191, 255, 0, 0.85);
-    stroke: rgba(255, 255, 255, 0.3);
-
-}
-
-.notation-svg-container .vf-timesignature {
-    fill: rgba(255, 255, 255, 0.7);
-}
-
-/* Make bar lines more visible */
-.notation-svg-container .vf-bar,
-.notation-svg-container .vf-bar-line {
-    stroke: rgba(255, 255, 255, 0.9);
-    stroke-width: 1.5px;
-}
-
-/* Enhance note styling */
-.notation-svg-container .vf-note .vf-notehead {
-    fill: rgba(255, 255, 255, 0.9);
-    stroke: rgba(0, 0, 0, 0.8);
-    stroke-width: 1.5px;
-}
-
-.notation-svg-container .vf-note .vf-stem {
-    stroke: rgba(255, 255, 255, 0.9);
-    stroke-width: 1.5px;
-}
-
-.notation-svg-container .vf-note .vf-flag {
-    fill: rgba(255, 255, 255, 0.9);
-    stroke: rgba(0, 0, 0, 0.5);
-}
-
-/* Enhance accidentals */
-.notation-svg-container .vf-accidental {
-    fill: rgba(255, 255, 255, 0.95);
-    stroke: rgba(0, 0, 0, 0.2);
-    font-weight: bold;
-}
-
-/* Style articulations */
-.notation-svg-container .vf-articulation {
-    fill: rgba(255, 255, 255, 0.95);
-}
-
-/* Style playhead indicator */
-
-/* Add a highlight at the top of the position indicator for better visibility */
-
-/* Add a pulse animation to make the indicator more noticeable */
-
-/* Apply the pulse animation when playing */
-
-/* Enhanced info panel styling */
-.notation-info-panel {
-    background-color: rgba(0, 0, 0, 0.6);
-    padding: 8px 12px;
-    border-radius: 4px;
-    color: #fff;
-    font-size: 12px;
-    line-height: 1.4;
-    position: absolute;
-    top: 5px;
-    right: 5px;
-    z-index: 20;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(2px);
-}
-
-.notation-info-panel .position-info,
-.notation-info-panel .measure-info,
-.notation-info-panel .speed-info,
-.notation-info-panel .playback-status,
-.notation-info-panel .view-info {
-    margin-bottom: 4px;
-}
-
-.notation-info-panel .measure-info {
-    color: var(--accent-color);
-    font-weight: bold;
-}
-
-.notation-info-panel .playback-status {
-    color: var(--accent-color);
-}
-
-/* Interactive area helpers for notation */
-.notation-container::before {
-    display: none;
-    /* Hide the tooltip completely */
-}
-
-/* Notation page navigation controls */
-
-/* Remove the navigation-page-controls class styles as they're not used anymore */
-
-/* Updated page display that's now standalone */
-.page-display {
-    display: none;
-}
-
-/* Simple notation page info styling */
-.simple-page-info {
-    margin: 5px 0;
-    text-align: center;
-    font-size: 12px;
-    color: rgba(255, 255, 255, 0.7);
-}
-
-/* Navigation mode indicator */
-.navigation-mode-indicator {
-    display: none;
-}
-
-/* Different cursor for navigation mode */
-.notation-container.navigation-mode {
-    cursor: pointer;
-}
-
-/* Default cursor when not in navigation mode */
-.notation-container:not(.navigation-mode) {
-    cursor: pointer;
-}
-
-/* Additional info line in the info panel for navigation mode status */
-.nav-info {
-    margin-top: 4px;
-    font-style: italic;
-    color: rgba(0, 150, 215, 0.9);
-    font-size: 10px;
-}
-
-/* Pulsing animation for the navigation mode indicator */
-@keyframes pulse {
-    0% {
-        box-shadow: 0 0 0 0 rgba(0, 150, 215, 0.4);
-    }
-
-    70% {
-        box-shadow: 0 0 0 10px rgba(0, 150, 215, 0);
-    }
-
-    100% {
-        box-shadow: 0 0 0 0 rgba(0, 150, 215, 0);
-    }
-}
-
-/* Optional: Change the look of the position indicator in navigation mode */
-
-/* Falling chord visualization */
+/* ===== FALLING CHORD VISUALIZATION ===== */
 .falling-chord {
     position: absolute;
     width: 120px;
@@ -965,16 +481,18 @@ body.disco-mode .note-bar.playing {
     padding: 8px;
     box-sizing: border-box;
     opacity: 0.95;
-    transition: opacity 0.2s ease-out;
+    transition: transform 0.2s ease-out, opacity 0.3s ease-out, height 0.2s ease-out;
     will-change: transform, opacity, height;
     backface-visibility: hidden;
     transform: translate3d(0, 0, 0);
     z-index: 5;
     text-align: center;
-    /* Transparent background with thin colored borders */
     background-color: rgba(0, 0, 0, 0.4);
     backdrop-filter: blur(3px);
     top: 0;
+    /* Prevent text wrapping that might cause layout shifts */
+    overflow: hidden;
+    white-space: nowrap;
 }
 
 /* Left hand chords on left side */
@@ -991,7 +509,7 @@ body.disco-mode .note-bar.playing {
     box-shadow: 0 0 8px rgba(0, 220, 180, 0.3);
 }
 
-/* Chord name styling - bigger and more prominent */
+/* Chord name styling */
 .falling-chord .chord-name {
     font-size: 24px;
     font-weight: bold;
@@ -1000,8 +518,35 @@ body.disco-mode .note-bar.playing {
     letter-spacing: 0.5px;
 }
 
-/* Color coding for different chord types */
+/* Chord notes styling */
+.falling-chord .chord-notes {
+    font-size: 12px;
+    opacity: 0.9;
+    color: rgba(255, 255, 255, 0.9);
+}
 
+/* Playing state */
+.falling-chord.playing {
+    opacity: 1;
+    z-index: 6;
+}
+
+.falling-chord .chord-name.playing {
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.9);
+}
+
+/* Different styling for different hand playing states */
+.falling-chord.left-hand.playing {
+    border-color: #ff5588;
+    box-shadow: 0 0 12px rgba(255, 85, 136, 0.7);
+}
+
+.falling-chord.right-hand.playing {
+    border-color: var(--accent-color, #64ffda);
+    box-shadow: 0 0 12px rgba(0, 220, 180, 0.7);
+}
+
+/* ===== CHORD TYPE COLORS ===== */
 /* Major family - teal/cyan colors */
 .falling-chord .chord-name[data-chord-type="major"] {
     color: var(--accent-color, #64ffda);
@@ -1116,42 +661,102 @@ body.disco-mode .note-bar.playing {
     color: #cccccc;
 }
 
-/* Chord notes styling */
-.falling-chord .chord-notes {
-    font-size: 12px;
-    opacity: 0.9;
-    color: rgba(255, 255, 255, 0.9);
+/* ===== ANIMATIONS ===== */
+@keyframes piano-key-pulse {
+    0% {
+        box-shadow: 0 0 5px var(--accent-color);
+    }
+
+    100% {
+        box-shadow: 0 0 15px var(--accent-color), 0 0 5px #fff;
+    }
 }
 
-.falling-chord .chord-name.playing {
-    text-shadow: 0 0 10px rgba(255, 255, 255, 0.9);
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(0, 150, 215, 0.4);
+    }
+
+    70% {
+        box-shadow: 0 0 0 10px rgba(0, 150, 215, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(0, 150, 215, 0);
+    }
 }
 
-/* Playing state */
-.falling-chord.playing {
-    opacity: 1;
-    z-index: 6;
-
-
+/* ===== DISCO MODE ===== */
+body.disco-mode .piano-visualization-container {
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    animation: panel-pulse 5.8s ease-in-out infinite;
 }
 
-/* Different styling for different hand playing states */
-.falling-chord.left-hand.playing {
-    border-color: #ff5588;
-    box-shadow: 0 0 12px rgba(255, 85, 136, 0.7);
+body.disco-mode .piano-key.active {
+    animation: piano-key-pulse 1s infinite alternate;
 }
 
-.falling-chord.right-hand.playing {
-    border-color: var(--accent-color, #64ffda);
-    box-shadow: 0 0 12px rgba(0, 220, 180, 0.7);
+/* ===== MEDIA QUERIES ===== */
+@media (max-height: 700px) {
+    .notation-container {
+        height: 200px;
+    }
+
+    .notation-svg-container {
+        height: 180px;
+    }
 }
 
-/* Media queries for responsive design */
+@media (max-height: 500px) {
+    .notation-container {
+        height: 180px;
+    }
+
+    .notation-svg-container {
+        height: 160px;
+    }
+}
+
+@media (max-width: 768px) {
+    .piano-visualization-container {
+        height: 350px;
+    }
+
+    .piano-roll-container {
+        height: 55%;
+    }
+
+    .notation-container {
+        height: 45%;
+    }
+
+    .piano-keyboard {
+        margin: 0 auto;
+    }
+}
+
 @media (max-width: 600px) {
+    .piano-keyboard-container {
+        height: 80px;
+    }
+
+    .note-bar-container {
+        bottom: 80px;
+    }
+
+    .white-key {
+        width: 20px;
+    }
+
+    .black-key {
+        width: 14px;
+        margin-left: -7px;
+        margin-right: -7px;
+    }
+
     .falling-chord {
         width: 80px;
         min-height: 30px;
-        bottom: 80px;
     }
 
     .falling-chord .chord-name {
@@ -1163,13 +768,15 @@ body.disco-mode .note-bar.playing {
     }
 }
 
-/* Make sure paused state works for falling chords too */
-.note-bar-container.paused .falling-chord {
-    animation-play-state: paused !important;
-}
+@media (max-width: 480px) {
+    .piano-keyboard {
+        width: 40px;
+    }
 
-/* Responsive adjustments */
-@media (max-width: 600px) {
+    .piano-roll {
+        width: calc(100% - 40px);
+    }
+
     .falling-chord {
         width: 80px;
     }
