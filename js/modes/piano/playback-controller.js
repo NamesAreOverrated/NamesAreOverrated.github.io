@@ -4,7 +4,6 @@
  */
 class PlaybackController {
     constructor(scoreModel) {
-        // Store reference to the score model
         this.scoreModel = scoreModel;
 
         // UI elements
@@ -18,11 +17,11 @@ class PlaybackController {
         this._lastNotationUpdate = 0;
         this._toggleInProgress = false;
 
-        // Callbacks for visualization updates
+        // Callbacks
         this.onVisualizationUpdate = null;
         this.onNotationUpdate = null;
 
-        // Bind methods that need 'this'
+        // Bind methods
         this.togglePlayback = this.togglePlayback.bind(this);
         this.startAnimationLoop = this.startAnimationLoop.bind(this);
         this.updatePlayPauseButton = this.updatePlayPauseButton.bind(this);
@@ -36,18 +35,11 @@ class PlaybackController {
      */
     initialize(container, callbacks = {}) {
         this.container = container;
-
-        // Set callbacks
         this.onVisualizationUpdate = callbacks.onVisualizationUpdate || null;
         this.onNotationUpdate = callbacks.onNotationUpdate || null;
 
-        // Initialize UI controls
         this.initializeControls();
-
-        // Set up event listeners for the score model
         this.setupScoreModelListeners();
-
-        // Set up keyboard shortcuts
         this.setupKeyboardShortcuts();
     }
 
@@ -57,41 +49,35 @@ class PlaybackController {
     initializeControls() {
         if (!this.container) return;
 
-        // Play/pause button
+        // Setup play/pause button
         this.playPauseButton = this.container.querySelector('.piano-play-pause');
         if (this.playPauseButton) {
-            // Replace with a fresh clone to remove any old event listeners
+            // Replace with fresh clone to remove old event listeners
             const newButton = this.playPauseButton.cloneNode(true);
             this.playPauseButton.parentNode.replaceChild(newButton, this.playPauseButton);
             this.playPauseButton = newButton;
 
-            // Add event listener
             this.playPauseButton.addEventListener('click', this.togglePlayback);
-
-            // Set initial state
             this.updatePlayPauseButton();
         }
 
-        // Speed control
+        // Setup speed control
         this.speedControl = this.container.querySelector('.piano-speed');
         this.speedDisplay = this.container.querySelector('.speed-value');
 
         if (this.speedControl && this.speedDisplay) {
-            // Replace with a fresh clone to remove any old event listeners
+            // Replace with fresh clone
             const newControl = this.speedControl.cloneNode(true);
             this.speedControl.parentNode.replaceChild(newControl, this.speedControl);
             this.speedControl = newControl;
 
             // Configure range input
-            this.speedControl.min = "40";   // Minimum BPM
-            this.speedControl.max = "240";  // Maximum BPM
-            this.speedControl.step = "1";   // BPM increments by 1
+            this.speedControl.min = "40";
+            this.speedControl.max = "240";
+            this.speedControl.step = "1";
             this.speedControl.value = this.scoreModel.bpm;
 
-            // Add event listener
             this.speedControl.addEventListener('input', this.handleTempoChange);
-
-            // Set initial display
             this.updateTempoDisplay();
         }
     }
@@ -100,25 +86,10 @@ class PlaybackController {
      * Set up event listeners for the score model
      */
     setupScoreModelListeners() {
-        // Listen for play events
-        this.scoreModel.addEventListener('play', () => {
-            this.updatePlayPauseButton();
-        });
-
-        // Listen for pause events
-        this.scoreModel.addEventListener('pause', () => {
-            this.updatePlayPauseButton();
-        });
-
-        // Listen for stop events
-        this.scoreModel.addEventListener('stop', () => {
-            this.updatePlayPauseButton();
-        });
-
-        // Listen for tempo change events
-        this.scoreModel.addEventListener('tempochange', (data) => {
-            this.updateTempoDisplay();
-        });
+        this.scoreModel.addEventListener('play', () => this.updatePlayPauseButton());
+        this.scoreModel.addEventListener('pause', () => this.updatePlayPauseButton());
+        this.scoreModel.addEventListener('stop', () => this.updatePlayPauseButton());
+        this.scoreModel.addEventListener('tempochange', () => this.updateTempoDisplay());
     }
 
     /**
@@ -126,10 +97,9 @@ class PlaybackController {
      */
     setupKeyboardShortcuts() {
         document.addEventListener('keydown', (event) => {
-            // Only if no text input is focused
-            if (document.activeElement &&
-                (document.activeElement.tagName === 'INPUT' ||
-                    document.activeElement.tagName === 'TEXTAREA')) {
+            // Skip if text input is focused
+            if (document.activeElement?.tagName === 'INPUT' ||
+                document.activeElement?.tagName === 'TEXTAREA') {
                 return;
             }
 
@@ -159,11 +129,7 @@ class PlaybackController {
      */
     updatePlayPauseButton() {
         if (!this.playPauseButton) return;
-
-        // Update button text
         this.playPauseButton.textContent = this.scoreModel.isPlaying ? 'Pause' : 'Play';
-
-        // Update button appearance
         this.playPauseButton.classList.toggle('playing', this.scoreModel.isPlaying);
     }
 
@@ -182,11 +148,7 @@ class PlaybackController {
      */
     updateTempoDisplay() {
         if (!this.speedDisplay) return;
-
-        // Update tempo display
         this.speedDisplay.textContent = `${this.scoreModel.bpm} BPM`;
-
-        // Ensure slider matches current tempo
         if (this.speedControl) {
             this.speedControl.value = this.scoreModel.bpm;
         }
@@ -221,10 +183,7 @@ class PlaybackController {
      * Start the animation loop for visualization updates
      */
     startAnimationLoop() {
-        // Cancel any existing animation frame
-        if (this.animationFrameId) {
-            cancelAnimationFrame(this.animationFrameId);
-        }
+        this.stopAnimationLoop();
 
         const animate = (timestamp) => {
             if (!this.scoreModel.isPlaying) return;
@@ -234,9 +193,8 @@ class PlaybackController {
                 this.onVisualizationUpdate(timestamp);
             }
 
-            // Update notation less frequently (every 500ms)
-            if (!this._lastNotationUpdate ||
-                timestamp - this._lastNotationUpdate > 500) {
+            // Update notation less frequently
+            if (!this._lastNotationUpdate || timestamp - this._lastNotationUpdate > 500) {
                 if (typeof this.onNotationUpdate === 'function') {
                     this.onNotationUpdate(timestamp);
                 }
@@ -247,7 +205,6 @@ class PlaybackController {
             this.animationFrameId = requestAnimationFrame(animate);
         };
 
-        // Start the animation loop
         this.animationFrameId = requestAnimationFrame(animate);
     }
 
@@ -263,7 +220,7 @@ class PlaybackController {
 
     /**
      * Seek forward or backward relative to current position
-     * @param {number} seconds Seconds to seek (positive for forward, negative for backward)
+     * @param {number} seconds Seconds to seek
      */
     seek(seconds) {
         const newPosition = Math.max(0, this.scoreModel.currentPosition + seconds);
@@ -275,7 +232,6 @@ class PlaybackController {
      */
     showPlaybackControls() {
         if (!this.container) return;
-
         const playbackControls = this.container.querySelector('.piano-playback-controls');
         if (playbackControls) {
             playbackControls.style.display = 'flex';
@@ -286,11 +242,8 @@ class PlaybackController {
      * Clean up resources
      */
     cleanup() {
-        // Stop animation loop
         this.stopAnimationLoop();
-
-        // Stop any playback
-        if (this.scoreModel && this.scoreModel.isPlaying) {
+        if (this.scoreModel?.isPlaying) {
             this.scoreModel.pause();
         }
     }

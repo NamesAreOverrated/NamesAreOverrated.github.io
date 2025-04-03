@@ -9,23 +9,17 @@ class PianoVisualization {
 
         // UI containers
         this.pianoVisualizationContainer = container;
-        this.keyboardContainer = this.pianoVisualizationContainer.querySelector('.piano-keyboard');
-        this.noteBarContainer = this.pianoVisualizationContainer.querySelector('.note-bar-container');
+        this.keyboardContainer = container.querySelector('.piano-keyboard');
+        this.noteBarContainer = container.querySelector('.note-bar-container');
 
-        // Note bar visualization
+        // Visualization settings
         this.noteBars = [];
-        this.noteBarLookAhead = 4; // Seconds of notes to show ahead of playback
-
-        // Falling chord visualization
         this.fallingChords = [];
-        this.fallingChordLookAhead = 4; // Same as noteBarLookAhead
+        this.noteBarLookAhead = 4; // Seconds of notes to show ahead
 
-
+        // Generate keyboard and set up resize handler
         this.generatePianoKeyboard();
-
-        // Window resize handler
         this.setupResizeHandler();
-
     }
 
     /**
@@ -35,7 +29,6 @@ class PianoVisualization {
         window.addEventListener('resize', () => {
             if (this.pianoVisualizationContainer.style.display !== 'none') {
                 this.updateNoteBarsPosition();
-                // Notification that we need to redraw notation
                 if (typeof this.onResizeCallback === 'function') {
                     this.onResizeCallback();
                 }
@@ -47,7 +40,9 @@ class PianoVisualization {
      * Generate the piano keyboard with all keys
      */
     generatePianoKeyboard() {
-        const keyboard = this.pianoVisualizationContainer.querySelector('.piano-keyboard');
+        const keyboard = this.keyboardContainer;
+        if (!keyboard) return;
+
         keyboard.innerHTML = '';
 
         for (let i = 21; i <= 108; i++) {
@@ -56,6 +51,7 @@ class PianoVisualization {
             keyElement.className = `piano-key ${isBlackKey ? 'black-key' : 'white-key'}`;
             keyElement.dataset.note = i;
 
+            // Add octave labels on C keys
             if (!isBlackKey && i % 12 === 0) {
                 const octave = Math.floor(i / 12) - 1;
                 const label = document.createElement('div');
@@ -69,9 +65,19 @@ class PianoVisualization {
     }
 
     /**
+     * Show the visualization
+     */
+    show() {
+        this.pianoVisualizationContainer.style.display = 'block';
+        // Small delay to ensure DOM is ready before positioning
+        setTimeout(() => this.updateNoteBarsPosition(), 50);
+    }
+
+    /**
      * Close the visualization
      */
     close() {
+        // Stop animations
         if (this.noteBarContainer) {
             this.noteBars.forEach(bar => {
                 if (bar.element) {
@@ -79,33 +85,22 @@ class PianoVisualization {
                 }
             });
         }
-
-        if (this.pianoVisualizationContainer) {
-            this.pianoVisualizationContainer.style.display = 'none';
-        }
-    }
-
-    /**
-     * Show the visualization
-     */
-    show() {
-        this.pianoVisualizationContainer.style.display = 'block';
-        setTimeout(() => this.updateNoteBarsPosition(), 50);
+        this.pianoVisualizationContainer.style.display = 'none';
     }
 
     /**
      * Cleanup resources
      */
     cleanup() {
-        // Clear note bars
+        // Clear all visual elements
         if (this.noteBarContainer) {
             this.noteBarContainer.innerHTML = '';
             this.noteBars = [];
             this.fallingChords = [];
         }
 
-        // Remove visualization container if it exists
-        if (this.pianoVisualizationContainer && this.pianoVisualizationContainer.parentNode) {
+        // Remove container from DOM if it exists
+        if (this.pianoVisualizationContainer?.parentNode) {
             this.pianoVisualizationContainer.parentNode.removeChild(this.pianoVisualizationContainer);
             this.pianoVisualizationContainer = null;
         }
@@ -118,22 +113,22 @@ class PianoVisualization {
     highlightPianoKeys(notes) {
         if (!this.pianoVisualizationContainer) return;
 
-        // First remove all active highlights
+        // Remove all active highlights first
         const keys = this.pianoVisualizationContainer.querySelectorAll('.piano-key');
         keys.forEach(key => key.classList.remove('active'));
 
-        // Nothing to highlight if no notes provided
-        if (!notes || notes.length === 0) return;
+        // Exit if no notes to highlight
+        if (!notes?.length) return;
 
         // Add active class to keys for currently playing notes
-        notes.forEach(note => {
-            if (!note || !note.noteNumber) return;
+        for (const note of notes) {
+            if (!note?.noteNumber) continue;
 
-            const key = this.pianoVisualizationContainer.querySelector(`.piano-key[data-note="${note.noteNumber}"]`);
-            if (key) {
-                key.classList.add('active');
-            }
-        });
+            const key = this.pianoVisualizationContainer.querySelector(
+                `.piano-key[data-note="${note.noteNumber}"]`
+            );
+            key?.classList.add('active');
+        }
     }
 
     /**
@@ -142,24 +137,28 @@ class PianoVisualization {
     updateNoteBars() {
         if (!this.noteBarContainer || !this.scoreModel.notes.length) return;
 
+        // Reset on new playback
         if (this.scoreModel.currentPosition < 0.1 && this.noteBars.length > 0) {
             this.noteBarContainer.innerHTML = '';
             this.noteBars = [];
-            this.fallingChords = []; // Also reset falling chords
+            this.fallingChords = [];
         }
 
+        // Define visible time window
         const startTime = this.scoreModel.currentPosition - 0.5;
         const endTime = this.scoreModel.currentPosition + this.noteBarLookAhead;
 
+        // Get notes in the visible range
         const visibleNotes = this.scoreModel.getVisibleNotes(startTime, endTime);
 
+        // Create any missing note bars and chord visualizations
         this.createMissingNoteBars(visibleNotes);
-
-        // Add chord visualization
         this.createFallingChordVisualizations(visibleNotes);
 
+        // Position all visual elements
         this.updateNoteBarsPosition();
 
+        // Clean up notes that are no longer visible
         this.cleanupInvisibleNoteBars(startTime);
     }
 
@@ -168,13 +167,17 @@ class PianoVisualization {
      * @param {Array} visibleNotes Array of visible notes
      */
     createMissingNoteBars(visibleNotes) {
-        visibleNotes.forEach(note => {
+        if (!visibleNotes?.length) return;
+
+        for (const note of visibleNotes) {
             const noteId = `${note.id}-${note.start.toFixed(6)}`;
 
-            if (!this.noteBars.some(bar => bar.noteId === noteId)) {
-                this.createEnhancedNoteBar(note, noteId);
-            }
-        });
+            // Skip if this note already has a bar
+            if (this.noteBars.some(bar => bar.noteId === noteId)) continue;
+
+            // Create a new note bar
+            this.createEnhancedNoteBar(note, noteId);
+        }
     }
 
     /**
@@ -183,77 +186,72 @@ class PianoVisualization {
      * @param {string} noteId Unique ID for the note bar
      */
     createEnhancedNoteBar(note, noteId) {
-        const keyElement = this.pianoVisualizationContainer.querySelector(`.piano-key[data-note="${note.noteNumber}"]`);
+        const keyElement = this.pianoVisualizationContainer.querySelector(
+            `.piano-key[data-note="${note.noteNumber}"]`
+        );
         if (!keyElement) return;
 
+        // Create note bar element
         const noteBar = document.createElement('div');
         noteBar.className = 'note-bar';
-
         noteBar.style.transition = 'none';
 
+        // Add styles based on note properties
         const isBlackKey = [1, 3, 6, 8, 10].includes(note.noteNumber % 12);
         if (isBlackKey) noteBar.classList.add('black-note');
 
-        // Determine hand based on staff information first, fallback to note number
+        // Determine hand and add appropriate class
         const isRightHand = note.staff === 1 || (note.staff === undefined && note.noteNumber >= 60);
         noteBar.classList.add(isRightHand ? 'right-hand' : 'left-hand');
 
+        // Add articulation classes
         if (note.staccato) noteBar.classList.add('staccato');
         if (note.accent) noteBar.classList.add('accent');
         if (note.tenuto) noteBar.classList.add('tenuto');
         if (note.fermata) noteBar.classList.add('fermata');
-
         if (note.hasTie) noteBar.classList.add('tied');
         if (note.isTiedFromPrevious) noteBar.classList.add('tied-continuation');
 
+        // Add data attributes
         noteBar.dataset.noteId = noteId;
         noteBar.dataset.duration = note.visualDuration || note.duration;
         noteBar.dataset.start = note.start;
         noteBar.dataset.part = note.partId;
         noteBar.dataset.voice = note.voice;
-        noteBar.dataset.staff = note.staff || "unspecified"; // Add staff info for debugging
+        noteBar.dataset.staff = note.staff || "unspecified";
 
-        // Add note name to the note bar
+        // Add note name
         const noteNameElement = document.createElement('div');
         noteNameElement.className = 'note-name';
-        noteNameElement.textContent = note.step + (note.alter === 1 ? '#' : note.alter === -1 ? 'b' : '');
+        noteNameElement.textContent = note.step +
+            (note.alter === 1 ? '#' : note.alter === -1 ? 'b' : '');
         noteBar.appendChild(noteNameElement);
 
+        // Add to container and track in array
         this.noteBarContainer.appendChild(noteBar);
-
-        this.noteBars.push({
-            noteId,
-            element: noteBar,
-            note,
-            keyElement
-        });
+        this.noteBars.push({ noteId, element: noteBar, note, keyElement });
     }
 
     /**
      * Calculate position for a note bar
      * @param {Object} bar Note bar data
-     * @param {number} currentTime Current playback time
-     * @param {number} containerHeight Container height
-     * @param {number} timeToPixelRatio Time to pixel ratio
-     * @param {number} minHeight Minimum height of note bar
-     * @param {DOMRect} containerRect Container rect
-     * @param {Map} keyPositions Map of key positions
+     * @param {Object} params Calculation parameters
      * @returns {Object} Position and display data
      */
-    calculateNoteBarPosition(bar, currentTime, containerHeight, timeToPixelRatio, minHeight, containerRect, keyPositions) {
-        const note = bar.note;
-        const keyElement = bar.keyElement;
+    calculateNoteBarPosition(bar, params) {
+        const { currentTime, containerHeight, timeToPixelRatio, minHeight, keyPositions } = params;
+        const { note, keyElement } = bar;
 
+        // Get or calculate key position
         let keyPosition;
         if (keyPositions.has(note.noteNumber)) {
             keyPosition = keyPositions.get(note.noteNumber);
         } else {
             const keyRect = keyElement.getBoundingClientRect();
-            // Use noteBarContainer instead of keyboardContainer for consistent positioning
             const noteBarContainerRect = this.noteBarContainer.getBoundingClientRect();
             keyPosition = {
                 left: keyRect.left - noteBarContainerRect.left + (keyRect.width / 2),
-                width: keyRect.width  // Use actual width instead of hardcoded values
+                width: keyRect.width
             };
             keyPositions.set(note.noteNumber, keyPosition);
         }
@@ -262,7 +260,7 @@ class PianoVisualization {
         const noteDuration = note.visualDuration || note.duration;
         const noteEnd = noteStart + noteDuration;
 
-        // Visibility checks
+        // Check visibility state
         const isPlaying = noteStart <= currentTime && noteEnd > currentTime;
         const isUpcoming = noteStart > currentTime && noteStart <= currentTime + this.noteBarLookAhead;
         const isPartiallyVisible = noteStart < currentTime && noteEnd > currentTime;
@@ -273,31 +271,28 @@ class PianoVisualization {
             return { display: 'none' };
         }
 
-        // Calculate position
+        // Calculate position and dimensions
         const noteHeight = Math.max(minHeight, noteDuration * timeToPixelRatio);
-        let topPosition, opacity = 1;
+        let topPosition = 0;
+        let opacity = 1;
 
         if (isPlaying) {
             const elapsedTime = currentTime - noteStart;
             const remainingDuration = Math.max(0, noteDuration - elapsedTime);
-            const remainingHeight = remainingDuration * timeToPixelRatio;
-            topPosition = containerHeight - remainingHeight;
+            topPosition = containerHeight - (remainingDuration * timeToPixelRatio);
         } else if (isUpcoming) {
             const timeToStart = noteStart - currentTime;
-            const distanceFromBottom = timeToStart * timeToPixelRatio;
-            topPosition = containerHeight - distanceFromBottom - noteHeight;
+            topPosition = containerHeight - (timeToStart * timeToPixelRatio) - noteHeight;
         } else if (isPartiallyVisible) {
             const elapsedTime = currentTime - noteStart;
             const remainingDuration = Math.max(0, noteDuration - elapsedTime);
-            const remainingHeight = remainingDuration * timeToPixelRatio;
-            topPosition = containerHeight - remainingHeight;
+            topPosition = containerHeight - (remainingDuration * timeToPixelRatio);
         } else if (isPassed) {
-            const timeSinceEnd = currentTime - noteEnd;
-            opacity = Math.max(0, 0.5 - timeSinceEnd);
+            opacity = Math.max(0, 0.5 - (currentTime - noteEnd));
             topPosition = containerHeight;
         }
 
-        // Apply staccato effect
+        // Apply staccato visual effect
         let finalHeight = noteHeight;
         if (note.staccato) {
             finalHeight = noteHeight * 0.7;
@@ -321,41 +316,39 @@ class PianoVisualization {
         if (!this.noteBarContainer || !this.noteBars.length) return;
 
         const containerHeight = this.noteBarContainer.clientHeight;
-        const lookAheadTime = this.noteBarLookAhead;
         const currentTime = this.scoreModel.currentPosition;
-
-        // Cache these calculations outside the loop
-        const timeToPixelRatio = containerHeight / lookAheadTime;
+        const timeToPixelRatio = containerHeight / this.noteBarLookAhead;
         const MIN_NOTE_HEIGHT = 8;
 
-        // Cache DOM rect calculations to avoid layout thrashing
+        // Cache container rect and key positions
         const containerRect = this.noteBarContainer.getBoundingClientRect();
         const keyPositions = new Map();
 
-        // Batch DOM updates using requestAnimationFrame
+        // Calculate all updates before applying to DOM
         const updates = [];
+        const params = {
+            currentTime,
+            containerHeight,
+            timeToPixelRatio,
+            minHeight: MIN_NOTE_HEIGHT,
+            containerRect,
+            keyPositions
+        };
 
-        this.noteBars.forEach(bar => {
-            const note = bar.note;
-            const element = bar.element;
-            if (!element || !bar.keyElement) return;
+        for (const bar of this.noteBars) {
+            if (!bar.element || !bar.keyElement) continue;
 
-            // Calculate position data but don't update DOM yet
-            const noteData = this.calculateNoteBarPosition(
-                bar, currentTime, containerHeight,
-                timeToPixelRatio, MIN_NOTE_HEIGHT,
-                containerRect, keyPositions
-            );
-
+            // Calculate position but don't update DOM yet
+            const noteData = this.calculateNoteBarPosition(bar, params);
             if (noteData) {
-                updates.push({ element, data: noteData });
+                updates.push({ element: bar.element, data: noteData });
             }
-        });
+        }
 
-        // Apply all DOM updates at once (better performance)
+        // Apply all DOM updates in one batch for better performance
         if (updates.length > 0) {
             requestAnimationFrame(() => {
-                updates.forEach(({ element, data }) => {
+                for (const { element, data } of updates) {
                     element.style.display = data.display;
                     if (data.display === 'block') {
                         element.style.transform = `translate3d(${data.x}px, ${data.y}px, 0)`;
@@ -364,12 +357,12 @@ class PianoVisualization {
                         element.style.opacity = data.opacity;
                         element.classList.toggle('playing', data.isPlaying);
                     }
-                });
+                }
             });
         }
 
         // Update falling chord positions
-        this.updateFallingChordPositions(containerHeight, currentTime, lookAheadTime);
+        this.updateFallingChordPositions(containerHeight, currentTime);
     }
 
     /**
@@ -380,45 +373,37 @@ class PianoVisualization {
         const cleanupThreshold = startTime - 1.0;
         const removeList = [];
 
-        // First identify elements to remove (separation of concerns)
+        // Identify elements to remove
         for (let i = 0; i < this.noteBars.length; i++) {
-            const bar = this.noteBars[i];
-            const note = bar.note;
+            const { note, element } = this.noteBars[i];
             const noteDuration = note.visualDuration || note.duration;
 
             if (note.start + noteDuration < cleanupThreshold) {
                 removeList.push(i);
-                if (bar.element && bar.element.parentNode) {
-                    bar.element.parentNode.removeChild(bar.element);
+                if (element?.parentNode) {
+                    element.parentNode.removeChild(element);
                 }
             }
         }
 
-        // Then remove from array (in reverse to maintain indices)
+        // Remove from array in reverse to maintain indices
         for (let i = removeList.length - 1; i >= 0; i--) {
             this.noteBars.splice(removeList[i], 1);
         }
 
-        // Log cleanup for debugging
-        if (removeList.length > 0) {
-            console.log(`Removed ${removeList.length} invisible note bars, ${this.noteBars.length} remaining`);
-        }
-
-        // Also clean up falling chords that are no longer visible
+        // Clean up falling chords
         const chordsToRemove = [];
-
-        // First identify chords to remove
         for (let i = 0; i < this.fallingChords.length; i++) {
-            const chordData = this.fallingChords[i];
-            if (chordData.startTime + chordData.duration < cleanupThreshold) {
+            const { startTime, duration, element } = this.fallingChords[i];
+            if (startTime + duration < cleanupThreshold) {
                 chordsToRemove.push(i);
-                if (chordData.element && chordData.element.parentNode) {
-                    chordData.element.parentNode.removeChild(chordData.element);
+                if (element?.parentNode) {
+                    element.parentNode.removeChild(element);
                 }
             }
         }
 
-        // Then remove from array in reverse order to maintain indexes
+        // Remove chords in reverse order
         for (let i = chordsToRemove.length - 1; i >= 0; i--) {
             this.fallingChords.splice(chordsToRemove[i], 1);
         }
@@ -635,13 +620,12 @@ class PianoVisualization {
      * Update positions of falling chord elements
      * @param {number} containerHeight Height of the container
      * @param {number} currentTime Current playback position
-     * @param {number} lookAheadTime How far ahead to show chords
      */
-    updateFallingChordPositions(containerHeight, currentTime, lookAheadTime) {
+    updateFallingChordPositions(containerHeight, currentTime) {
         if (!this.fallingChords || this.fallingChords.length === 0) return;
 
         // Calculate positions for chords
-        const timeToPixelRatio = containerHeight / lookAheadTime;
+        const timeToPixelRatio = containerHeight / this.noteBarLookAhead;
 
         this.fallingChords.forEach(chordData => {
             const element = chordData.element;
@@ -653,7 +637,7 @@ class PianoVisualization {
 
             // Visibility checks - same logic as note bars
             const isPlaying = chordStart <= currentTime && chordEnd > currentTime;
-            const isUpcoming = chordStart > currentTime && chordStart <= currentTime + lookAheadTime;
+            const isUpcoming = chordStart > currentTime && chordStart <= currentTime + this.noteBarLookAhead;
             const isPartiallyVisible = chordStart < currentTime && chordEnd > currentTime;
             const isPassed = chordEnd <= currentTime && chordEnd > currentTime - 0.5;
             const isVisible = isPlaying || isUpcoming || isPartiallyVisible || isPassed;
@@ -717,8 +701,6 @@ class PianoVisualization {
     getNotationContainer() {
         return this.notationContainer;
     }
-
-
 }
 
 // Make the class available globally

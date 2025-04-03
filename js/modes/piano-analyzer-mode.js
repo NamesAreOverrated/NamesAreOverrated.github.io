@@ -2,105 +2,99 @@
  * Piano Analyzer Mode
  * Visualizes musical notation from MusicXML files
  */
-
 class PianoAnalyzerMode extends MusicAnalyzerMode {
     constructor(analyzer) {
         super(analyzer);
 
-        // Create the music score model instance
+        // Create core components
         this.scoreModel = new MusicScoreModel();
-
-        // Create the MusicXML parser
         this.musicXMLParser = new MusicXMLParser();
-
-        // Create the piano visualization
-        this.pianoVisualization = null;
-
-        // Create the playback controller
         this.playbackController = new PlaybackController(this.scoreModel);
 
-        // The notation renderer will be created when visualization is shown
+        // These will be initialized later
+        this.pianoVisualization = null;
         this.notationRenderer = null;
-
-        // State variables
         this.currentPosition = 0;
     }
 
+    /**
+     * Initialize the mode
+     */
     initialize() {
+        this.setupFileInput();
+        this.setupPlaybackController();
+        this.setupScoreModelListeners();
+        this.updateResultDisplay();
+    }
+
+    /**
+     * Set up file input handling
+     */
+    setupFileInput() {
         const openButton = this.analyzer.container.querySelector('.open-musicxml');
         const fileInput = this.analyzer.container.querySelector('#musicxml-input');
 
         if (openButton && fileInput) {
-            // Clear existing listeners to prevent duplicates
+            // Replace with fresh clones to prevent duplicate listeners
             const newOpenButton = openButton.cloneNode(true);
             const newFileInput = fileInput.cloneNode(true);
 
-            // Update the accept attribute to include .mxl files
             newFileInput.accept = '.xml,.musicxml,.mxl';
 
             openButton.parentNode.replaceChild(newOpenButton, openButton);
             fileInput.parentNode.replaceChild(newFileInput, fileInput);
 
             // Add event listeners
-            newOpenButton.addEventListener('click', () => {
-                newFileInput.click();
-            });
-
+            newOpenButton.addEventListener('click', () => newFileInput.click());
             newFileInput.addEventListener('change', (e) => {
                 if (e.target.files.length > 0) {
                     this.loadMusicXMLFile(e.target.files[0]);
                 }
             });
         }
+    }
 
-        // Also update the result display to show Piano mode is ready
+    /**
+     * Update the result display area
+     */
+    updateResultDisplay() {
         const resultElement = this.analyzer.container.querySelector('.music-result');
         if (resultElement && resultElement.style.display === 'none') {
             resultElement.style.display = 'block';
         }
+    }
 
-
-
-        // Initialize playback controller with callbacks
+    /**
+     * Set up playback controller
+     */
+    setupPlaybackController() {
         this.playbackController.initialize(this.analyzer.container, {
             onVisualizationUpdate: this.updateVisualization.bind(this),
             onNotationUpdate: this.updateNotation.bind(this)
         });
-
-
-
-        // Set up event listeners for the score model
-        this.setupScoreModelListeners();
     }
 
     /**
      * Set up event listeners for the score model
      */
     setupScoreModelListeners() {
-        // Listen for position changes to update visualizations
+        // Listen for position changes
         this.scoreModel.addEventListener('positionchange', (data) => {
-            // Store current position
             this.currentPosition = data.position;
 
-            // Skip visualization updates if containers aren't created yet
+            // Skip updates if visualization isn't created yet
             if (!this.pianoVisualization) return;
 
-            // For large position jumps, update immediately (seeking behavior)
+            // For large position jumps, update immediately
             if (Math.abs(data.position - (data.previousPosition || 0)) > 0.3) {
-                // Handle page changes immediately
                 if (this.notationRenderer) {
                     this.notationRenderer.renderNotation(true);
                 }
-                return;
             }
-
-            // Updates will happen in the animation loop managed by PlaybackController
         });
 
         // Score loaded event
         this.scoreModel.addEventListener('loaded', () => {
-
-
             console.log("Score model loaded data successfully");
         });
     }
@@ -109,25 +103,22 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
      * Update visualization components (called from animation loop)
      */
     updateVisualization(timestamp) {
-        // Update note bars
+        if (!this.pianoVisualization) return;
+
+        // Update visual elements
         this.pianoVisualization.updateNoteBars();
 
-        // Highlight piano keys
+        // Highlight currently playing notes
         const playingNotes = this.scoreModel.getCurrentlyPlayingNotes();
         this.pianoVisualization.highlightPianoKeys(playingNotes);
-
-        // Remove position indicator update since it's been removed
-        // this.notationRenderer.updatePositionIndicator(this.scoreModel.currentPosition);
     }
 
     /**
-     * Update notation (called less frequently from animation loop)
+     * Update notation (called less frequently)
      */
     updateNotation(timestamp) {
         if (this.notationRenderer) {
-
-            this.notationRenderer.renderNotation()
-
+            this.notationRenderer.renderNotation();
         }
     }
 
@@ -142,10 +133,10 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         statusElement.textContent = 'Loading MusicXML file...';
 
         try {
-            // Use the parser to load and process the file
+            // Parse the file
             const scoreData = await this.musicXMLParser.loadMusicXMLFile(file);
 
-            // Set the data in our score model
+            // Set data in our model
             this.scoreModel.setScoreData(scoreData);
 
             // Update UI
@@ -158,6 +149,9 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         }
     }
 
+    /**
+     * Update the displayed score title
+     */
     updateScoreTitle(title) {
         const songNameElement = document.querySelector('.piano-song-name');
         if (songNameElement) {
@@ -165,70 +159,73 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         }
     }
 
+    /**
+     * Create the visualization components
+     */
     createVisualization() {
-
+        // Remove any existing visualization
         const existingContainer = document.getElementById('piano-visualization-container');
         if (existingContainer) {
             existingContainer.remove();
         }
 
+        // Create container
         this.pianoVisualizationContainer = document.createElement('div');
         this.pianoVisualizationContainer.id = 'piano-visualization-container';
         this.pianoVisualizationContainer.className = 'piano-visualization-container';
 
+        // Set up container structure
         this.pianoVisualizationContainer.innerHTML = `
-            <div class="notation-container">
-            </div>
-            <div class="note-bar-container">
-            </div>
+            <div class="notation-container"></div>
+            <div class="note-bar-container"></div>
             <div class="piano-keyboard-container">
-                <div class="piano-keyboard">
-                </div>
+                <div class="piano-keyboard"></div>
             </div>
-           
         `;
 
+        // Add to document
         document.body.appendChild(this.pianoVisualizationContainer);
 
+        // Get notation container reference
         this.notationContainer = this.pianoVisualizationContainer.querySelector('.notation-container');
 
-
-
+        // Hide analyzer panel while visualization is shown
         this.analyzer.panel.style.display = 'none';
 
-
-        // Create the notation renderer
+        // Create components
         this.notationRenderer = new NotationRenderer(this.scoreModel, this.notationContainer);
-
-        // Initial render of notation
-        this.notationRenderer.renderNotation(true);
-
         this.pianoVisualization = new PianoVisualization(this.scoreModel, this.pianoVisualizationContainer);
 
-
-        // Show the visualization
+        // Initial render
+        this.notationRenderer.renderNotation(true);
         this.pianoVisualization.show();
     }
 
+    /**
+     * Clean up resources
+     */
     cleanup() {
-        // Use playback controller's cleanup
         this.playbackController.cleanup();
 
-        // Release references
-        this.notationRenderer = null;
+        if (this.pianoVisualization) {
+            this.pianoVisualization.cleanup();
+        }
 
-        // Use piano visualization's cleanup
-        this.pianoVisualization.cleanup();
+        this.notationRenderer = null;
     }
 
+    /**
+     * Close the piano visualization
+     */
     closePianoVisualization() {
         this.cleanup();
         this.analyzer.panel.style.display = 'block';
     }
 
+    /**
+     * Update UI after score is loaded
+     */
     updateScoreUI() {
-
-
         this.updateScoreTitle(this.scoreModel.title);
         this.playbackController.showPlaybackControls();
         this.createVisualization();
