@@ -458,10 +458,13 @@ class NotationRenderer {
         // Calculate note density for width allocation
         const notesByMeasure = measureIndices.map(index => {
             const bounds = measureTimeBounds.find(b => b.index === index);
-            const notesInMeasure = allNotes.filter(note =>
-                (note.start >= bounds.start && note.start < bounds.end) ||
-                (note.start < bounds.start && note.start + (note.visualDuration || note.duration) > bounds.start)
-            );
+            const notesInMeasure = allNotes.filter(note => {
+                // Define noteEnd variable here
+                const noteEnd = note.start + (note.visualDuration || note.duration);
+
+                return (note.start >= bounds.start && note.start < bounds.end) ||
+                    (note.start < bounds.start && noteEnd > bounds.start);
+            });
             return { index, noteCount: notesInMeasure.length, notes: notesInMeasure };
         });
 
@@ -1163,7 +1166,7 @@ class NotationRenderer {
     /**
      * Extract chord type from chord name with improved pattern matching
      * @param {Object} chord The chord object
-     * @returns {string} The chord type for styling
+     * @returns {string|Object} The chord type for styling or object with multiple types
      */
     getChordType(chord) {
         if (!chord || !chord.name) return 'other';
@@ -1181,6 +1184,27 @@ class NotationRenderer {
         // Handle slash chords - extract just the quality before the slash
         const slashIndex = quality.indexOf('/');
         const mainQuality = slashIndex > -1 ? quality.substring(0, slashIndex) : quality;
+
+        // Check for hybrid chords that need gradient treatment
+        if (/7sus4|7sus/.test(mainQuality)) {
+            // Special case for 7sus4 chords - return composite type
+            return "7sus4-composite";
+        }
+
+        if (/maj7aug|maj7#5|maj7\+5/.test(mainQuality)) {
+            // Special case for maj7aug chords
+            return "maj7aug-composite";
+        }
+
+        if (/m7b5|min7b5|ø/.test(mainQuality)) {
+            // Special case for half-diminished chords
+            return "min7b5-composite";
+        }
+
+        if (/add9/.test(mainQuality) && /maj|major/.test(mainQuality)) {
+            // For major add9 chords
+            return "maj-add9-composite";
+        }
 
         // Map of regex patterns to chord types for more maintainable matching
         const chordPatterns = [

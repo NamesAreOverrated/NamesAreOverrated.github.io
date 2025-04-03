@@ -550,116 +550,355 @@
 /* ===== CHORD TYPE COLORS ===== */
 /* Major family - teal/cyan colors */
 .falling-chord .chord-name[data-chord-type="major"] {
-    color: var(--accent-color, #64ffda);
+    color: var(--chord-major);
 }
 
 .falling-chord .chord-name[data-chord-type="6"] {
-    color: var(--accent-color, #64ffda);
+    color: var(--chord-6);
 }
 
 .falling-chord .chord-name[data-chord-type="maj7"] {
-    color: #5eeecd;
+    color: var(--chord-maj7);
 }
 
 .falling-chord .chord-name[data-chord-type="maj9"] {
-    color: #58dfbf;
+    color: var(--chord-maj9);
 }
 
 .falling-chord .chord-name[data-chord-type="maj11"] {
-    color: #52d0b2;
+    color: var(--chord-maj11);
 }
 
 .falling-chord .chord-name[data-chord-type="maj13"] {
-    color: #4cc1a5;
+    color: var(--chord-maj13);
 }
 
 .falling-chord .chord-name[data-chord-type="add9"],
 .falling-chord .chord-name[data-chord-type="add11"],
 .falling-chord .chord-name[data-chord-type="add13"],
 .falling-chord .chord-name[data-chord-type="add"] {
-    color: #70ffda;
+    color: var(--chord-add);
 }
 
 /* Minor family - green colors */
 .falling-chord .chord-name[data-chord-type="minor"] {
-    color: #55ff96;
+    color: var(--chord-minor);
 }
 
 .falling-chord .chord-name[data-chord-type="min7"] {
-    color: #60ee90;
+    color: var(--chord-min7);
 }
 
 .falling-chord .chord-name[data-chord-type="min6"] {
-    color: #66ff9c;
+    color: var(--chord-min6);
 }
 
 .falling-chord .chord-name[data-chord-type="min7b5"] {
-    color: #4ad87e;
+    color: var(--chord-min7b5);
 }
 
 /* Dominant family - purple/lavender colors */
 .falling-chord .chord-name[data-chord-type="7"] {
-    color: #bb99ff;
+    color: var(--chord-7);
 }
 
 .falling-chord .chord-name[data-chord-type="9"] {
-    color: #b28dff;
+    color: var(--chord-9);
 }
 
 .falling-chord .chord-name[data-chord-type="11"] {
-    color: #a580ff;
+    color: var(--chord-11);
 }
 
 .falling-chord .chord-name[data-chord-type="13"] {
-    color: #9a74fa;
+    color: var(--chord-13);
 }
 
 .falling-chord .chord-name[data-chord-type="7sus4"] {
-    color: #c4a5ff;
+    color: var(--chord-7sus4);
 }
 
 /* Diminished family - orange colors */
 .falling-chord .chord-name[data-chord-type="dim"] {
-    color: #ff9966;
+    color: var(--chord-dim);
 }
 
 .falling-chord .chord-name[data-chord-type="dim7"] {
-    color: #ff8c52;
+    color: var(--chord-dim7);
 }
 
 .falling-chord .chord-name[data-chord-type="7b5"] {
-    color: #ffaa7a;
+    color: var(--chord-7b5);
 }
 
 .falling-chord .chord-name[data-chord-type="maj7b5"] {
-    color: #ffb68c;
+    color: var(--chord-maj7b5);
 }
 
 /* Augmented family - yellow colors */
 .falling-chord .chord-name[data-chord-type="aug"] {
-    color: #ffdd66;
+    color: var(--chord-aug);
 }
 
 .falling-chord .chord-name[data-chord-type="7aug"] {
-    color: #ffcf4d;
+    color: var(--chord-7aug);
 }
 
 .falling-chord .chord-name[data-chord-type="maj7aug"] {
-    color: #ffe680;
+    color: var(--chord-maj7aug);
 }
 
 /* Suspended family - blue colors */
 .falling-chord .chord-name[data-chord-type="sus2"] {
-    color: #80d8ff;
+    color: var(--chord-sus2);
 }
 
 .falling-chord .chord-name[data-chord-type="sus4"] {
-    color: #66ccff;
+    color: var(--chord-sus4);
 }
 
 /* Other chord types */
 .falling-chord .chord-name[data-chord-type="other"] {
-    color: #cccccc;
+    color: var(--chord-other);
+}
+
+/* Composite types */
+.falling-chord .chord-name[data-chord-type="7sus4-composite"] {
+    background: linear-gradient(135deg, var(--chord-7) 0%, var(--chord-sus4) 100%);
+    color: black;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: none;
+    font-weight: 900;
+}
+
+.falling-chord .chord-name[data-chord-type="maj7aug-composite"] {
+    background: linear-gradient(135deg, var(--chord-maj7) 0%, var(--chord-aug) 100%);
+    color: black;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: none;
+    font-weight: 900;
+}
+
+.falling-chord .chord-name[data-chord-type="min7b5-composite"] {
+    background: linear-gradient(135deg, var(--chord-min7) 0%, var(--chord-dim) 100%);
+    color: black;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: none;
+    font-weight: 900;
+}
+
+.falling-chord .chord-name[data-chord-type="maj-add9-composite"] {
+    background: linear-gradient(135deg, var(--chord-major) 0%, var(--chord-9) 100%);
+    color: black;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: none;
+    font-weight: 900;
+}
+
+/* ===== CHORD PROGRESSION BAR ===== */
+.chord-progression-container {
+    position: absolute;
+    top: 15px;
+    left: 0;
+    right: 0;
+    height: 30px;
+    display: flex;
+    overflow: visible;
+    z-index: 12;
+    pointer-events: none;
+}
+
+.chord-block {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: black;
+    font-weight: bold;
+    border-radius: 3px;
+    margin-right: 1px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13px;
+    font-family: 'Arial', sans-serif;
+    opacity: 0.9;
+    text-shadow: 0 0 2px rgba(255, 255, 255, 0.7);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    transition: opacity 0.2s ease;
+}
+
+.chord-block.current {
+    opacity: 1;
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    z-index: 2;
+}
+
+/* Color coding - reusing existing styles but with higher opacity */
+.chord-block[data-chord-type="major"] {
+    background-color: rgba(100, 255, 218, 0.85);
+}
+
+.chord-block[data-chord-type="6"] {
+    background-color: rgba(100, 255, 218, 0.85);
+}
+
+.chord-block[data-chord-type="maj7"] {
+    background-color: rgba(94, 238, 205, 0.85);
+}
+
+.chord-block[data-chord-type="maj9"] {
+    background-color: rgba(88, 223, 191, 0.85);
+}
+
+.chord-block[data-chord-type="maj11"] {
+    background-color: rgba(82, 208, 178, 0.85);
+}
+
+.chord-block[data-chord-type="maj13"] {
+    background-color: rgba(76, 193, 165, 0.85);
+}
+
+.chord-block[data-chord-type="add9"],
+.chord-block[data-chord-type="add11"],
+.chord-block[data-chord-type="add13"],
+.chord-block[data-chord-type="add"] {
+    background-color: rgba(112, 255, 218, 0.85);
+}
+
+/* Minor family */
+.chord-block[data-chord-type="minor"] {
+    background-color: rgba(85, 255, 150, 0.85);
+}
+
+.chord-block[data-chord-type="min7"] {
+    background-color: rgba(96, 238, 144, 0.85);
+}
+
+.chord-block[data-chord-type="min6"] {
+    background-color: rgba(102, 255, 156, 0.85);
+}
+
+.chord-block[data-chord-type="min7b5"] {
+    background-color: rgba(74, 216, 126, 0.85);
+}
+
+/* Dominant family */
+.chord-block[data-chord-type="7"] {
+    background-color: rgba(187, 153, 255, 0.85);
+}
+
+.chord-block[data-chord-type="9"] {
+    background-color: rgba(178, 141, 255, 0.85);
+}
+
+.chord-block[data-chord-type="11"] {
+    background-color: rgba(165, 128, 255, 0.85);
+}
+
+.chord-block[data-chord-type="13"] {
+    background-color: rgba(154, 116, 250, 0.85);
+}
+
+.chord-block[data-chord-type="7sus4"] {
+    background-color: rgba(196, 165, 255, 0.85);
+}
+
+/* Diminished family */
+.chord-block[data-chord-type="dim"] {
+    background-color: rgba(255, 153, 102, 0.85);
+}
+
+.chord-block[data-chord-type="dim7"] {
+    background-color: rgba(255, 140, 82, 0.85);
+}
+
+.chord-block[data-chord-type="7b5"] {
+    background-color: rgba(255, 170, 122, 0.85);
+}
+
+.chord-block[data-chord-type="maj7b5"] {
+    background-color: rgba(255, 182, 140, 0.85);
+}
+
+/* Augmented family */
+.chord-block[data-chord-type="aug"] {
+    background-color: rgba(255, 221, 102, 0.85);
+}
+
+.chord-block[data-chord-type="7aug"] {
+    background-color: rgba(255, 207, 77, 0.85);
+}
+
+.chord-block[data-chord-type="maj7aug"] {
+    background-color: rgba(255, 230, 128, 0.85);
+}
+
+/* Suspended family */
+.chord-block[data-chord-type="sus2"] {
+    background-color: rgba(128, 216, 255, 0.85);
+}
+
+.chord-block[data-chord-type="sus4"] {
+    background-color: rgba(102, 204, 255, 0.85);
+}
+
+/* Other chord types */
+.chord-block[data-chord-type="other"] {
+    background-color: rgba(204, 204, 204, 0.85);
+}
+
+/* Hybrid chord gradients */
+.chord-block[data-chord-type="7sus4-composite"] {
+    background: linear-gradient(135deg,
+            rgba(187, 153, 255, 0.85) 0%,
+            /* var(--chord-7) */
+            rgba(102, 204, 255, 0.85) 100%
+            /* var(--chord-sus4) */
+        );
+    border-color: rgba(144, 178, 255, 0.9);
+}
+
+.chord-block[data-chord-type="maj7aug-composite"] {
+    background: linear-gradient(135deg,
+            rgba(94, 238, 205, 0.85) 0%,
+            /* var(--chord-maj7) */
+            rgba(255, 221, 102, 0.85) 100%
+            /* var(--chord-aug) */
+        );
+    border-color: rgba(174, 229, 153, 0.9);
+}
+
+.chord-block[data-chord-type="min7b5-composite"] {
+    background: linear-gradient(135deg,
+            rgba(96, 238, 144, 0.85) 0%,
+            /* var(--chord-min7) */
+            rgba(255, 153, 102, 0.85) 100%
+            /* var(--chord-dim) */
+        );
+    border-color: rgba(175, 195, 122, 0.9);
+}
+
+.chord-block[data-chord-type="maj-add9-composite"] {
+    background: linear-gradient(135deg,
+            rgba(100, 255, 218, 0.85) 0%,
+            /* var(--chord-major) */
+            rgba(178, 141, 255, 0.85) 100%
+            /* var(--chord-9) */
+        );
+    border-color: rgba(139, 198, 236, 0.9);
+}
+
+/* Improve highlighting of current chord */
+.chord-block.current[data-chord-type*="-composite"] {
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+    opacity: 1;
+    border-width: 2px;
 }
 
 /* ===== ANIMATIONS ===== */
@@ -833,111 +1072,45 @@ body.disco-mode .piano-key.active {
     }
 }
 
-/* ===== CHORD PROGRESSION BAR ===== */
-.chord-progression-container {
-    position: absolute;
-    top: 15px;
-    left: 0;
-    right: 0;
-    height: 30px;
-    display: flex;
-    overflow: visible;
-    z-index: 12;
-    pointer-events: none;
-}
+/* ===== UNIFIED CHORD COLOR VARIABLES ===== */
+:root {
+    /* Major family - teal/cyan colors */
+    --chord-major: #64ffda;
+    --chord-6: #64ffda;
+    --chord-maj7: #5eeecd;
+    --chord-maj9: #58dfbf;
+    --chord-maj11: #52d0b2;
+    --chord-maj13: #4cc1a5;
+    --chord-add: #70ffda;
 
-.chord-block {
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: black;
-    font-weight: bold;
-    border-radius: 3px;
-    margin-right: 1px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: 13px;
-    font-family: 'Arial', sans-serif;
-    opacity: 0.9;
-    text-shadow: 0 0 2px rgba(255, 255, 255, 0.7);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-    transition: opacity 0.2s ease;
-}
+    /* Minor family - green colors */
+    --chord-minor: #55ff96;
+    --chord-min7: #60ee90;
+    --chord-min6: #66ff9c;
+    --chord-min7b5: #4ad87e;
 
-.chord-block.current {
-    opacity: 1;
-    box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
-    border: 1px solid rgba(255, 255, 255, 0.8);
-    z-index: 2;
-}
+    /* Dominant family - purple/lavender colors */
+    --chord-7: #bb99ff;
+    --chord-9: #b28dff;
+    --chord-11: #a580ff;
+    --chord-13: #9a74fa;
+    --chord-7sus4: #c4a5ff;
 
-/* Color coding - reusing existing styles but with higher opacity */
-.chord-block[data-chord-type="major"] {
-    background-color: rgba(100, 255, 218, 0.85);
-}
+    /* Diminished family - orange colors */
+    --chord-dim: #ff9966;
+    --chord-dim7: #ff8c52;
+    --chord-7b5: #ffaa7a;
+    --chord-maj7b5: #ffb68c;
 
-.chord-block[data-chord-type="6"] {
-    background-color: rgba(100, 255, 218, 0.85);
-}
+    /* Augmented family - yellow colors */
+    --chord-aug: #ffdd66;
+    --chord-7aug: #ffcf4d;
+    --chord-maj7aug: #ffe680;
 
-.chord-block[data-chord-type="maj7"] {
-    background-color: rgba(94, 238, 205, 0.85);
-}
+    /* Suspended family - blue colors */
+    --chord-sus2: #80d8ff;
+    --chord-sus4: #66ccff;
 
-.chord-block[data-chord-type="maj9"] {
-    background-color: rgba(88, 223, 191, 0.85);
-}
-
-.chord-block[data-chord-type="minor"] {
-    background-color: rgba(85, 255, 150, 0.85);
-}
-
-.chord-block[data-chord-type="min7"] {
-    background-color: rgba(96, 238, 144, 0.85);
-}
-
-.chord-block[data-chord-type="min6"] {
-    background-color: rgba(102, 255, 156, 0.85);
-}
-
-.chord-block[data-chord-type="7"] {
-    background-color: rgba(187, 153, 255, 0.85);
-}
-
-.chord-block[data-chord-type="9"] {
-    background-color: rgba(178, 141, 255, 0.85);
-}
-
-.chord-block[data-chord-type="11"] {
-    background-color: rgba(165, 128, 255, 0.85);
-}
-
-.chord-block[data-chord-type="13"] {
-    background-color: rgba(154, 116, 250, 0.85);
-}
-
-.chord-block[data-chord-type="dim"] {
-    background-color: rgba(255, 153, 102, 0.85);
-}
-
-.chord-block[data-chord-type="dim7"] {
-    background-color: rgba(255, 140, 82, 0.85);
-}
-
-.chord-block[data-chord-type="aug"] {
-    background-color: rgba(255, 221, 102, 0.85);
-}
-
-.chord-block[data-chord-type="sus2"] {
-    background-color: rgba(128, 216, 255, 0.85);
-}
-
-.chord-block[data-chord-type="sus4"] {
-    background-color: rgba(102, 204, 255, 0.85);
-}
-
-.chord-block[data-chord-type="other"] {
-    background-color: rgba(204, 204, 204, 0.85);
+    /* Other chord types */
+    --chord-other: #cccccc;
 }
