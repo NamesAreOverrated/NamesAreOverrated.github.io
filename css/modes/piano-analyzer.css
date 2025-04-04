@@ -1122,3 +1122,96 @@ body.disco-mode .piano-key.active {
     /* Other chord types */
     --chord-other: #cccccc;
 }
+
+/* ===== NOTATION INFO PANEL DISCO MODE ===== */
+.disco-mode .notation-disco-info {
+    position: absolute;
+    bottom: 0px;
+    left: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 0px;
+    padding: 0px;
+    z-index: 20;
+    pointer-events: none;
+    font-family: 'Courier New', monospace;
+    text-transform: uppercase;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+/* Row container for info items */
+.disco-mode .notation-info-row {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    justify-content: flex-start;
+}
+
+.disco-mode .notation-info-item {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    background-color: transparent;
+    padding: 0px 15px;
+    border-radius: 10px;
+    border: none;
+    box-shadow: none;
+    backdrop-filter: none;
+    min-width: 120px;
+    text-align: center;
+    gap: 10px;
+}
+
+
+.disco-mode .notation-info-value {
+    font-size: 22px;
+    text-decoration: underline;
+    padding-bottom: 2px;
+}
+
+/* Add icon styling */
+.disco-mode .notation-info-icon {
+    font-size: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Heart icon styling - simple, no animation in CSS */
+.disco-mode .heart-icon {
+    display: inline-block;
+    font-size: 28px;
+    text-shadow: 0 0 10px rgba(255, 0, 0, 0.7);
+    position: relative;
+    z-index: 5;
+}
+
+/* Apply static colors for other elements */
+.disco-mode .notation-info-item.key-info .notation-info-value,
+.disco-mode .notation-info-item.key-info .notation-info-icon {
+    color: rgba(255, 0, 110, 1);
+    text-shadow: 0 0 10px rgba(255, 0, 110, 0.8), 0 0 15px rgba(255, 0, 110, 0.5);
+    border-bottom: none;
+}
+
+.disco-mode .notation-info-item.tempo-info .notation-info-value {
+    color: rgba(255, 80, 80, 1);
+    text-shadow: 0 0 10px rgba(255, 0, 0, 0.8), 0 0 15px rgba(255, 0, 0, 0.5);
+    border-bottom: none;
+}
+
+.disco-mode .notation-info-item.measure-info .notation-info-value,
+.disco-mode .notation-info-item.measure-info .notation-info-icon {
+    color: rgba(174, 0, 255, 1);
+    text-shadow: 0 0 10px rgba(174, 0, 255, 0.8), 0 0 15px rgba(174, 0, 255, 0.5);
+    border-bottom: none;
+}
+
+.disco-mode .notation-info-item.time-info .notation-info-value,
+.disco-mode .notation-info-item.time-info .notation-info-icon {
+    color: rgba(255, 221, 0, 1);
+    text-shadow: 0 0 10px rgba(255, 221, 0, 0.8), 0 0 15px rgba(255, 221, 0, 0.5);
+    border-bottom: none;
+}

@@ -14,12 +14,14 @@ class MusicScoreModel {
         this.measures = [];
         this.timeSignatures = [];
         this.tempoChanges = [];
+        this.keySignatures = []; // Add explicit array for key signatures
 
         // State
         this.isPlaying = false;
         this.currentPosition = 0;
         this.previousPosition = 0;
         this.bpm = 120;
+        this.key = ''; // Add key property to store the current key
 
         // Playback
         this.playbackStartTime = 0;
@@ -53,6 +55,14 @@ class MusicScoreModel {
         this.measures = data.measures || [];
         this.timeSignatures = data.timeSignatures || [];
         this.tempoChanges = data.tempoChanges || [];
+
+        // Store key signatures if available
+        this.keySignatures = data.keySignatures || [];
+
+        // Set initial key if available
+        if (this.keySignatures.length > 0) {
+            this.key = this.keySignatures[0].key || '';
+        }
 
         // Set initial tempo
         if (this.tempoChanges.length > 0) {
@@ -373,6 +383,32 @@ class MusicScoreModel {
     }
 
     /**
+     * Get the current key signature based on playback position
+     * @returns {string} Current key signature
+     */
+    getCurrentKey() {
+        if (!this.keySignatures || this.keySignatures.length === 0) {
+            return this.key || ''; // Return stored key or empty string
+        }
+
+        // Find the latest key signature that's before or at the current position
+        const position = this.currentPosition;
+        let currentKey = this.keySignatures[0].key || '';
+
+        for (let i = 1; i < this.keySignatures.length; i++) {
+            const keyChange = this.keySignatures[i];
+            if (keyChange.position <= position) {
+                currentKey = keyChange.key;
+            } else {
+                // We've gone past the current position
+                break;
+            }
+        }
+
+        return currentKey;
+    }
+
+    /**
      * Get the current measure based on playback position
      * @returns {Object} Current measure data
      */
@@ -381,7 +417,21 @@ class MusicScoreModel {
 
         for (let i = this.measures.length - 1; i >= 0; i--) {
             if (this.measures[i].startPosition <= this.currentPosition) {
-                return this.measures[i];
+                // Add time signature information if available
+                const measure = { ...this.measures[i] };
+
+                // Find time signature for this measure
+                if (this.timeSignatures && this.timeSignatures.length > 0) {
+                    for (let j = this.timeSignatures.length - 1; j >= 0; j--) {
+                        if (this.timeSignatures[j].position <= measure.startPosition) {
+                            const { numerator, denominator } = this.timeSignatures[j];
+                            measure.timeSignature = `${numerator}/${denominator}`;
+                            break;
+                        }
+                    }
+                }
+
+                return measure;
             }
         }
 

@@ -826,8 +826,8 @@ class NotationRenderer {
      * Add info panel to the notation container
      */
     addNotationOverlays() {
-        // Remove this method's content - don't add the info panel
-        // We'll keep the empty method to avoid breaking any calls to it
+        // The disco info panel creation is now handled by PianoAnalyzerMode
+        // so this method is now empty or can be removed entirely
     }
 
     /**
@@ -902,7 +902,7 @@ class NotationRenderer {
         }
         this.chordBlockElements.clear();
 
-        // Clear info panel (keeping this check for cleanup purposes)
+        // Clear info panel
         if (this.infoPanel) {
             if (this.infoPanel.parentNode) {
                 this.infoPanel.parentNode.removeChild(this.infoPanel);

@@ -125,6 +125,7 @@ class MusicXMLParser {
                 measures: this.measureData,
                 timeSignatures: this.timeSignatureChanges,
                 tempoChanges: this.tempoChanges,
+                keySignatures: this.keySignatureChanges, // Now including key signature changes
                 divisions: this.divisions,
                 timeSignatureNumerator: this.timeSignatureNumerator,
                 timeSignatureDenominator: this.timeSignatureDenominator
@@ -164,12 +165,19 @@ class MusicXMLParser {
         this.timeSignatureNumerator = 4;
         this.timeSignatureDenominator = 4;
         this.bpm = 120;
+        this.currentKey = 'C major';
 
         this.tempoChanges = [{ position: 0, tempo: this.bpm }];
         this.timeSignatureChanges = [{
             position: 0,
             numerator: this.timeSignatureNumerator,
             denominator: this.timeSignatureDenominator
+        }];
+        this.keySignatureChanges = [{
+            position: 0,
+            fifths: 0,
+            mode: 'major',
+            key: 'C major'
         }];
 
         this.parsedNotes = [];
@@ -215,7 +223,7 @@ class MusicXMLParser {
     }
 
     /**
-     * Scan the score for tempo and time signature changes
+     * Scan the score for tempo, key signature, and time signature changes
      * @param {Document} musicXML The parsed MusicXML document
      */
     scanTimingChanges(musicXML) {
@@ -229,6 +237,14 @@ class MusicXMLParser {
         let currentTickPosition = 0;
         let currentDivisions = this.divisions;
 
+        // Initialize key signatures collection if not already done
+        this.keySignatureChanges = [{
+            position: 0,
+            fifths: 0,
+            mode: 'major',
+            key: 'C major'
+        }];
+
         for (let measureIndex = 0; measureIndex < measures.length; measureIndex++) {
             const measure = measures[measureIndex];
             const measureNumber = parseInt(measure.getAttribute('number')) || (measureIndex + 1);
@@ -240,7 +256,8 @@ class MusicXMLParser {
                 startTick: currentTickPosition,
                 divisions: currentDivisions,
                 hasTimeChange: false,
-                hasTempoChange: false
+                hasTempoChange: false,
+                hasKeyChange: false
             };
 
             const divisionsElements = measure.getElementsByTagName('divisions');
@@ -273,6 +290,32 @@ class MusicXMLParser {
                     measureInfo.timeSignature = `${beats}/${beatType}`;
 
                     console.log(`Measure ${measureNumber}: Time signature change to ${beats}/${beatType}`);
+                }
+            }
+
+            // Process key signature changes
+            const keyElements = measure.querySelectorAll('attributes key');
+            if (keyElements.length > 0) {
+                for (const keyElement of keyElements) {
+                    const fifths = parseInt(keyElement.querySelector('fifths')?.textContent);
+                    const mode = keyElement.querySelector('mode')?.textContent?.toLowerCase() || 'major';
+
+                    if (!isNaN(fifths)) {
+                        const keyName = this.fifthsToKeyName(fifths, mode);
+
+                        this.keySignatureChanges.push({
+                            position: currentMeasurePosition,
+                            fifths: fifths,
+                            mode: mode,
+                            key: keyName,
+                            measure: measureNumber
+                        });
+
+                        measureInfo.hasKeyChange = true;
+                        measureInfo.keySignature = keyName;
+
+                        console.log(`Measure ${measureNumber}: Key signature change to ${keyName}`);
+                    }
                 }
             }
 
@@ -708,10 +751,48 @@ class MusicXMLParser {
         const keyElement = attributesElement.querySelector('key');
         if (keyElement) {
             const fifths = parseInt(keyElement.querySelector('fifths')?.textContent);
+            const mode = keyElement.querySelector('mode')?.textContent?.toLowerCase() || 'major';
+
             if (!isNaN(fifths)) {
                 this.keySignature = fifths;
+                // Create proper key name from fifths value
+                const keyName = this.fifthsToKeyName(fifths, mode);
+
+                // Store this for later use
+                this.currentKey = keyName;
             }
         }
+    }
+
+    /**
+     * Convert fifths value to key name
+     * @param {number} fifths The fifths value from the MusicXML
+     * @param {string} mode The mode (major/minor)
+     * @returns {string} The key name (e.g., "C major", "F# minor")
+     */
+    fifthsToKeyName(fifths, mode = 'major') {
+        // Key mapping for major keys based on circle of fifths
+        const majorKeyMap = {
+            '-7': 'Cb', '-6': 'Gb', '-5': 'Db', '-4': 'Ab', '-3': 'Eb',
+            '-2': 'Bb', '-1': 'F', '0': 'C', '1': 'G', '2': 'D',
+            '3': 'A', '4': 'E', '5': 'B', '6': 'F#', '7': 'C#'
+        };
+
+        // Key mapping for minor keys based on circle of fifths
+        const minorKeyMap = {
+            '-7': 'Ab', '-6': 'Eb', '-5': 'Bb', '-4': 'F', '-3': 'C',
+            '-2': 'G', '-1': 'D', '0': 'A', '1': 'E', '2': 'B',
+            '3': 'F#', '4': 'C#', '5': 'G#', '6': 'D#', '7': 'A#'
+        };
+
+        // Select the appropriate map based on the mode
+        const keyMap = mode === 'minor' ? minorKeyMap : majorKeyMap;
+
+        // Get the note name from the map or default to C for unknown fifths
+        const keyNote = keyMap[fifths.toString()] || 'C';
+
+        // Return the full key name
+        return `${keyNote} ${mode}`;
     }
 
     /**

@@ -139,6 +139,39 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
                 reopenButton.style.display = 'none';
             }
         });
+
+        // Add listeners for play and pause to update heart animation
+        this.scoreModel.addEventListener('play', () => {
+            // Update heart animation when playback starts
+            this.updateHeartPulseAnimation();
+        });
+
+        this.scoreModel.addEventListener('pause', () => {
+            // Update heart animation when playback pauses
+            this.updateHeartPulseAnimation();
+        });
+
+        this.scoreModel.addEventListener('stop', () => {
+            // Update heart animation when playback stops
+            this.updateHeartPulseAnimation();
+        });
+
+        // Also listen for beat-level events to synchronize heart animation
+        this.scoreModel.addEventListener('positionchange', (data) => {
+            // If we're playing, check if we've just crossed a beat boundary
+            if (this.scoreModel.isPlaying && this.heartIcon) {
+                const bpm = parseFloat(this.scoreModel.bpm) || 60;
+                const beatDuration = 60 / bpm;
+
+                const prevBeat = Math.floor(data.previousPosition / beatDuration);
+                const currentBeat = Math.floor(data.position / beatDuration);
+
+                // If we've crossed a beat boundary, pulse the heart
+                if (prevBeat !== currentBeat) {
+                    this._pulseHeartImmediately();
+                }
+            }
+        });
     }
 
     /**
@@ -153,6 +186,9 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         // Highlight currently playing notes
         const playingNotes = this.scoreModel.getCurrentlyPlayingNotes();
         this.pianoVisualization.highlightPianoKeys(playingNotes);
+
+        // Update disco info panel with current playback information
+        this.updateDiscoInfoPanel();
     }
 
     /**
@@ -241,9 +277,15 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         this.notationRenderer = new NotationRenderer(this.scoreModel, this.notationContainer);
         this.pianoVisualization = new PianoVisualization(this.scoreModel, this.pianoVisualizationContainer);
 
+        // Create disco info panel
+        this.createDiscoInfoPanel();
+
         // Initial render
         this.notationRenderer.renderNotation(true);
         this.pianoVisualization.show();
+
+        // Initial update of info panel
+        this.updateDiscoInfoPanel();
 
         // Show an escape hint in the piano status
         const statusElement = this.analyzer.container.querySelector('.piano-status');
@@ -265,6 +307,229 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         const reopenButton = this.analyzer.container.querySelector('.reopen-musicxml');
         if (reopenButton) {
             reopenButton.style.display = 'none';
+        }
+    }
+
+    /**
+     * Create the disco-themed information panel
+     */
+    createDiscoInfoPanel() {
+        // Remove any existing panel
+        if (this.discoInfoPanel) {
+            this.discoInfoPanel.remove();
+        }
+
+        // Create new panel
+        this.discoInfoPanel = document.createElement('div');
+        this.discoInfoPanel.className = 'notation-disco-info';
+
+        // Create first row: KEY and TIME
+        const row1 = document.createElement('div');
+        row1.className = 'notation-info-row';
+
+        // Create key info with icon
+        const keyInfo = document.createElement('div');
+        keyInfo.className = 'notation-info-item key-info';
+        keyInfo.innerHTML = `
+            <div class="notation-info-icon">🔑</div>
+         
+            <div class="notation-info-value key-value">--</div>
+        `;
+
+        // Create time signature info with icon
+        const timeInfo = document.createElement('div');
+        timeInfo.className = 'notation-info-item time-info';
+        timeInfo.innerHTML = `
+            <div class="notation-info-icon">🕒</div>
+           
+            <div class="notation-info-value time-value">4/4</div>
+        `;
+
+        // Add items to first row
+        row1.appendChild(keyInfo);
+        row1.appendChild(timeInfo);
+
+        // Create second row: TEMPO with heart icon
+        const row2 = document.createElement('div');
+        row2.className = 'notation-info-row';
+
+        // Create tempo info with pulsing heart icon
+        const tempoInfo = document.createElement('div');
+        tempoInfo.className = 'notation-info-item tempo-info';
+        tempoInfo.innerHTML = `
+            <div class="notation-info-icon heart-icon">❤️</div>
+           
+            <div class="notation-info-value tempo-value">${this.scoreModel.bpm || '--'} BPM</div>
+        `;
+
+        // Add tempo to second row
+        row2.appendChild(tempoInfo);
+
+        // Create third row: MEASURE with icon
+        const row3 = document.createElement('div');
+        row3.className = 'notation-info-row';
+
+        // Create measure info with icon
+        const measureInfo = document.createElement('div');
+        measureInfo.className = 'notation-info-item measure-info';
+        measureInfo.innerHTML = `
+            <div class="notation-info-icon">📏</div>
+          
+            <div class="notation-info-value measure-value">--/--</div>
+        `;
+
+        // Add measure to third row
+        row3.appendChild(measureInfo);
+
+        // Add all rows to panel
+        this.discoInfoPanel.appendChild(row1);
+        this.discoInfoPanel.appendChild(row2);
+        this.discoInfoPanel.appendChild(row3);
+
+        // Add panel to the visualization container
+        this.pianoVisualizationContainer.appendChild(this.discoInfoPanel);
+
+        // Store references for updating
+        this.keyValueElement = keyInfo.querySelector('.key-value');
+        this.tempoValueElement = tempoInfo.querySelector('.tempo-value');
+        this.measureValueElement = measureInfo.querySelector('.measure-value');
+        this.timeValueElement = timeInfo.querySelector('.time-value');
+        this.heartIcon = tempoInfo.querySelector('.heart-icon');
+
+        // Initialize heart beat
+        this.setupHeartBeat();
+    }
+
+    /**
+     * Set up heart beat animation
+     */
+    setupHeartBeat() {
+        if (!this.heartIcon) return;
+
+        // Initial styling
+        this.heartIcon.style.transition = 'transform 0.1s ease-out';
+        this.heartIcon.style.transform = 'scale(1)';
+        this.heartIcon.style.transformOrigin = 'center';
+        this.heartIcon.style.display = 'inline-block';
+        this.heartIcon.style.color = '#ff3a3a';
+
+        // Track the last beat time
+        this.lastBeatTime = 0;
+
+        // Listen for beat events
+        this.scoreModel.addEventListener('positionchange', this.checkForBeat.bind(this));
+    }
+
+    /**
+     * Check if we've hit a beat and trigger heart animation
+     * @param {Object} data Position change data
+     */
+    checkForBeat(data) {
+        if (!this.scoreModel.isPlaying || !this.heartIcon) return;
+
+        const bpm = parseFloat(this.scoreModel.bpm) || 60;
+        const beatInterval = 60 / bpm; // seconds per beat
+
+        // Calculate which beat we're on
+        const currentBeat = Math.floor(this.scoreModel.currentPosition / beatInterval);
+        const previousBeat = Math.floor((data.previousPosition || 0) / beatInterval);
+
+        // If we've crossed a beat boundary
+        if (currentBeat > previousBeat) {
+            this.pulseBeat();
+        }
+    }
+
+    /**
+     * Create a single heartbeat pulse
+     */
+    pulseBeat() {
+        if (!this.heartIcon || this.pulseInProgress) return;
+
+        // Prevent multiple simultaneous beats
+        this.pulseInProgress = true;
+
+        // Visual styles during active beat
+        this.heartIcon.style.color = '#ff0000';
+        this.heartIcon.style.transform = 'scale(1.6)';
+
+        // Reset after animation
+        setTimeout(() => {
+            if (this.heartIcon) {
+                this.heartIcon.style.transform = 'scale(1)';
+                this.heartIcon.style.color = this.scoreModel.isPlaying ? '#ff3a3a' : '#aa3a3a';
+            }
+            this.pulseInProgress = false;
+        }, 150);
+    }
+
+    /**
+     * Update the disco information panel with current data
+     */
+    updateDiscoInfoPanel() {
+        if (!this.discoInfoPanel) return;
+
+        // Update key information if available
+        if (this.keyValueElement) {
+            const currentKey = this.scoreModel.getCurrentKey();
+
+            if (currentKey) {
+                this.keyValueElement.textContent = currentKey;
+            } else {
+                // If no key information is available, try to detect from current notes
+                const currentNotes = this.scoreModel.getCurrentlyPlayingNotes();
+                if (currentNotes && currentNotes.length > 0 && window.MusicTheory) {
+                    const detectedKey = MusicTheory.detectKey(currentNotes);
+                    this.keyValueElement.textContent = detectedKey || 'C MAJOR';
+                } else {
+                    this.keyValueElement.textContent = 'C MAJOR';
+                }
+            }
+        }
+
+        // Update tempo information
+        if (this.tempoValueElement) {
+            const newBpm = this.scoreModel.bpm || '--';
+            this.tempoValueElement.textContent = `${newBpm} BPM`;
+
+            // Playing state changed or BPM changed
+            const wasPlaying = this.heartIcon && this.heartIcon.style.animation &&
+                this.heartIcon.style.animation !== 'none';
+
+            if (wasPlaying !== this.scoreModel.isPlaying ||
+                (this.scoreModel.isPlaying && this._lastBpm !== newBpm)) {
+                // this.updateHeartPulseAnimation();
+                this._lastBpm = newBpm;
+            }
+        }
+
+        // Update measure information with current/total format
+        if (this.measureValueElement) {
+            const currentMeasure = this.scoreModel.getCurrentMeasure();
+            const totalMeasures = this.scoreModel.measures.length;
+
+            if (currentMeasure && totalMeasures) {
+                const measureNumber = currentMeasure.number || '--';
+                this.measureValueElement.textContent = `${measureNumber}/${totalMeasures}`;
+            } else {
+                this.measureValueElement.textContent = '--/--';
+            }
+        }
+
+        // Update time signature information
+        if (this.timeValueElement) {
+            const currentMeasure = this.scoreModel.getCurrentMeasure();
+            if (currentMeasure && currentMeasure.timeSignature) {
+                this.timeValueElement.textContent = currentMeasure.timeSignature;
+            } else {
+                // Default time signature if none is specified
+                this.timeValueElement.textContent = '4/4';
+            }
+        }
+
+        // Update heart color based on playback state
+        if (this.heartIcon && !this.pulseInProgress) {
+            this.heartIcon.style.color = this.scoreModel.isPlaying ? '#ff3a3a' : '#aa3a3a';
         }
     }
 
@@ -351,6 +616,24 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
                     this.scoreModel.eventListeners[event] = [];
                 }
             });
+        }
+
+        // Clean up disco info panel
+        if (this.discoInfoPanel) {
+            if (this.discoInfoPanel.parentNode) {
+                this.discoInfoPanel.parentNode.removeChild(this.discoInfoPanel);
+            }
+            this.discoInfoPanel = null;
+            this.keyValueElement = null;
+            this.tempoValueElement = null;
+            this.measureValueElement = null;
+            this.timeValueElement = null;
+        }
+
+        // Remove heart pulse animation style
+        const styleSheet = document.getElementById('heart-pulse-style');
+        if (styleSheet) {
+            styleSheet.remove();
         }
 
         // Reset current position
