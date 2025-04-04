@@ -134,6 +134,9 @@ class AudioVisualizer {
         }
 
         this.active = false;
+
+        // Dispatch event to notify other components that visualization has stopped
+        document.dispatchEvent(new CustomEvent('audio-visualization-stopped'));
     }
 
     nextVisualization() {

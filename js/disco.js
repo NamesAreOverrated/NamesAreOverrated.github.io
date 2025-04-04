@@ -352,6 +352,20 @@ function initDiscoMode() {
             window.AudioVisualizer.handleResize();
         }
     });
+
+    // Add listener for audio visualization stopped event
+    document.addEventListener('audio-visualization-stopped', () => {
+        // Close piano visualization if active
+        if (window.musicAnalyzer &&
+            window.musicAnalyzer.modes &&
+            window.musicAnalyzer.modes.piano) {
+            const pianoMode = window.musicAnalyzer.modes.piano;
+            if (pianoMode.pianoVisualization) {
+                console.log("Closing piano visualization because audio visualization was stopped");
+                pianoMode.closePianoVisualization();
+            }
+        }
+    });
 }
 
 // Initialize disco mode when the page is loaded

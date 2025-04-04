@@ -16,6 +16,20 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         this.notationRenderer = null;
         this.currentPosition = 0;
         this.scoreLoaded = false; // Track if a score is loaded
+
+        // Listen for audio visualization stopped event
+        this.handleVisualizationStopped = this.handleVisualizationStopped.bind(this);
+        document.addEventListener('audio-visualization-stopped', this.handleVisualizationStopped);
+    }
+
+    /**
+     * Handle audio visualization stopped event
+     */
+    handleVisualizationStopped() {
+        if (this.pianoVisualization) {
+            console.log("Piano Analyzer: Closing visualization due to audio visualization being stopped");
+            this.closePianoVisualization();
+        }
     }
 
     /**
@@ -689,6 +703,9 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
     deactivate() {
         // Ensure we clean up thoroughly when switching to another analyzer mode
         this.cleanup();
+
+        // Remove the visualization stopped event listener
+        document.removeEventListener('audio-visualization-stopped', this.handleVisualizationStopped);
 
         // Also ensure we null out any remaining references
         this.pianoVisualizationContainer = null;

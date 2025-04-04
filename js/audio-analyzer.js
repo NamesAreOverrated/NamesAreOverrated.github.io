@@ -400,6 +400,9 @@ class AudioAnalyzer {
         if (this.isAnalyzing) {
             this.stopAnalysis();
         }
+
+        // Dispatch an event that visualization has stopped
+        document.dispatchEvent(new CustomEvent('audio-visualization-stopped'));
     }
 
     nextVisualization() {
