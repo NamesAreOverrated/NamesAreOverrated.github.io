@@ -332,7 +332,6 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         keyInfo.className = 'notation-info-item key-info';
         keyInfo.innerHTML = `
             <div class="notation-info-icon">🔑</div>
-         
             <div class="notation-info-value key-value">--</div>
         `;
 
@@ -341,7 +340,6 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         timeInfo.className = 'notation-info-item time-info';
         timeInfo.innerHTML = `
             <div class="notation-info-icon">🕒</div>
-           
             <div class="notation-info-value time-value">4/4</div>
         `;
 
@@ -358,7 +356,6 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         tempoInfo.className = 'notation-info-item tempo-info';
         tempoInfo.innerHTML = `
             <div class="notation-info-icon heart-icon">❤️</div>
-           
             <div class="notation-info-value tempo-value">${this.scoreModel.bpm || '--'} BPM</div>
         `;
 
@@ -374,7 +371,6 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         measureInfo.className = 'notation-info-item measure-info';
         measureInfo.innerHTML = `
             <div class="notation-info-icon">📏</div>
-          
             <div class="notation-info-value measure-value">--/--</div>
         `;
 

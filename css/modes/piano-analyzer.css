@@ -1127,7 +1127,7 @@ body.disco-mode .piano-key.active {
 .disco-mode .notation-disco-info {
     position: absolute;
     bottom: 0px;
-    left: 15px;
+    left: 1.5%;
     display: flex;
     flex-direction: column;
     gap: 0px;
@@ -1138,6 +1138,9 @@ body.disco-mode .piano-key.active {
     text-transform: uppercase;
     font-weight: bold;
     letter-spacing: 1px;
+    border-radius: 10px;
+    box-shadow: #00ccaa;
+    box-shadow: 0px 10px 10px rgba(0, 255, 200, 0.7);
 }
 
 /* Row container for info items */
@@ -1146,15 +1149,16 @@ body.disco-mode .piano-key.active {
     flex-direction: row;
     gap: 10px;
     justify-content: flex-start;
+    align-items: center;
+    padding: 0px 10px;
 }
 
 .disco-mode .notation-info-item {
     display: flex;
-    flex-direction: row;
     align-items: center;
     justify-content: center;
     background-color: transparent;
-    padding: 0px 15px;
+    padding: 0px 0px;
     border-radius: 10px;
     border: none;
     box-shadow: none;
@@ -1162,6 +1166,7 @@ body.disco-mode .piano-key.active {
     min-width: 120px;
     text-align: center;
     gap: 10px;
+
 }
 
 
@@ -1193,25 +1198,24 @@ body.disco-mode .piano-key.active {
 .disco-mode .notation-info-item.key-info .notation-info-icon {
     color: rgba(255, 0, 110, 1);
     text-shadow: 0 0 10px rgba(255, 0, 110, 0.8), 0 0 15px rgba(255, 0, 110, 0.5);
-    border-bottom: none;
+
 }
 
 .disco-mode .notation-info-item.tempo-info .notation-info-value {
     color: rgba(255, 80, 80, 1);
     text-shadow: 0 0 10px rgba(255, 0, 0, 0.8), 0 0 15px rgba(255, 0, 0, 0.5);
-    border-bottom: none;
+
 }
 
 .disco-mode .notation-info-item.measure-info .notation-info-value,
 .disco-mode .notation-info-item.measure-info .notation-info-icon {
     color: rgba(174, 0, 255, 1);
     text-shadow: 0 0 10px rgba(174, 0, 255, 0.8), 0 0 15px rgba(174, 0, 255, 0.5);
-    border-bottom: none;
+
 }
 
 .disco-mode .notation-info-item.time-info .notation-info-value,
 .disco-mode .notation-info-item.time-info .notation-info-icon {
     color: rgba(255, 221, 0, 1);
     text-shadow: 0 0 10px rgba(255, 221, 0, 0.8), 0 0 15px rgba(255, 221, 0, 0.5);
-    border-bottom: none;
 }
