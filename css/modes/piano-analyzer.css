@@ -1127,91 +1127,111 @@ body.disco-mode .piano-key.active {
 .disco-mode .notation-disco-info {
     position: absolute;
     bottom: 0px;
-    left: 1.5%;
+    left: 10px;
     display: flex;
     flex-direction: column;
-    gap: 0px;
-    padding: 0px;
+    gap: 6px;
+    padding: 8px 10px;
     z-index: 20;
     pointer-events: none;
     font-family: 'Courier New', monospace;
     text-transform: uppercase;
     font-weight: bold;
     letter-spacing: 1px;
-    border-radius: 10px;
-    box-shadow: #00ccaa;
-    box-shadow: 0px 10px 10px rgba(0, 255, 200, 0.7);
+    border-radius: 12px;
+    background-color: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(5px);
+    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.5),
+        inset 0px 1px 1px rgba(255, 255, 255, 0.1);
 }
 
 /* Row container for info items */
 .disco-mode .notation-info-row {
     display: flex;
     flex-direction: row;
-    gap: 10px;
+    gap: 12px;
     justify-content: flex-start;
     align-items: center;
-    padding: 0px 10px;
+    padding: 2px 5px;
 }
 
 .disco-mode .notation-info-item {
     display: flex;
     align-items: center;
-    justify-content: center;
-    background-color: transparent;
-    padding: 0px 0px;
-    border-radius: 10px;
-    border: none;
-    box-shadow: none;
-    backdrop-filter: none;
+    justify-content: flex-start;
+    background-color: rgba(0, 0, 0, 0.2);
+    padding: 4px 8px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     min-width: 120px;
-    text-align: center;
+    text-align: left;
     gap: 10px;
-
 }
 
-
 .disco-mode .notation-info-value {
-    font-size: 22px;
-    text-decoration: underline;
-    padding-bottom: 2px;
+    font-size: 18px;
+    font-weight: 900;
 }
 
 /* Add icon styling */
 .disco-mode .notation-info-icon {
-    font-size: 22px;
+    font-size: 18px;
     display: flex;
     align-items: center;
     justify-content: center;
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    padding: 2px;
 }
 
-/* Heart icon styling - simple, no animation in CSS */
+/* Heart icon styling */
 .disco-mode .heart-icon {
     display: inline-block;
-    font-size: 28px;
+    font-size: 20px;
     text-shadow: 0 0 10px rgba(255, 0, 0, 0.7);
     position: relative;
     z-index: 5;
+    background: none;
+    width: auto;
+    height: auto;
+    padding: 0;
 }
 
-/* Apply static colors for other elements */
+/* Apply static colors with improved visual effects for each element */
+.disco-mode .notation-info-item.key-info {
+    background: linear-gradient(135deg, rgba(255, 0, 110, 0.3) 0%, rgba(0, 0, 0, 0.2) 100%);
+}
+
 .disco-mode .notation-info-item.key-info .notation-info-value,
 .disco-mode .notation-info-item.key-info .notation-info-icon {
     color: rgba(255, 0, 110, 1);
     text-shadow: 0 0 10px rgba(255, 0, 110, 0.8), 0 0 15px rgba(255, 0, 110, 0.5);
+}
 
+.disco-mode .notation-info-item.tempo-info {
+    background: linear-gradient(135deg, rgba(255, 80, 80, 0.3) 0%, rgba(0, 0, 0, 0.2) 100%);
 }
 
 .disco-mode .notation-info-item.tempo-info .notation-info-value {
     color: rgba(255, 80, 80, 1);
     text-shadow: 0 0 10px rgba(255, 0, 0, 0.8), 0 0 15px rgba(255, 0, 0, 0.5);
+}
 
+.disco-mode .notation-info-item.measure-info {
+    background: linear-gradient(135deg, rgba(174, 0, 255, 0.3) 0%, rgba(0, 0, 0, 0.2) 100%);
 }
 
 .disco-mode .notation-info-item.measure-info .notation-info-value,
 .disco-mode .notation-info-item.measure-info .notation-info-icon {
     color: rgba(174, 0, 255, 1);
     text-shadow: 0 0 10px rgba(174, 0, 255, 0.8), 0 0 15px rgba(174, 0, 255, 0.5);
+}
 
+.disco-mode .notation-info-item.time-info {
+    background: linear-gradient(135deg, rgba(255, 221, 0, 0.3) 0%, rgba(0, 0, 0, 0.2) 100%);
 }
 
 .disco-mode .notation-info-item.time-info .notation-info-value,

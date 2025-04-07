@@ -376,10 +376,6 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
         // Add tempo to second row
         row2.appendChild(tempoInfo);
 
-        // Create third row: MEASURE with icon
-        const row3 = document.createElement('div');
-        row3.className = 'notation-info-row';
-
         // Create measure info with icon
         const measureInfo = document.createElement('div');
         measureInfo.className = 'notation-info-item measure-info';
@@ -388,13 +384,12 @@ class PianoAnalyzerMode extends MusicAnalyzerMode {
             <div class="notation-info-value measure-value">--/--</div>
         `;
 
-        // Add measure to third row
-        row3.appendChild(measureInfo);
+        // Add measure to first row
+        row2.appendChild(measureInfo);
 
         // Add all rows to panel
         this.discoInfoPanel.appendChild(row1);
         this.discoInfoPanel.appendChild(row2);
-        this.discoInfoPanel.appendChild(row3);
 
         // Add panel to the visualization container
         this.pianoVisualizationContainer.appendChild(this.discoInfoPanel);
