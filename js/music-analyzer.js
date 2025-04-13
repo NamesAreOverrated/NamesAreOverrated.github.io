@@ -394,6 +394,16 @@ class MusicAnalyzer {
 
     startActualAnalysis() {
         console.log("[MUSIC UI] Starting music analysis");
+
+        // Make sure AudioContext is running (may be suspended after initialization)
+        if (window.AudioAnalyzer.audioContext &&
+            window.AudioAnalyzer.audioContext.state === 'suspended') {
+            window.AudioAnalyzer.audioContext.resume()
+                .then(() => console.log("[MUSIC UI] AudioContext resumed"))
+                .catch(err => console.error("[MUSIC UI] Error resuming AudioContext:", err));
+        }
+
+        // Start analysis with our callback
         const analysisStarted = window.AudioAnalyzer.startAnalysis(data => this.updateMusicData(data));
 
         if (analysisStarted) {
@@ -419,9 +429,45 @@ class MusicAnalyzer {
 
             // Update the pause button state
             this.updatePauseButtonState();
+
+            // Schedule a check to ensure we're getting data
+            setTimeout(() => this.checkAnalysisActivity(), 3000);
         } else {
             console.log("[MUSIC UI] Failed to start music analysis");
             this.showStatus('Failed to start music analysis.', 'error');
+        }
+    }
+
+    // Check if we're getting actual audio data
+    checkAnalysisActivity() {
+        if (!this.analyzing || this.paused) return;
+
+        // If AudioAnalyzer exists but has no current notes data after 3 seconds
+        if (window.AudioAnalyzer &&
+            (!window.AudioAnalyzer.currentNotes || window.AudioAnalyzer.currentNotes.length === 0)) {
+
+            console.log("[MUSIC UI] Analysis appears inactive, attempting to restart");
+
+            // Restart the AudioContext
+            if (window.AudioAnalyzer.audioContext) {
+                window.AudioAnalyzer.audioContext.resume()
+                    .then(() => {
+                        console.log("[MUSIC UI] AudioContext resumed after inactivity");
+
+                        // Restart analysis after a brief delay to let context stabilize
+                        setTimeout(() => {
+                            window.AudioAnalyzer.stopAnalysis();
+                            window.AudioAnalyzer.startAnalysis(data => this.updateMusicData(data));
+                            console.log("[MUSIC UI] Analysis restarted after inactivity");
+                        }, 100);
+                    })
+                    .catch(err => console.error("[MUSIC UI] Error resuming AudioContext:", err));
+            }
+
+            // Show status to inform user
+            this.showStatus('Restarting audio analysis... Please make some sound.', 'info');
+        } else {
+            console.log("[MUSIC UI] Analysis is active and receiving data");
         }
     }
 
@@ -471,9 +517,16 @@ class MusicAnalyzer {
             return;
         }
 
+        // Debug log to track data flow (uncomment if needed)
+        // console.log(`[MUSIC UI] Received data with ${data.notes?.length || 0} notes`);
+
         // Use the current mode instance to handle the data
         if (this.currentModeInstance && typeof this.currentModeInstance.processData === 'function') {
-            this.currentModeInstance.processData(data);
+            try {
+                this.currentModeInstance.processData(data);
+            } catch (error) {
+                console.error("[MUSIC UI] Error processing data in mode:", error);
+            }
         } else {
             console.warn("[MUSIC UI] No valid mode instance available for processing data");
         }

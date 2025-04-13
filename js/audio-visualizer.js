@@ -10,10 +10,12 @@ class AudioVisualizer {
         this.audioContext = null;
         this.analyser = null;
         this.microphone = null;
+        this.microphoneStream = null;
         this.canvas = null;
         this.canvasContext = null;
         this.animationFrame = null;
         this.dataArray = null;
+        this.consecutiveEmptyFrames = 0;
 
         // Configuration
         this.fftSize = 512;
@@ -39,7 +41,7 @@ class AudioVisualizer {
     }
 
     async init() {
-        if (this.initialized) return;
+        if (this.initialized) return true;
 
         try {
             // Create audio context
@@ -66,9 +68,28 @@ class AudioVisualizer {
     async requestMicrophoneAccess() {
         try {
             console.log('Requesting microphone access for audio visualization.');
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+            // Request with optimal audio settings for visualization
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                    echoCancellation: false,
+                    noiseSuppression: false,
+                    autoGainControl: false
+                }
+            });
+
+            // Ensure audioContext is in running state (may be suspended initially)
+            if (this.audioContext.state === 'suspended') {
+                await this.audioContext.resume();
+            }
+
+            // Connect microphone to analyser
             this.microphone = this.audioContext.createMediaStreamSource(stream);
             this.microphone.connect(this.analyser);
+
+            // Save stream reference for reconnection if needed
+            this.microphoneStream = stream;
+
             console.log('Microphone access granted');
             return true;
         } catch (error) {
@@ -107,6 +128,28 @@ class AudioVisualizer {
     start() {
         if (!this.initialized || this.active) return;
 
+        // Ensure we have microphone access
+        if (!this.microphone) {
+            this.requestMicrophoneAccess().then(granted => {
+                if (granted) {
+                    this._startVisualization();
+                } else {
+                    console.error('Cannot start visualization without microphone access');
+                }
+            });
+        } else {
+            // Make sure AudioContext is running
+            if (this.audioContext.state === 'suspended') {
+                this.audioContext.resume().then(() => {
+                    this._startVisualization();
+                });
+            } else {
+                this._startVisualization();
+            }
+        }
+    }
+
+    _startVisualization() {
         if (!this.canvas) {
             this.createCanvas();
         }
@@ -117,6 +160,8 @@ class AudioVisualizer {
 
         // Start visualization loop
         this.draw();
+
+        console.log('Audio visualization started');
     }
 
     stop() {
@@ -151,34 +196,96 @@ class AudioVisualizer {
     draw() {
         if (!this.active) return;
 
-        // Get frequency data
-        this.analyser.getByteFrequencyData(this.dataArray);
+        // Check if AudioContext is running, resume if suspended
+        if (this.audioContext.state === 'suspended') {
+            this.audioContext.resume().catch(err => {
+                console.error('Error resuming AudioContext:', err);
+            });
+            // Continue visualization even if resume fails
+        }
 
-        // Clear canvas
-        this.canvasContext.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        try {
+            // Get frequency data
+            this.analyser.getByteFrequencyData(this.dataArray);
 
-        // Draw current visualization type
-        const type = this.visualizationTypes[this.currentVisualization];
+            // Check if we're getting real data (if all zeros, might indicate connection issue)
+            let hasData = false;
+            for (let i = 0; i < this.dataArray.length; i++) {
+                if (this.dataArray[i] > 0) {
+                    hasData = true;
+                    break;
+                }
+            }
 
-        switch (type) {
-            case 'bars':
-                this.drawBars();
-                break;
-            case 'wave':
-                this.drawWave();
-                break;
-            case 'circular':
-                this.drawCircular();
-                break;
-            case 'spectrum':
-                this.drawSpectrum();
-                break;
-            default:
-                this.drawBars();
+            // If not getting data, attempt to reconnect microphone
+            if (!hasData && this.consecutiveEmptyFrames === undefined) {
+                this.consecutiveEmptyFrames = 1;
+            } else if (!hasData) {
+                this.consecutiveEmptyFrames++;
+
+                // After several empty frames, try reconnection
+                if (this.consecutiveEmptyFrames > 30) { // About 0.5s at 60fps
+                    console.log('No audio data detected, attempting to reconnect microphone');
+                    this._attemptMicrophoneReconnection();
+                    this.consecutiveEmptyFrames = 0;
+                }
+            } else {
+                // Reset counter when we get data
+                this.consecutiveEmptyFrames = 0;
+            }
+
+            // Clear canvas
+            this.canvasContext.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+            // Draw current visualization type
+            const type = this.visualizationTypes[this.currentVisualization];
+
+            switch (type) {
+                case 'bars':
+                    this.drawBars();
+                    break;
+                case 'wave':
+                    this.drawWave();
+                    break;
+                case 'circular':
+                    this.drawCircular();
+                    break;
+                case 'spectrum':
+                    this.drawSpectrum();
+                    break;
+                default:
+                    this.drawBars();
+            }
+        }
+        catch (e) {
+            console.error('Error in visualization draw loop:', e);
         }
 
         // Schedule next frame
         this.animationFrame = requestAnimationFrame(() => this.draw());
+    }
+
+    // New method to handle microphone reconnection attempts
+    async _attemptMicrophoneReconnection() {
+        if (!this.initialized || !this.active) return;
+
+        try {
+            // Disconnect existing microphone if present
+            if (this.microphone) {
+                this.microphone.disconnect();
+                this.microphone = null;
+            }
+
+            // Try to get microphone access again
+            const granted = await this.requestMicrophoneAccess();
+            if (granted) {
+                console.log('Successfully reconnected microphone');
+            } else {
+                console.warn('Failed to reconnect microphone');
+            }
+        } catch (err) {
+            console.error('Error reconnecting microphone:', err);
+        }
     }
 
     drawBars() {

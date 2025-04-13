@@ -114,11 +114,17 @@ class AudioAnalyzer {
                 clearInterval(this.analysisInterval);
             }
 
+            // Ensure audioContext is running (may be suspended initially)
+            if (this.audioContext.state === 'suspended') {
+                this.audioContext.resume();
+            }
+
             // Start regular analysis
             this.analysisInterval = setInterval(() => this.analyze(), this.analysisRate);
             console.log(`Started audio analysis at ${1000 / this.analysisRate}Hz rate`);
 
-            // IMPORTANT: We no longer start visualization automatically when doing analysis
+            // Initial analysis immediately to prevent delay
+            setTimeout(() => this.analyze(), 10);
         }
 
         return true;
@@ -146,6 +152,11 @@ class AudioAnalyzer {
 
     analyze() {
         if (!this.isAnalyzing) return;
+
+        // Check if audioContext is running, resume if suspended
+        if (this.audioContext.state === 'suspended') {
+            this.audioContext.resume();
+        }
 
         // Get frequency data (using Float32Array for better precision)
         this.analyser.getFloatFrequencyData(this.dataArray);
@@ -183,13 +194,17 @@ class AudioAnalyzer {
             isInstrument: this.isLikelyInstrument(frequencies, notes)
         };
 
-        this.analysisCallbacks.forEach(callback => {
-            try {
-                callback(result);
-            } catch (err) {
-                console.error('Error in analysis callback:', err);
-            }
-        });
+        if (this.analysisCallbacks.length > 0) {
+            this.analysisCallbacks.forEach(callback => {
+                try {
+                    callback(result);
+                } catch (err) {
+                    console.error('Error in analysis callback:', err);
+                }
+            });
+        } else {
+            console.log('No analysis callbacks registered');
+        }
     }
 
     /**
