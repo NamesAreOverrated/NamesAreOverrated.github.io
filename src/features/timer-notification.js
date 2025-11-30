@@ -1,4 +1,4 @@
-import NotificationSound from './notification-sound.js';
+import NotificationSound from '../audio/notification-sound.js';
 
 class TimerNotification {
     constructor() {

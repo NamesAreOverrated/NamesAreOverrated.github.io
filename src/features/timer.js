@@ -1086,11 +1086,11 @@ class Timer {
     }
 }
 
+// Make Timer class globally available immediately
+window.Timer = Timer;
+
 // Update initialization to prevent unwanted Timer instances
 document.addEventListener('DOMContentLoaded', () => {
-    // Make Timer class globally available but don't initialize yet
-    window.Timer = Timer;
-
     // Hide the toggle by default on page load
     const toggleElement = document.querySelector('.timer-mode-toggle');
     if (toggleElement) {
