@@ -17,9 +17,6 @@ const router = {
                 document.getElementById('blogs').style.display = 'block';
                 // Hide the dynamic content container
                 document.getElementById('page-content').style.display = 'none';
-                // Hide habit tracker section
-                const habitSection = document.getElementById('habit-tracker-section');
-                if (habitSection) habitSection.style.display = 'none';
 
                 // Hide timer section
                 const timerSection = document.getElementById('timer-section');
@@ -42,12 +39,6 @@ const router = {
             path: 'tool',
             handler: (id) => {
                 displayTool(id);
-            }
-        },
-        habit: {
-            path: 'habit-tracker',
-            handler: () => {
-                displayHabitTracker();
             }
         },
         timer: {
@@ -119,7 +110,7 @@ const router = {
 // Function to display a blog post
 async function displayBlogPost(id) {
     // Clear any body classes first
-    document.body.classList.remove('viewing-timer', 'viewing-habit-tracker');
+    document.body.classList.remove('viewing-timer');
     document.body.classList.add('viewing-page');
 
     // Hide all sections properly
@@ -127,7 +118,6 @@ async function displayBlogPost(id) {
     document.getElementById('tools').style.display = 'none';
     document.getElementById('blogs').style.display = 'none';
     document.getElementById('timer-section').style.display = 'none';
-    document.getElementById('habit-tracker-section').style.display = 'none';
     document.getElementById('page-content').style.display = 'block';
 
     try {
@@ -190,7 +180,7 @@ async function displayBlogPost(id) {
 // Function to display a project
 async function displayProject(id) {
     // Clear any body classes first
-    document.body.classList.remove('viewing-timer', 'viewing-habit-tracker');
+    document.body.classList.remove('viewing-timer');
     document.body.classList.add('viewing-page');
 
     // Hide all sections properly
@@ -198,7 +188,6 @@ async function displayProject(id) {
     document.getElementById('tools').style.display = 'none';
     document.getElementById('blogs').style.display = 'none';
     document.getElementById('timer-section').style.display = 'none';
-    document.getElementById('habit-tracker-section').style.display = 'none';
     document.getElementById('page-content').style.display = 'block';
 
     try {
@@ -255,7 +244,7 @@ async function displayProject(id) {
 // Function to display a tool
 async function displayTool(id) {
     // Clear any body classes first
-    document.body.classList.remove('viewing-timer', 'viewing-habit-tracker');
+    document.body.classList.remove('viewing-timer');
     document.body.classList.add('viewing-page');
 
     // Hide all sections properly
@@ -263,7 +252,6 @@ async function displayTool(id) {
     document.getElementById('tools').style.display = 'none';
     document.getElementById('blogs').style.display = 'none';
     document.getElementById('timer-section').style.display = 'none';
-    document.getElementById('habit-tracker-section').style.display = 'none';
     document.getElementById('page-content').style.display = 'block';
 
     try {
@@ -310,60 +298,12 @@ async function displayTool(id) {
     }
 }
 
-// New function to display the habit tracker
-function displayHabitTracker() {
-    console.log("Router: Displaying habit tracker");
-
-    // Reset body classes
-    document.body.classList.remove('viewing-timer', 'viewing-page');
-    document.body.classList.add('viewing-habit-tracker');
-
-    // Hide all sections properly and explicitly
-    document.getElementById('projects').style.display = 'none';
-    document.getElementById('tools').style.display = 'none';
-    document.getElementById('blogs').style.display = 'none';
-    document.getElementById('page-content').style.display = 'none';
-    document.getElementById('timer-section').style.display = 'none';
-
-    // Show habit tracker section
-    const habitSection = document.getElementById('habit-tracker-section');
-    if (habitSection) {
-        habitSection.style.display = 'block';
-
-        // Wait a brief moment to ensure DOM elements are ready before initializing or refreshing
-        setTimeout(() => {
-            // Initialize habit tracker if not already done
-            if (typeof HabitTracker === 'function' && !window.habitTrackerInstance) {
-                window.habitTrackerInstance = new HabitTracker();
-                console.log('Habit tracker initialized from router');
-            } else if (window.habitTrackerInstance) {
-                // If already initialized, refresh the UI
-                window.habitTrackerInstance.renderHabits();
-                console.log('Habit tracker refreshed from router');
-            } else {
-                console.warn('Router: HabitTracker class not found. Waiting for script load.');
-                // Try again after a longer delay if script might still be loading
-                setTimeout(() => {
-                    if (typeof HabitTracker === 'function') {
-                        window.habitTrackerInstance = new HabitTracker();
-                        console.log('Habit tracker initialized after delay from router');
-                    } else {
-                        console.error('Router: HabitTracker class not available after waiting. Check script loading.');
-                    }
-                }, 1000);
-            }
-        }, 100);
-    } else {
-        console.error('Router: Habit tracker section not found in the DOM');
-    }
-}
-
 // Function to display the timer section
 function displayTimer() {
     console.log("Router: Displaying timer");
 
     // Reset body classes
-    document.body.classList.remove('viewing-habit-tracker', 'viewing-page');
+    document.body.classList.remove('viewing-page');
     document.body.classList.add('viewing-timer');
 
     // Hide all main sections explicitly
@@ -371,7 +311,6 @@ function displayTimer() {
     document.getElementById('tools').style.display = 'none';
     document.getElementById('blogs').style.display = 'none';
     document.getElementById('page-content').style.display = 'none';
-    document.getElementById('habit-tracker-section').style.display = 'none';
 
     // Show timer section
     const timerSection = document.getElementById('timer-section');

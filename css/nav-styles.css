@@ -110,31 +110,8 @@ nav a.active::after {
     }
 }
 
-/* Habit tracker specific view styles - hide back button */
-body.viewing-habit-tracker .back-button {
-    display: none;
-    /* Changed from display: block to display: none */
-}
-
-/* Additional styles for habit-tracker section navigation */
-#habit-tracker-link.active {
-    color: #0f0;
-    background-color: rgba(0, 255, 0, 0.15);
-    border-bottom: 2px solid #0f0;
-    box-shadow: 0 0 15px rgba(0, 255, 0, 0.3) inset;
-}
-
-/* Active state for the habit tracker navigation link */
-nav a[href="#/habit-tracker"].active {
-    color: #0f0;
-    background-color: rgba(0, 255, 0, 0.15);
-    border-bottom: 2px solid #0f0;
-    box-shadow: 0 0 15px rgba(0, 255, 0, 0.3) inset;
-}
-
 /* Ensure the navigation links are properly colored for all sections */
 nav a[href="#/"].active,
-nav a[href="#/habit-tracker"].active,
 nav a[href="#/blog"].active,
 nav a[href="#/project"].active,
 nav a[href="#/tool"].active {

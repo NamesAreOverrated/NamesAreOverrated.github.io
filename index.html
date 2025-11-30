@@ -47,7 +47,6 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="css/nav-styles.css">
     <link rel="stylesheet" href="css/disco.css">
-    <link rel="stylesheet" href="css/habit-tracker.css">
     <link rel="stylesheet" href="css/timer-styles.css">
     <link rel="stylesheet" href="css/music-analyzer.css">
     <link rel="stylesheet" href="css/modes/piano-analyzer.css">
@@ -67,7 +66,6 @@
         <nav>
             <ul>
                 <li><a href="#/" class="active">Home</a></li>
-                <li><a href="#/habit-tracker" id="habit-tracker-link">Habit_Tracker</a></li>
                 <li><a href="#/timer" id="timer-link">Timer</a></li>
             </ul>
         </nav>
@@ -155,143 +153,6 @@
                     id="blogs-total-pages">1</span></span>
             <button id="blogs-next-page">Next &gt;</button>
         </div>
-    </section>
-
-    <!-- Habit Tracker Section - Added as an integrated part of the main application -->
-    <section id="habit-tracker-section" style="display: none;">
-        <!-- Removed "Back to home" button -->
-
-        <!-- Add tab navigation for habits and statistics -->
-        <div class="habits-tab-navigation">
-            <button id="habits-tab-button" class="tab-button active">Habits</button>
-            <button id="stats-tab-button" class="tab-button">Statistics</button>
-        </div>
-
-        <!-- Habits tab -->
-        <div id="habits-tab" class="tab-content active">
-            <!-- Habits section - removed featured-section class to match main page styling -->
-            <section class="section habits-section">
-                <h2>> Daily_Habit_Tracker</h2>
-                <p class="description">Track your habits and build streaks. Data is stored in your browser's local
-                    storage.</p>
-                <div id="habits-list" class="habits-list">
-                    <!-- Habits will be inserted here -->
-                </div>
-            </section>
-
-            <!-- Add habit section - matches main page styling now -->
-            <section class="section add-habit-section">
-                <h2>> Add_New_Habit</h2>
-                <form id="habit-form">
-                    <div class="form-row">
-                        <label for="habit-input">Habit Name:</label>
-                        <div class="input-container">
-                            <input type="text" id="habit-input" placeholder="Enter a new habit..." required>
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <label for="habit-category">Category:</label>
-                        <select id="habit-category">
-                            <!-- Categories will be populated dynamically via JavaScript -->
-                        </select>
-                        <button id="manage-categories-btn" type="button" class="manage-categories-btn">Manage
-                            Categories</button>
-                    </div>
-
-                    <div class="form-row goal-options">
-                        <div class="goal-type">
-                            <label for="goal-type">Goal Type:</label>
-                            <select id="goal-type">
-                                <option value="streak">Streak Goal</option>
-                                <option value="frequency">Weekly Frequency</option>
-                            </select>
-                        </div>
-
-                        <div class="goal-value">
-                            <label for="goal-value">Target:</label>
-                            <input type="number" id="goal-value" min="1" value="7">
-                            <span id="goal-unit">days</span>
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <button type="submit">Add Habit</button>
-                    </div>
-                </form>
-            </section>
-        </div>
-
-        <!-- Statistics tab -->
-        <div id="stats-tab" class="tab-content">
-            <section class="section stats-section featured-section">
-                <h2>> Habit_Statistics</h2>
-                <p class="description">Visualize your progress and analyze your habit performance over time.</p>
-                <div id="stats-container" class="stats-container">
-                    <!-- Statistics will be inserted here -->
-                </div>
-            </section>
-        </div>
-
-        <!-- Info section as its own independent section -->
-        <section class="section info-section">
-            <h2>> How_This_Works</h2>
-            <div class="info-box">
-                <p>This habit tracker uses your browser's localStorage to save your habits. This means:</p>
-                <ul>
-                    <li>Your habits are private and only visible to you</li>
-                    <li>Your data persists between visits on the same device and browser</li>
-                    <li>Different users will see their own individual habit trackers</li>
-                    <li>Clearing browser data will reset your habit tracker</li>
-                </ul>
-            </div>
-        </section>
-
-        <!-- Data Management section as its own independent section -->
-        <section class="section data-section">
-            <h2>> Data_Management</h2>
-            <div class="data-controls">
-                <p class="description">Back up your habit data to your computer or restore from a previous backup.</p>
-
-                <div class="data-buttons">
-                    <button id="export-data" class="data-btn export-btn">
-                        <span class="btn-icon">📥</span> Export Data
-                    </button>
-
-                    <button id="import-data" class="data-btn import-btn">
-                        <span class="btn-icon">📤</span> Import Data
-                    </button>
-
-                    <button id="reset-data" class="data-btn reset-btn">
-                        <span class="btn-icon">🗑️</span> Reset Data
-                    </button>
-
-                    <button id="copy-logseq" class="data-btn logseq-btn">
-                        <span class="btn-icon">📋</span> Copy as Logseq Block
-                    </button>
-                </div>
-
-                <input type="file" id="import-file" accept=".json" style="display:none">
-
-                <div class="data-info">
-                    <p><strong>Note:</strong> Importing data will overwrite your current habits. Resetting will
-                        permanently delete all habits.</p>
-                </div>
-
-                <!-- Add storage usage indicator -->
-                <div class="storage-usage">
-                    <h4>> Local_Storage_Usage</h4>
-                    <div id="storage-usage" class="usage-details">
-                        <!-- Storage usage will be populated by JavaScript -->
-                        <div class="usage-value">0.00 KB</div>
-                        <div class="usage-bar">
-                            <div class="usage-fill" style="width: 0%"></div>
-                        </div>
-                        <div class="usage-percent">0.00% used</div>
-                    </div>
-                </div>
-            </div>
-        </section>
     </section>
 
     <!-- Timer Section -->
@@ -443,13 +304,17 @@
     <script src="js/modes/voice-training-mode.js"></script>
     <script src="js/modes/piano-analyzer-mode.js"></script>
     <script src="js/utils/music-xml-parser.js"></script>
+    <script src="js/modes/piano/notation-view-manager.js"></script>
+    <script src="js/modes/piano/vexflow-adapter.js"></script>
+    <script src="js/modes/piano/chord-overlay.js"></script>
     <script src="js/modes/piano/notation-renderer.js"></script>
+    <script src="js/modes/piano/piano-keyboard.js"></script>
+    <script src="js/modes/piano/note-bar-renderer.js"></script>
+    <script src="js/modes/piano/chord-renderer.js"></script>
     <script src="js/modes/piano/piano-visualization.js"></script>
     <script src="js/modes/piano/playback-controller.js"></script>
     <script src="js/music-analyzer.js"></script>
     <script src="js/disco.js"></script>
-    <script src="js/habit-tracker.js"></script>
-    <script src="js/habit-tracker-init.js"></script>
     <script src="js/timer-notification.js" type="module"></script>
     <script src="js/timer.js" type="module" defer></script>
     <script src="js/audio-visualizer.js"></script>

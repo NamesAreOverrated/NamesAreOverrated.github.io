@@ -65,19 +65,11 @@ class PlaybackController {
         this.speedControl = this.container.querySelector('.piano-speed');
         this.speedDisplay = this.container.querySelector('.speed-value');
 
-        if (this.speedControl && this.speedDisplay) {
-            // Replace with fresh clone
-            const newControl = this.speedControl.cloneNode(true);
-            this.speedControl.parentNode.replaceChild(newControl, this.speedControl);
-            this.speedControl = newControl;
+        if (this.speedControl) {
+            this.speedControl.style.display = 'none';
+        }
 
-            // Configure range input
-            this.speedControl.min = "40";
-            this.speedControl.max = "240";
-            this.speedControl.step = "1";
-            this.speedControl.value = this.scoreModel.bpm;
-
-            this.speedControl.addEventListener('input', this.handleTempoChange);
+        if (this.speedDisplay) {
             this.updateTempoDisplay();
         }
     }
@@ -120,8 +112,27 @@ class PlaybackController {
                     event.preventDefault();
                     this.scoreModel.seekTo(0);
                     break;
+                case '+': // Plus - increase tempo
+                case '=': // Equal (often same key as plus)
+                    this.adjustTempo(5);
+                    break;
+                case '-': // Minus - decrease tempo
+                case '_': // Underscore (often same key as minus)
+                    this.adjustTempo(-5);
+                    break;
             }
         });
+    }
+
+    /**
+     * Adjust tempo by a relative amount
+     * @param {number} delta Amount to change tempo by
+     */
+    adjustTempo(delta) {
+        const currentTempo = this.scoreModel.bpm;
+        const newTempo = Math.max(40, Math.min(240, currentTempo + delta));
+        this.scoreModel.setTempo(newTempo);
+        this.updateTempoDisplay();
     }
 
     /**
@@ -148,10 +159,8 @@ class PlaybackController {
      */
     updateTempoDisplay() {
         if (!this.speedDisplay) return;
-        this.speedDisplay.textContent = `${this.scoreModel.bpm} BPM`;
-        if (this.speedControl) {
-            this.speedControl.value = this.scoreModel.bpm;
-        }
+        // Round to integer for cleaner display
+        this.speedDisplay.textContent = `${Math.round(this.scoreModel.bpm)} BPM`;
     }
 
     /**

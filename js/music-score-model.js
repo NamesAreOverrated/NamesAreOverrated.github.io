@@ -21,6 +21,8 @@ class MusicScoreModel {
         this.currentPosition = 0;
         this.previousPosition = 0;
         this.bpm = 120;
+        this.baseBpm = 120; // Base BPM from score
+        this.tempoMultiplier = 1.0; // Multiplier for playback speed
         this.key = ''; // Add key property to store the current key
 
         // Playback
@@ -67,7 +69,9 @@ class MusicScoreModel {
         // Set initial tempo
         if (this.tempoChanges.length > 0) {
             this.bpm = this.tempoChanges[0].tempo;
+            this.baseBpm = this.bpm;
         }
+        this.tempoMultiplier = 1.0;
 
         // Reset position
         this.currentPosition = 0;
@@ -105,7 +109,7 @@ class MusicScoreModel {
             this.pauseTime = 0;
         } else {
             // Starting fresh - convert currentPosition to milliseconds
-            this.playbackStartTime = now - (this.currentPosition * 1000);
+            this.playbackStartTime = now - (this.currentPosition * 1000 / this.tempoMultiplier);
         }
 
         // Clean up any existing animation frame before starting a new one
@@ -174,9 +178,9 @@ class MusicScoreModel {
         // If playing, adjust the start time to maintain continuity
         if (this.isPlaying) {
             if (performance && performance.now) {
-                this.playbackStartTime = performance.now() - (this.currentPosition * 1000);
+                this.playbackStartTime = performance.now() - (this.currentPosition * 1000 / this.tempoMultiplier);
             } else {
-                this.playbackStartTime = Date.now() - (this.currentPosition * 1000);
+                this.playbackStartTime = Date.now() - (this.currentPosition * 1000 / this.tempoMultiplier);
             }
         }
 
@@ -195,7 +199,13 @@ class MusicScoreModel {
         if (bpm === this.bpm) return;
 
         const oldBpm = this.bpm;
-        this.bpm = Math.max(40, Math.min(240, bpm));
+        const targetBpm = Math.max(40, Math.min(240, bpm));
+
+        // Calculate new multiplier based on current base BPM
+        // If baseBpm is 0 (shouldn't happen), default to 120
+        const currentBase = this.baseBpm || 120;
+        this.tempoMultiplier = targetBpm / currentBase;
+        this.bpm = targetBpm;
 
         // If we have notes, need to adjust timing
         if (this.isPlaying && this.notes.length > 0) {
@@ -205,9 +215,9 @@ class MusicScoreModel {
 
             // Adjust playback start time to maintain musical position with new tempo
             if (performance && performance.now) {
-                this.playbackStartTime = performance.now() - (currentMusicalPosition * 1000);
+                this.playbackStartTime = performance.now() - (currentMusicalPosition * 1000 / this.tempoMultiplier);
             } else {
-                this.playbackStartTime = Date.now() - (currentMusicalPosition * 1000);
+                this.playbackStartTime = Date.now() - (currentMusicalPosition * 1000 / this.tempoMultiplier);
             }
         }
 
@@ -231,7 +241,8 @@ class MusicScoreModel {
 
         // Use consistent timing method
         const currentTime = this.getTimestamp();
-        const elapsedSeconds = (currentTime - this.playbackStartTime) / 1000;
+        // Apply tempo multiplier to elapsed time
+        const elapsedSeconds = ((currentTime - this.playbackStartTime) * this.tempoMultiplier) / 1000;
 
         // Guard against NaN or Infinity
         if (!isNaN(elapsedSeconds) && isFinite(elapsedSeconds)) {
@@ -314,25 +325,25 @@ class MusicScoreModel {
         }
 
         // If tempo has changed, update and trigger event
-        if (Math.abs(this.bpm - currentTempo) > 0.01 || tempoChangeApplied) {
+        if (Math.abs(this.baseBpm - currentTempo) > 0.01 || tempoChangeApplied) {
             const oldTempo = this.bpm;
-            this.bpm = currentTempo;
+
+            // Update base BPM from score
+            this.baseBpm = currentTempo;
+
+            // Recalculate actual BPM based on multiplier
+            this.bpm = this.baseBpm * this.tempoMultiplier;
 
             // When crossing a tempo change boundary, we need to adjust playbackStartTime
-            // to maintain musical position
-            if (tempoChangeApplied) {
-                // Calculate time elapsed since tempo change point
-                const realTimeElapsed = this.currentPosition - tempoChangePosition;
+            // to maintain musical position.
+            // Since we are using tempoMultiplier in updatePlayback, and currentPosition is continuous,
+            // we actually DON'T need to adjust playbackStartTime here if the multiplier stays constant.
+            // The "speed" of currentPosition (seconds) relative to real time is determined by tempoMultiplier.
+            // The fact that the score's tempo changed is already baked into the seconds mapping by the parser.
+            // So, we just update the BPM display.
 
-                // Reset the playback start time to adjust for new tempo from this point forward
-                if (performance && performance.now) {
-                    this.playbackStartTime = performance.now() - (tempoChangePosition * 1000) -
-                        (realTimeElapsed * 1000);
-                } else {
-                    this.playbackStartTime = Date.now() - (tempoChangePosition * 1000) -
-                        (realTimeElapsed * 1000);
-                }
-            }
+            // However, if we want to be super precise about floating point drift, we could reset playbackStartTime
+            // but it's likely unnecessary and could cause glitches.
 
             this.triggerEvent('tempochange', {
                 tempo: this.bpm,
