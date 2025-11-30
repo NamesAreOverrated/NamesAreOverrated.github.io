@@ -156,22 +156,6 @@
     display: none;
 }
 
-/* Remove these problematic hover overrides completely */
-.pattern-card:hover .dot.focus,
-.pattern-card:hover .dot.break,
-.pattern-card:hover .dot.inhale,
-.pattern-card:hover .dot.hold,
-.pattern-card:hover .dot.exhale,
-.dot::before,
-.dot span,
-.pattern-card:hover .dot.focus,
-.pattern-card:hover .dot.break,
-.pattern-card:hover .dot.inhale,
-.pattern-card:hover .dot.hold,
-.pattern-card:hover .dot.exhale {
-    /* Delete these style blocks completely */
-}
-
 .patterns-controls {
     display: flex;
     justify-content: flex-end;
@@ -876,7 +860,7 @@
 }
 
 .timer-return-notification.hiding {
-    transform: translateY(150%);
+    animation: slide-out 0.3s ease forwards;
 }
 
 #return-to-timer-btn {
@@ -917,27 +901,6 @@
     to {
         transform: translateY(150%);
     }
-}
-
-.timer-return-notification.hiding {
-    animation: slide-out 0.3s ease forwards;
-}
-
-#return-to-timer-btn {
-    align-self: flex-end;
-    background-color: var(--accent-color);
-    color: var(--bg-color);
-    border: none;
-    padding: 5px 10px;
-    border-radius: 3px;
-    cursor: pointer;
-    font-family: 'Courier New', monospace;
-    transition: all 0.3s ease;
-}
-
-#return-to-timer-btn:hover {
-    background-color: var(--text-color);
-    color: var(--accent-color);
 }
 
 /* Tab change confirmation dialog */

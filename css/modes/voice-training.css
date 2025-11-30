@@ -2,27 +2,221 @@
 
 .voice-training {
     display: none;
-    max-height: 450px;
+    max-height: 500px;
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: rgba(100, 100, 120, 0.5) rgba(30, 30, 40, 0.3);
+    padding-right: 5px;
 }
 
-.voice-training::-webkit-scrollbar {
-    width: 8px;
+/* ...existing code... */
+
+/* Calibration UI */
+.calibration-container {
+    background: rgba(30, 30, 40, 0.6);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    margin-top: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.voice-training::-webkit-scrollbar-track {
-    background: rgba(30, 30, 40, 0.3);
+.calibration-step {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+
+.calibration-step.active {
+    display: block;
+}
+
+.calibration-instruction {
+    font-size: 18px;
+    margin-bottom: 15px;
+    color: #fff;
+}
+
+.calibration-subtext {
+    font-size: 14px;
+    color: #aaa;
+    margin-bottom: 20px;
+    min-height: 40px;
+}
+
+.calibration-meter-container {
+    height: 150px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+    position: relative;
+    margin: 20px 0;
+    overflow: hidden;
+}
+
+.calibration-bar {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    background: var(--accent-color);
+    transition: height 0.1s ease;
+    border-radius: 4px 4px 0 0;
+    box-shadow: 0 0 15px var(--accent-color);
+}
+
+.calibration-target-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    border-top: 2px dashed rgba(255, 255, 255, 0.3);
+    pointer-events: none;
+}
+
+.calibration-note-display {
+    font-size: 32px;
+    font-weight: bold;
+    color: var(--accent-color);
+    margin: 10px 0;
+    height: 40px;
+    text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.calibration-controls {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.btn-primary,
+.btn-secondary {
+    padding: 10px 24px;
+    border-radius: 6px;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: 1px;
+}
+
+.btn-primary {
+    background: var(--accent-color);
+    color: #111;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(var(--accent-rgb), 0.4);
+}
+
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Range Visualization */
+.range-visualizer {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 20px 0;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    padding: 10px;
+    position: relative;
+}
+
+.range-segment {
+    height: 30px;
     border-radius: 4px;
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.9);
+    position: relative;
+    transition: opacity 0.2s;
 }
 
-.voice-training::-webkit-scrollbar-thumb {
-    background-color: rgba(100, 100, 120, 0.5);
-    border-radius: 4px;
+.range-segment.active {
+    filter: brightness(1.3);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+    z-index: 2;
 }
 
-/* Voice exercises section */
+.range-segment .note-range {
+    margin-left: auto;
+    font-family: monospace;
+    opacity: 0.7;
+}
+
+.range-segment.chest {
+    background: linear-gradient(90deg, #1a237e, #283593);
+    border-left: 4px solid #5c6bc0;
+}
+
+.range-segment.mixed {
+    background: linear-gradient(90deg, #004d40, #00695c);
+    border-left: 4px solid #26a69a;
+}
+
+.range-segment.head {
+    background: linear-gradient(90deg, #1b5e20, #2e7d32);
+    border-left: 4px solid #66bb6a;
+}
+
+.range-segment.falsetto {
+    background: linear-gradient(90deg, #bf360c, #d84315);
+    border-left: 4px solid #ff7043;
+}
+
+.current-note-indicator {
+    position: absolute;
+    left: -5px;
+    width: 10px;
+    height: 10px;
+    background: #fff;
+    border-radius: 50%;
+    transform: translateY(-50%);
+    box-shadow: 0 0 8px #fff;
+    transition: top 0.1s ease;
+    z-index: 10;
+}
+
+.current-note-indicator::after {
+    content: '';
+    position: absolute;
+    left: 10px;
+    top: 4px;
+    height: 2px;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.3);
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Hide old elements */
+.voice-register-section,
+.register-exercises {
+    display: none !important;
+}
+
 .voice-exercises {
     margin-top: 15px;
 }

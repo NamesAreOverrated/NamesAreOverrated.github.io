@@ -271,7 +271,6 @@
     background-color: transparent;
     padding: 10px;
     cursor: default;
-    /* Changed from pointer to default */
     z-index: 10;
     display: flex;
     align-items: center;
@@ -283,12 +282,10 @@
 /* Cursor states - removing pointer styling */
 .notation-container.navigation-mode {
     cursor: default;
-    /* Changed from pointer to default */
 }
 
 .notation-container:not(.navigation-mode) {
     cursor: default;
-    /* Changed from pointer to default */
 }
 
 /* ===== NOTATION SVG ===== */
@@ -667,6 +664,7 @@
     background: linear-gradient(135deg, var(--chord-7) 0%, var(--chord-sus4) 100%);
     color: black;
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
     text-shadow: none;
     font-weight: 900;
@@ -676,6 +674,7 @@
     background: linear-gradient(135deg, var(--chord-maj7) 0%, var(--chord-aug) 100%);
     color: black;
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
     text-shadow: none;
     font-weight: 900;
@@ -685,6 +684,7 @@
     background: linear-gradient(135deg, var(--chord-min7) 0%, var(--chord-dim) 100%);
     color: black;
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
     text-shadow: none;
     font-weight: 900;
@@ -694,6 +694,7 @@
     background: linear-gradient(135deg, var(--chord-major) 0%, var(--chord-9) 100%);
     color: black;
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
     text-shadow: none;
     font-weight: 900;
